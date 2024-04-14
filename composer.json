@@ -1,0 +1,23 @@
+{
+    "name": "meme/phpvian",
+    "description": "A Travian project trying to make with PHP-MVC",
+    "type": "project",
+    "license": "GNU GPLv3",
+    "require": {
+        "php": "^8.1.0",
+        "phpmailer/phpmailer": "^6.9",
+      "ext-pdo": "*"
+    },
+    "require-dev": {
+        "maximebf/debugbar": "^1.22"
+    },
+    "autoload": {
+        "psr-4": {
+            "PHPvian\\": "app/"
+        },
+        "files": [
+            "app/helpers.php"
+        ]
+    },
+    "minimum-stability": "stable"
+}

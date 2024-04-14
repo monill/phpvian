@@ -1,0 +1,11 @@
+RewriteEngine on
+# Prevent people from looking directly into folders
+Options All -Indexes
+
+RewriteRule ^(.*) public/$1 [L]
+
+#Prevent viewing of .htaccess file
+<Files .htaccess>
+order allow,deny
+deny from all
+</Files>
