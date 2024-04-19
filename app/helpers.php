@@ -1,5 +1,6 @@
 <?php
 
+use PHPvian\Libs\Lang;
 use PHPvian\Views\View;
 
 if (!function_exists('md5_gen')) {
@@ -157,15 +158,13 @@ if (!function_exists('md5_gen')) {
 
 // Function to check the existence of data in the request
 if (!function_exists('input_exists')) {
-    function input_exists($type = "POST")
-    {
-        switch ($type) {
-            case "POST":
-                return (!empty($_POST)) ? true : false;
-            case "GET":
-                return (!empty($_GET)) ? true : false;
-            default:
-                return false;
+    function input_exists($type = "POST") {
+        if ($type === "POST") {
+            return !empty($_POST);
+        } elseif ($type === "GET") {
+            return !empty($_GET);
+        } else {
+            return false;
         }
     }
 }
@@ -174,26 +173,20 @@ if (!function_exists('input_exists')) {
 if (!function_exists('input')) {
     function input($value)
     {
-        if (isset($_POST[$value])) {
-            return trim(strip_tags(filter_input(INPUT_POST, $value)));
-        } elseif (isset($_GET[$value])) {
-            return trim(strip_tags(filter_input(INPUT_GET, $value)));
+        $inputValue = '';
+
+        if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST[$value])) {
+            $inputValue = trim(strip_tags($_POST[$value]));
+        } elseif ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET[$value])) {
+            $inputValue = trim(strip_tags($_GET[$value]));
         }
-        return "";
+        return $inputValue;
     }
 }
 
 if (!function_exists('redirect')) {
     function redirect($url, $statusCode = 302)
     {
-        // Validate the URL
-        $url = filter_var($url, FILTER_VALIDATE_URL);
-
-        if ($url === false) {
-            // Invalid URL, redirect to an error page or home page
-            $url = "/";
-        }
-
         // Redirect using HTTP header if possible
         if (!headers_sent()) {
             header("Location: " . $url, true, $statusCode);
@@ -246,6 +239,21 @@ if (!function_exists('get_http_protocol')) {
     function get_http_protocol()
     {
         return !empty($_SERVER['HTTPS']) ? "https" : "http";
+    }
+}
+
+if (!function_exists('translate')) {
+    function translate($file, $translate)
+    {
+        $lang = new Lang();
+        return $lang->get($file, $translate);
+    }
+}
+
+if (!function_exists('error_response')) {
+    function error_response($errors, $status = "error")
+    {
+        return json_encode(["status" => $status, "errors" => $errors]);
     }
 }
 
