@@ -1,0 +1,14 @@
+{
+  "hero_herodeadornothere": "Your hero is dead, or (s) he is not in this village, so you can\"t use this item.",
+  "hero_herobuyitems": "Buy Items",
+  "hero_herosellitems": "Sell Items",
+  "hero_heroexp": "Experience",
+  "hero_heroexpgrow": "Experience Enhancement",
+  "hero_heroexpwillbe": "Experience it after use",
+  "hero_herocurrentcp": "Current Cultural Rating",
+  "hero_herocpvalue": "Cultural Rating",
+  "hero_herocpafteruse": "HERO_HEROCPAFTERUSE",
+  "hero_herowannawear": "Do you really want to use the item?",
+  "hero_herotiu": "Total Used",
+  "hero_consumption": "Use"
+}

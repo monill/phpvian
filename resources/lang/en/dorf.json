@@ -1,0 +1,18 @@
+{
+	"fd_buildings": "Buildings",
+	"fd_loading": "Wait...",
+	"bd_building": "Building:",
+	"bd_loading": "Wait...",
+	"bd_compconsim": "Instant Construction",
+	"bd_cancel": "Cancel",
+	"bd_level": "Level",
+	"bd_buildmaster": "Main Building",
+	"bd_slots": "Slots",
+	"bd_count": "Number",
+	"bd_servermaint": "Server is temporarily under repair",
+	"bd_servermaintdesc": "Welcome %s. Welcome",
+	"bd_servermaintdesc2": "Battery description",
+	"bd_sorynoreasyet": "Sorry! There is no reason to report this yet.",
+	"bd_notfinish": "Not Expired",
+	"bd_prodoverview": "Product Overview"
+}

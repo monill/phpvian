@@ -1,0 +1,23 @@
+{
+  "hp_system": "Help system",
+  "hp_answerlinkdesc": "Here, you can find your answers about Travian. If you really can\"t find your answer here, you can also contact our ingame support afterwards.",
+  "hp_ruleslinkdesc": "Here, you can find the current game rules.",
+  "hp_contactingamesupport": "Contact ingame support",
+  "hp_contactingamesupportdesc": "If you couldn\"t find an answer, contact the ingame support here.",
+  "hp_plusquestions": "Plus questions",
+  "hp_plusquestionsdesc": "You can ask questions about payment and premium features here.",
+  "hp_forumlinkdesc": "On our Forum, you can meet and converse with other players.",
+  "hp_shortinstruction": "Short instruction",
+  "hp_shortinstructiondesc": "Here you can find short explanations about the troops and buildings found in Travian.",
+  "ct_select": "Select",
+  "ct_generalquestions": "General Questions",
+  "ct_icannotlogin": "I can not log in",
+  "ct_icannotregister": "I can not register",
+  "ct_messagecontent": "Message Content",
+  "ct_email": "Email",
+  "ct_emailempty": "(Email Empty)",
+  "ct_secproblem": "Security problem",
+  "ct_secproblemdesc": "Probably this message Show because you are trying to infiltrate the system.<br/> Your IP was logged. Your IP : %s <br/> If This message is repeated in the repository (cache) should clear your browser and try again.",
+  "ct_support": "Support",
+  "ct_supportdesc": "If you couldn\"t find an answer, contact the ingame support here."
+}

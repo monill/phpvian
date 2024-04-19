@@ -1,0 +1,19 @@
+{
+  "fs": "Fighting Strength",
+  "fstitle": "Fighting Strength Combines with your heros defence and offense. The higher the Fighting strength the better in battle",
+  "ob": "Offence Bonus",
+  "obtitle": "Offence bonus gives a bonus when attacking.",
+  "db": "Defence Bonus",
+  "dbtitle": "Defence bonus gives an extra bonus when attacked.",
+  "rb": "Resources bonus",
+  "rbtitle": "The Hero also gathers resources, the higher the level the more resources.",
+  "warsim_etc": "Additional options",
+  "warsim_ctar1": "Catapult\"s target",
+  "warsim_ctar1lvl": "Catapult\"s target level",
+  "warsim_combat_model": "Combat Model",
+  "warsim_normal": "Normal attack",
+  "warsim_raid": "Raid",
+  "warsim_scout": "Scout",
+  "warsim_attackconfig": "Attack configuration",
+  "warsim_simulate": "Simulate"
+}
