@@ -9,6 +9,6 @@ class LogoutController
     public function logout()
     {
         Session::destroySession();
-//        redirect('/login');
+        redirect('/login');
     }
 }
