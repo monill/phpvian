@@ -20,7 +20,7 @@ class Controller
     {
         if (!$this->isUserLoggedIn()) {
 //            Session::destroySession();
-//            redirect('/');
+//            redirect("/login");
         }
     }
 
@@ -29,7 +29,7 @@ class Controller
         if (Session::get("userID") || Session::get("loggedIN")) {
             if ($this->loginFingerPrint) {
                 $loginString = $this->generateLoginString();
-                $storedString = Session::get("login_fingerprint");
+                $storedString = Session::get("loginFingerPrint");
 
                 if ($storedString !== null && $storedString === $loginString) {
                     return true;
@@ -44,6 +44,11 @@ class Controller
         }
     }
 
+    /**
+     * Generate a string that will be used as a fingerprint.
+     * This is actually a string created from the user's browser name and the user's IP
+     * Address, so if someone steals users session, he will not be able to access.
+     */
     protected function generateLoginString()
     {
         return hash("sha512", get_ip() . browser());
