@@ -1338,7 +1338,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `ausilver` smallint NOT NULL DEFAULT '0',
   `bidsilver` smallint NOT NULL DEFAULT '0',
   `gender` tinyint unsigned NOT NULL DEFAULT '0',
-  `birthday` date NOT NULL DEFAULT '0000-00-00',
+  `birthday` DATE NULL DEFAULT NULL,
   `location` char(40) CHARACTER SET utf8mb3 NOT NULL DEFAULT '',
   `desc1` char(255) CHARACTER SET utf8mb3 NOT NULL,
   `desc2` char(255) CHARACTER SET utf8mb3 NOT NULL,
@@ -1385,7 +1385,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `chat_config` tinyint NOT NULL DEFAULT '1',
   `timezone` tinyint NOT NULL DEFAULT '23',
   PRIMARY KEY (`id`),
-  KEY `username` (`username`)
+  UNIQUE INDEX `UNIQUE` (`username`, `email`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Copiando dados para a tabela phpvian.users: ~3 rows (aproximadamente)
