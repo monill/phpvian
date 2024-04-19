@@ -9,13 +9,6 @@
 
     <link href="<?= asset('assets/css/compact.css') ?>" rel="stylesheet" type="text/css" />
     <link href="<?= asset('assets/css/lang.css') ?>" rel="stylesheet" type="text/css" />
-
-    <script src="/assets/js/mt-core.js" type="text/javascript"></script>
-    <script src="/assets/js/new.js" type="text/javascript"></script>
-
-    <script type="text/javascript">
-        window.ajaxToken = '<?= md5($_SERVER['REQUEST_TIME']); ?>';
-    </script>
 </head>
 
 <body class="v35 logout">
