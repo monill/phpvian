@@ -13,7 +13,7 @@
 </div>
 <br>
 
-<h4>&nbsp;&nbsp;Disclaimer</h4>
+<h4>Disclaimer</h4>
 
 <ul>
     <li>Along with the installation/usage of this game, you shall be fully responsible for any legal results that may
