@@ -8,4 +8,12 @@ class SignupController
     {
         return "Signup Page";
     }
+
+    public function signup()
+    {
+        if (!input_exists()) {
+            redirect("/signup");
+        }
+    }
+
 }
