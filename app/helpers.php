@@ -224,7 +224,7 @@ if (!function_exists('asset')) {
      */
     function asset($asset = null)
     {
-        $assetPath = get_http_protocol() . '://' . base_url() . '/public/';
+        $assetPath = get_http_protocol() . '://' . base_url() . '/';
         if (is_null($asset)) {
             return $assetPath;
         }
@@ -256,4 +256,27 @@ if (!function_exists('error_response')) {
         return json_encode(["status" => $status, "errors" => $errors]);
     }
 }
+
+function tableRow($name, $details, $status) {
+    // Set icon based on status
+    $icon = ($status == '1') ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
+    // Assemble the table row
+    echo "<tr><td>$name</td><td>$details</td><td>$icon</td></tr>";
+}
+
+function isExtensionAvailable($name) {
+    return extension_loaded($name);
+}
+
+function checkFolderPerm($name){
+    // Verificar se a pasta existe
+    if (!is_dir(dirname(__DIR__) . DIRECTORY_SEPARATOR . $name)) {
+        return false;
+    }
+
+    // Verificar as permissões da pasta
+    $perm = substr(sprintf('%o', fileperms(dirname(__DIR__) . DIRECTORY_SEPARATOR . $name)), -4);
+    return $perm >= '0775';
+}
+
 

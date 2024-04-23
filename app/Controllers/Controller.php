@@ -13,14 +13,15 @@ class Controller
     {
         $this->db = new Database();
         $this->loginFingerPrint = config('login', 'login_fingerprint');
-        $this->checkLoggedIn();
+        Session::startSession();
+        //$this->checkLoggedIn();
     }
 
     protected function checkLoggedIn()
     {
         if (!$this->isUserLoggedIn()) {
-//            Session::destroySession();
-//            redirect("/login");
+            Session::destroySession();
+            redirect('/login');
         }
     }
 

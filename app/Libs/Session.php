@@ -9,45 +9,59 @@ class Session
     public function __construct()
     {
         $this->secure = config('session', 'session_secure');
+        $this->sessionSetting();
     }
 
     private function sessionSetting()
     {
+        // Cookie related settings
         ini_set('session.cookie_lifetime', 0);
         ini_set('session.use_cookies', 'On');
         ini_set('session.use_only_cookies', 'On');
         ini_set('session.use_strict_mode', 'On');
         ini_set('session.cookie_httponly', 'On');
         ini_set('session.cookie_samesite', 'Lax');
-        ini_set('session.use_trans_sid', "Off");
+
+        // Session transaction related settings
+        ini_set('session.use_trans_sid', 'Off');
         ini_set('session.trans_sid_hosts', '[limited hosts]');
         ini_set('session.trans_sid_tags', '[limited tags]');
+
+        // Referrer settings
         ini_set('session.referer_check', base_url());
+
+        // Other settings
         ini_set('session.cache_limiter', 'nocache');
         ini_set('session.sid_length', 48);
         ini_set('session.sid_bits_per_character', 6);
+
+        // Conditional settings
         if ($this->secure) {
             ini_set('session.cookie_secure', 'On');
         }
     }
+
     /**
      * Start session.
      */
     public static function startSession()
     {
-        ini_set('session.name', 'PHPvian');
-        ini_set("session.use_only_cookies", config('session', 'session_use_only_cookies'));
-
+        // Define the session name
+        session_name('PHPvian');
+        // Gets session cookie parameters
         $cookieParams = session_get_cookie_params();
-        session_set_cookie_params(
-            $cookieParams["lifetime"],
-            $cookieParams["path"],
-            $cookieParams["domain"],
-            config('session', 'session_secure'),
-            config('session', 'session_http_only'),
-        );
-
+        // Sets session cookie parameters
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => isset($_SERVER['HTTPS']),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        // Start the session
         session_start();
+        // Regenerate session ID to prevent session fixation attacks
         session_regenerate_id(config('session', 'session_regenerate_id'));
     }
 
@@ -56,19 +70,13 @@ class Session
      */
     public static function destroySession()
     {
+        // Clear session data
         $_SESSION = [];
-
+        // Gets session cookie parameters
         $params = session_get_cookie_params();
-
-        setcookie(
-            session_name(),
-            '',
-            time() - 420000,
-            $params["path"],
-            $params["domain"],
-            $params["secure"],
-            $params["httponly"]
-        );
+        // Set the session cookie to expire
+        setcookie(session_name(), '', time() - 1, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        // Destroy the session
         session_destroy();
     }
 
@@ -76,10 +84,22 @@ class Session
      * Set session data.
      * @param string $key Key that will be used to store value.
      * @param mixed $value Value that will be stored.
+     * @return mixed
      */
     public static function set($key, $value)
     {
-        return $_SESSION[$key] = $value;
+        // Checks if the session is active
+        if (!session_id()) {
+            throw new \RuntimeException('The session is not started.');
+        }
+        // Try to set the value in the session
+        $_SESSION[$key] = $value;
+        // Checks if the value was set successfully
+        if (!isset($_SESSION[$key]) || $_SESSION[$key] !== $value) {
+            throw new \RuntimeException('Failed to set value in session.');
+        }
+        // Returns the defined value
+        return $value;
     }
 
     /**
@@ -91,11 +111,12 @@ class Session
      */
     public static function get($key, $default = null)
     {
-        if (isset($_SESSION[$key])) {
-            return $_SESSION[$key];
-        } else {
-            return $default;
+        // Checks if the key is a valid string
+        if (!is_string($key)) {
+            throw new \InvalidArgumentException('The session key must be a valid string.');
         }
+        // Returns the value associated with the key in the session, or the default value if the key does not exist
+        return isset($_SESSION[$key]) ? $_SESSION[$key] : $default;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace PHPvian\Libs;
 
+use Exception;
 use InvalidArgumentException;
 use PDO;
 use PDOException;
@@ -10,15 +11,18 @@ class Database extends PDO
 {
     public function __construct()
     {
-        $config = config('database');
-        $dsn = "{$config['DB_TYPE']}:host={$config['DB_HOST']};port={$config['DB_PORT']};dbname={$config['DB_NAME']};charset=UTF8";
+        if (file_exists(dirname(__DIR__) . "../config/database.php")) {
+            $config = config('database');
 
-        try {
-            parent::__construct($dsn, $config['DB_USER'], $config['DB_PASS']);
-            $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->exec("SET CHARACTER SET utf8");
-        } catch (PDOException $exc) {
-            exit("Connection error: " . $exc->getMessage());
+            $dsn = "{$config['DB_TYPE']}:host={$config['DB_HOST']};port={$config['DB_PORT']};dbname={$config['DB_NAME']};charset=UTF8";
+
+            try {
+                parent::__construct($dsn, $config['DB_USER'], $config['DB_PASS']);
+                $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $this->exec("SET CHARACTER SET utf8");
+            } catch (PDOException $exc) {
+                exit("Connection error: " . $exc->getMessage());
+            }
         }
     }
 
@@ -171,11 +175,156 @@ class Database extends PDO
 
     public function importSQL($filePath)
     {
-        // Read the contents of the SQL file
-        $sql = file_get_contents($filePath);
+        // Check if the file exists
+        if (!file_exists($filePath)) {
+            throw new Exception("SQL file not found: $filePath");
+        }
 
-        // Execute the contents of the SQL file as a single query
-        $this->exec($sql);
+        // Open the file for reading
+        $fileHandle = fopen($filePath, 'r');
+        if (!$fileHandle) {
+            throw new Exception("Failed to open SQL file: $filePath");
+        }
+
+        // Loop through each line in the file
+        while (($query = fgets($fileHandle)) !== false) {
+            // Skip empty lines and comments
+            if (trim($query) == '' || strpos($query, '--') === 0) {
+                continue;
+            }
+
+            // Execute the query
+            $this->exec($query);
+        }
+
+        // Close the file handle
+        fclose($fileHandle);
     }
+
+
+    /**
+     * Now Start The Game Engine
+     */
+    public function modifyPoints($aid, $pointsColumn, $amt)
+    {
+        try {
+            $table = 'users';
+            $result = $this->selectFirst($table, $pointsColumn, 'id = :id', [':id' => $aid]);
+            if (!$result) {
+                return false; // Se não houver registro para o ID fornecido
+            }
+            $newPoints = $result[$pointsColumn] + $amt;
+            $data = [$pointsColumn => $newPoints];
+            return $this->update($table, $data, 'id = :aid', [':aid' => $aid]);
+        } catch (PDOException $e) {
+            throw new Exception("Error modifying points: " . $e->getMessage());
+        }
+    }
+
+
+    public function modifyPointsAlly($aid, $pointsColumn, $amt)
+    {
+        if (!$aid) return false;
+
+        try {
+            $table = 'alidata';
+            $result = $this->selectFirst($table, $pointsColumn, 'id = :id', [':id' => $aid]);
+            if (!$result) {
+                return false; // Se não houver registro para o ID fornecido
+            }
+            $newPoints = $result[$pointsColumn] + $amt;
+            $data = [$pointsColumn => $newPoints];
+            return $this->update($table, $data, 'id = :aid', [':aid' => $aid]);
+        } catch (PDOException $e) {
+            throw new Exception("Error modifying ally points: " . $e->getMessage());
+        }
+    }
+
+
+    public function checkHeroItem($uid, $btype, $type = 0, $proc = 2)
+    {
+        $whereClause = "1";
+        $params = [];
+
+        if ($uid) {
+            $whereClause .= " AND uid = :uid";
+            $params[':uid'] = $uid;
+        }
+
+        if ($btype) {
+            $whereClause .= " AND btype = :btype";
+            $params[':btype'] = $btype;
+        }
+
+        if ($type) {
+            $whereClause .= " AND type = :type";
+            $params[':type'] = $type;
+        }
+
+        if ($proc != 2) {
+            $whereClause .= " AND proc = :proc";
+            $params[':proc'] = $proc;
+        }
+
+        try {
+            $result = $this->selectFirst('heroitems', 'id, btype', $whereClause, $params);
+            return $result ? $result['id'] : false;
+        } catch (PDOException $e) {
+            throw new Exception("Error checking hero item: " . $e->getMessage());
+        }
+    }
+
+    public function modifyHeroItem($id, $column, $value, $mode)
+    {
+        // mode=0 set; 1 add; 2 sub; 3 mul; 4 div
+        switch ($mode) {
+            case 0:
+                $data = [$column => $value];
+                return $this->update('heroitems', $data, 'id = :id', [':id' => $id]);
+            case 1:
+                return $this->update('heroitems', [$column => "$column + :value"], 'id = :id', [':id' => $id, ':value' => $value]);
+            case 2:
+                return $this->update('heroitems', [$column => "$column - :value"], 'id = :id', [':id' => $id, ':value' => $value]);
+            case 3:
+                return $this->update('heroitems', [$column => "$column * :value"], 'id = :id', [':id' => $id, ':value' => $value]);
+            case 4:
+                return $this->update('heroitems', [$column => "$column / :value"], 'id = :id', [':id' => $id, ':value' => $value]);
+            default:
+                throw new InvalidArgumentException("Invalid mode value. Mode must be between 0 and 4.");
+        }
+    }
+
+    public function addHeroItem($uid, $btype, $type, $num)
+    {
+        try {
+            $data = [
+                'uid' => $uid,
+                'btype' => $btype,
+                'type' => $type,
+                'num' => $num,
+                'proc' => 0
+            ];
+            return $this->insert('heroitems', $data);
+        } catch (PDOException $e) {
+            throw new Exception("Error adding hero item: " . $e->getMessage());
+        }
+    }
+
+    public function setSilver($uid, $silver, $mode)
+    {
+        if (!$mode) {
+            $data = ['silver' => "silver - :silver"];
+            $result1 = $this->update('users', $data, 'id = :uid', [':uid' => $uid, ':silver' => $silver]);
+            $data = ['usedsilver' => "usedsilver + :silver"];
+            $result2 = $this->update('users', $data, 'id = :uid', [':uid' => $uid, ':silver' => $silver]);
+        } else {
+            $data = ['silver' => "silver + :silver"];
+            $result1 = $this->update('users', $data, 'id = :uid', [':uid' => $uid, ':silver' => $silver]);
+            $data = ['addsilver' => "addsilver + :silver"];
+            $result2 = $this->update('users', $data, 'id = :uid', [':uid' => $uid, ':silver' => $silver]);
+        }
+        return $result1 && $result2;
+    }
+
 
 }
