@@ -11,9 +11,8 @@ class Database extends PDO
 {
     public function __construct()
     {
-        if (file_exists(dirname(__DIR__) . "../config/database.php")) {
+        if (file_exists(dirname(__DIR__) . "/../config/database.php")) {
             $config = config('database');
-
             $dsn = "{$config['DB_TYPE']}:host={$config['DB_HOST']};port={$config['DB_PORT']};dbname={$config['DB_NAME']};charset=UTF8";
 
             try {
@@ -173,34 +172,15 @@ class Database extends PDO
         return $result['total'] > 0;
     }
 
-    public function importSQL($filePath)
+    public function testConnection()
     {
-        // Check if the file exists
-        if (!file_exists($filePath)) {
-            throw new Exception("SQL file not found: $filePath");
+        try {
+            $this->query('SELECT 1');
+            return "Connection successful!";
+        } catch (PDOException $exc) {
+            exit("Error testing connection: " . $exc->getMessage());
         }
-
-        // Open the file for reading
-        $fileHandle = fopen($filePath, 'r');
-        if (!$fileHandle) {
-            throw new Exception("Failed to open SQL file: $filePath");
-        }
-
-        // Loop through each line in the file
-        while (($query = fgets($fileHandle)) !== false) {
-            // Skip empty lines and comments
-            if (trim($query) == '' || strpos($query, '--') === 0) {
-                continue;
-            }
-
-            // Execute the query
-            $this->exec($query);
-        }
-
-        // Close the file handle
-        fclose($fileHandle);
     }
-
 
     /**
      * Now Start The Game Engine
