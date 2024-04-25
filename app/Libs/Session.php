@@ -46,23 +46,33 @@ class Session
      */
     public static function startSession()
     {
-        // Define the session name
-        session_name('PHPvian');
-        // Gets session cookie parameters
-        $cookieParams = session_get_cookie_params();
-        // Sets session cookie parameters
-        session_set_cookie_params([
-            'lifetime' => 0,
-            'path' => '/',
-            'domain' => '',
-            'secure' => isset($_SERVER['HTTPS']),
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
-        // Start the session
-        session_start();
-        // Regenerate session ID to prevent session fixation attacks
-        session_regenerate_id(config('session', 'session_regenerate_id'));
+        try {
+            // Sets the session name
+            session_name('PHPvian');
+
+            // Sets session cookie parameters
+            $cookieParams = session_get_cookie_params();
+            session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => $cookieParams['path'],
+                'domain' => $cookieParams['domain'],
+                'secure' => isset($_SERVER['HTTPS']),
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+
+            // Start the session
+            if (session_status() == PHP_SESSION_NONE) {
+                session_start();
+            }
+
+            // Regenerates session ID to prevent session fixation attacks
+            session_regenerate_id(true);
+        } catch (\Throwable $e) {
+            // Handles any errors during session initialization
+            error_log('Error when starting the session: ' . $e->getMessage());
+            exit('An internal error has occurred. Please try again later.');
+        }
     }
 
     /**
