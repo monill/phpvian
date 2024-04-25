@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
--- Servidor:                     127.0.0.1
--- Versão do servidor:           8.0.30 - MySQL Community Server - GPL
--- OS do Servidor:               Win64
--- HeidiSQL Versão:              12.1.0.6537
+-- Host:                         127.0.0.1
+-- Server version:               8.0.30 - MySQL Community Server - GPL
+-- Server OS:                    Win64
+-- HeidiSQL Version:             12.1.0.6537
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -14,10 +14,10 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- Copiando estrutura para tabela phpvian.a2b
+-- Dumping structure for table phpvian.a2b
 CREATE TABLE IF NOT EXISTS `a2b` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
-  `ckey` char(12) CHARACTER SET utf8mb3 NOT NULL,
+  `ckey` char(12) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `time_check` int unsigned NOT NULL DEFAULT '0',
   `to_vid` int unsigned NOT NULL,
   `u1` int unsigned NOT NULL,
@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS `a2b` (
   KEY `time_check` (`time_check`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.a2b: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.a2b: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.abdata
+-- Dumping structure for table phpvian.abdata
 CREATE TABLE IF NOT EXISTS `abdata` (
   `vref` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `a1` tinyint unsigned NOT NULL DEFAULT '0',
@@ -65,36 +65,36 @@ CREATE TABLE IF NOT EXISTS `abdata` (
   PRIMARY KEY (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.abdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.abdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.activate
+-- Dumping structure for table phpvian.activate
 CREATE TABLE IF NOT EXISTS `activate` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `username` char(45) CHARACTER SET utf8mb3 NOT NULL,
-  `password` char(45) CHARACTER SET utf8mb3 NOT NULL,
-  `email` text CHARACTER SET utf8mb3 NOT NULL,
+  `username` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `password` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `email` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `tribe` tinyint unsigned NOT NULL,
   `access` tinyint unsigned NOT NULL DEFAULT '1',
-  `act` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `act` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `timestamp` int unsigned NOT NULL DEFAULT '0',
-  `location` text CHARACTER SET utf8mb3 NOT NULL,
-  `act2` char(10) CHARACTER SET utf8mb3 NOT NULL,
-  `ancestor` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `location` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `act2` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `ancestor` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.activate: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.activate: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.active
+-- Dumping structure for table phpvian.active
 CREATE TABLE IF NOT EXISTS `active` (
-  `username` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `username` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `timestamp` int unsigned NOT NULL,
   PRIMARY KEY (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.active: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.active: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.adventure
+-- Dumping structure for table phpvian.adventure
 CREATE TABLE IF NOT EXISTS `adventure` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `wref` smallint NOT NULL,
@@ -108,19 +108,19 @@ CREATE TABLE IF NOT EXISTS `adventure` (
   KEY `end` (`end`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.adventure: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.adventure: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.alidata
+-- Dumping structure for table phpvian.alidata
 CREATE TABLE IF NOT EXISTS `alidata` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
-  `name` char(25) CHARACTER SET utf8mb3 NOT NULL,
-  `tag` char(10) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(25) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `tag` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `leader` smallint unsigned NOT NULL,
   `coor` int unsigned NOT NULL,
   `advisor` int unsigned NOT NULL,
   `recruiter` int unsigned NOT NULL,
-  `notice` char(255) CHARACTER SET utf8mb3 NOT NULL,
-  `desc` char(255) CHARACTER SET utf8mb3 NOT NULL,
+  `notice` char(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `desc` char(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `max` tinyint unsigned NOT NULL,
   `ap` bigint unsigned NOT NULL DEFAULT '0',
   `dp` bigint unsigned NOT NULL DEFAULT '0',
@@ -135,9 +135,9 @@ CREATE TABLE IF NOT EXISTS `alidata` (
   KEY `tag` (`tag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.alidata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.alidata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.ali_invite
+-- Dumping structure for table phpvian.ali_invite
 CREATE TABLE IF NOT EXISTS `ali_invite` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
@@ -148,25 +148,25 @@ CREATE TABLE IF NOT EXISTS `ali_invite` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.ali_invite: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.ali_invite: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.ali_log
+-- Dumping structure for table phpvian.ali_log
 CREATE TABLE IF NOT EXISTS `ali_log` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `aid` smallint NOT NULL,
-  `comment` char(200) CHARACTER SET utf8mb3 NOT NULL,
+  `comment` char(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `date` int unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.ali_log: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.ali_log: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.ali_permission
+-- Dumping structure for table phpvian.ali_permission
 CREATE TABLE IF NOT EXISTS `ali_permission` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
   `alliance` smallint unsigned NOT NULL,
-  `rank` char(20) CHARACTER SET utf8mb3 NOT NULL,
+  `rank` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `opt1` int unsigned NOT NULL DEFAULT '0',
   `opt2` int unsigned NOT NULL DEFAULT '0',
   `opt3` int unsigned NOT NULL DEFAULT '0',
@@ -180,9 +180,9 @@ CREATE TABLE IF NOT EXISTS `ali_permission` (
   KEY `alliance` (`alliance`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.ali_permission: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.ali_permission: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.allimedal
+-- Dumping structure for table phpvian.allimedal
 CREATE TABLE IF NOT EXISTS `allimedal` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `allyid` smallint NOT NULL,
@@ -190,13 +190,13 @@ CREATE TABLE IF NOT EXISTS `allimedal` (
   `plaats` smallint NOT NULL,
   `week` smallint NOT NULL,
   `points` bigint NOT NULL,
-  `img` char(6) CHARACTER SET utf8mb3 NOT NULL,
+  `img` char(6) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.allimedal: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.allimedal: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.artefacts
+-- Dumping structure for table phpvian.artefacts
 CREATE TABLE IF NOT EXISTS `artefacts` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `vref` smallint unsigned NOT NULL,
@@ -206,18 +206,18 @@ CREATE TABLE IF NOT EXISTS `artefacts` (
   `conquered` int unsigned NOT NULL,
   `lastupdate` int unsigned NOT NULL,
   `status` tinyint unsigned NOT NULL,
-  `name` char(30) CHARACTER SET utf8mb3 NOT NULL,
-  `desc` char(20) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `desc` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `effecttype` int NOT NULL,
   `effect` double NOT NULL,
   `aoe` int NOT NULL,
-  `img` char(15) CHARACTER SET utf8mb3 NOT NULL,
+  `img` char(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.artefacts: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.artefacts: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.attacks
+-- Dumping structure for table phpvian.attacks
 CREATE TABLE IF NOT EXISTS `attacks` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `vref` smallint unsigned NOT NULL,
@@ -239,9 +239,9 @@ CREATE TABLE IF NOT EXISTS `attacks` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.attacks: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.attacks: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.auction
+-- Dumping structure for table phpvian.auction
 CREATE TABLE IF NOT EXISTS `auction` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `itemid` smallint unsigned NOT NULL,
@@ -260,9 +260,9 @@ CREATE TABLE IF NOT EXISTS `auction` (
   KEY `finish` (`finish`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.auction: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.auction: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.autoauction
+-- Dumping structure for table phpvian.autoauction
 CREATE TABLE IF NOT EXISTS `autoauction` (
   `id` tinyint NOT NULL,
   `number` tinyint NOT NULL,
@@ -272,7 +272,7 @@ CREATE TABLE IF NOT EXISTS `autoauction` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.autoauction: ~15 rows (aproximadamente)
+-- Dumping data for table phpvian.autoauction: ~8 rows (approximately)
 INSERT INTO `autoauction` (`id`, `number`, `time`, `lasttime`, `active`) VALUES
 	(1, 0, 0, 0, 0),
 	(2, 0, 0, 0, 0),
@@ -290,7 +290,7 @@ INSERT INTO `autoauction` (`id`, `number`, `time`, `lasttime`, `active`) VALUES
 	(14, 0, 0, 0, 0),
 	(15, 0, 0, 0, 0);
 
--- Copiando estrutura para tabela phpvian.bdata
+-- Dumping structure for table phpvian.bdata
 CREATE TABLE IF NOT EXISTS `bdata` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `wid` smallint unsigned NOT NULL,
@@ -307,42 +307,42 @@ CREATE TABLE IF NOT EXISTS `bdata` (
   KEY `timestamp` (`timestamp`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.bdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.bdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.cchat
+-- Dumping structure for table phpvian.cchat
 CREATE TABLE IF NOT EXISTS `cchat` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
   `To` smallint unsigned NOT NULL,
   `alliance` tinyint unsigned NOT NULL,
-  `msg` text CHARACTER SET latin1 NOT NULL,
+  `msg` text CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
   `viewed` tinyint NOT NULL DEFAULT '0',
   `time` int unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.cchat: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.cchat: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.chat
+-- Dumping structure for table phpvian.chat
 CREATE TABLE IF NOT EXISTS `chat` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `id_user` int NOT NULL,
-  `name` char(30) CHARACTER SET utf8mb3 NOT NULL,
-  `alli` char(30) CHARACTER SET utf8mb3 NOT NULL,
-  `date` char(30) CHARACTER SET utf8mb3 NOT NULL,
-  `msg` char(200) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `alli` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `date` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `msg` char(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.chat: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.chat: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.config
+-- Dumping structure for table phpvian.config
 CREATE TABLE IF NOT EXISTS `config` (
-  `server_name` varchar(60) CHARACTER SET utf8mb3 NOT NULL,
-  `lang` varchar(3) CHARACTER SET utf8mb3 NOT NULL,
+  `server_name` varchar(60) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `lang` varchar(3) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `speed` double NOT NULL,
   `roundlenght` double NOT NULL,
-  `gp_locate` varchar(45) CHARACTER SET utf8mb3 NOT NULL,
+  `gp_locate` varchar(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `increase` double NOT NULL,
   `heroattrspeed` double NOT NULL,
   `itemattrspeed` double NOT NULL,
@@ -368,16 +368,16 @@ CREATE TABLE IF NOT EXISTS `config` (
   `newsbox1` int NOT NULL,
   `newsbox2` int NOT NULL,
   `newsbox3` int NOT NULL,
-  `admin_email` varchar(45) CHARACTER SET utf8mb3 NOT NULL,
-  `domain_url` varchar(60) CHARACTER SET utf8mb3 NOT NULL,
-  `homepage_url` varchar(60) CHARACTER SET utf8mb3 NOT NULL,
-  `server_url` varchar(60) CHARACTER SET utf8mb3 NOT NULL,
+  `admin_email` varchar(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `domain_url` varchar(60) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `homepage_url` varchar(60) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `server_url` varchar(60) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `natars_max` double NOT NULL,
   `medalinterval` int NOT NULL,
   `lastgavemedal` int NOT NULL,
   `commence` int NOT NULL,
   `storagemultiplier` int NOT NULL,
-  `secsig` varchar(255) CHARACTER SET utf8mb3 NOT NULL,
+  `secsig` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `winmoment` int NOT NULL,
   `stats_lasttime` int NOT NULL,
   `stats_time` int NOT NULL,
@@ -389,18 +389,18 @@ CREATE TABLE IF NOT EXISTS `config` (
   UNIQUE KEY `server_name` (`server_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.config: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.config: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.deleting
+-- Dumping structure for table phpvian.deleting
 CREATE TABLE IF NOT EXISTS `deleting` (
   `uid` smallint unsigned NOT NULL,
   `timestamp` int unsigned NOT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.deleting: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.deleting: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.demolition
+-- Dumping structure for table phpvian.demolition
 CREATE TABLE IF NOT EXISTS `demolition` (
   `vref` smallint unsigned NOT NULL AUTO_INCREMENT,
   `buildnumber` smallint unsigned NOT NULL DEFAULT '0',
@@ -409,9 +409,9 @@ CREATE TABLE IF NOT EXISTS `demolition` (
   PRIMARY KEY (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.demolition: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.demolition: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.diplomacy
+-- Dumping structure for table phpvian.diplomacy
 CREATE TABLE IF NOT EXISTS `diplomacy` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `alli1` smallint unsigned NOT NULL,
@@ -421,20 +421,20 @@ CREATE TABLE IF NOT EXISTS `diplomacy` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.diplomacy: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.diplomacy: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.emailinvite
+-- Dumping structure for table phpvian.emailinvite
 CREATE TABLE IF NOT EXISTS `emailinvite` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
-  `invemail` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `invemail` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `time` int unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.emailinvite: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.emailinvite: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.enforcement
+-- Dumping structure for table phpvian.enforcement
 CREATE TABLE IF NOT EXISTS `enforcement` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `hero` tinyint unsigned NOT NULL DEFAULT '0',
@@ -495,20 +495,20 @@ CREATE TABLE IF NOT EXISTS `enforcement` (
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.enforcement: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.enforcement: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.farmlist
+-- Dumping structure for table phpvian.farmlist
 CREATE TABLE IF NOT EXISTS `farmlist` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `wref` smallint unsigned NOT NULL,
   `owner` smallint unsigned NOT NULL,
-  `name` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.farmlist: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.farmlist: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.fdata
+-- Dumping structure for table phpvian.fdata
 CREATE TABLE IF NOT EXISTS `fdata` (
   `vref` smallint unsigned NOT NULL,
   `f1` tinyint unsigned NOT NULL DEFAULT '0',
@@ -593,59 +593,59 @@ CREATE TABLE IF NOT EXISTS `fdata` (
   `f40t` tinyint unsigned NOT NULL DEFAULT '0',
   `f99` tinyint unsigned NOT NULL DEFAULT '0',
   `f99t` tinyint unsigned NOT NULL DEFAULT '0',
-  `wwname` char(45) CHARACTER SET utf8mb3 NOT NULL DEFAULT '',
+  `wwname` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`vref`),
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.fdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.fdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.forum_cat
+-- Dumping structure for table phpvian.forum_cat
 CREATE TABLE IF NOT EXISTS `forum_cat` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `owner` smallint NOT NULL,
   `alliance` smallint NOT NULL,
-  `forum_name` char(20) CHARACTER SET utf8mb3 NOT NULL,
-  `forum_des` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `forum_name` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `forum_des` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `forum_area` tinyint NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.forum_cat: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.forum_cat: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.forum_edit
+-- Dumping structure for table phpvian.forum_edit
 CREATE TABLE IF NOT EXISTS `forum_edit` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `alliance` smallint NOT NULL,
-  `result` char(20) CHARACTER SET utf8mb3 NOT NULL,
+  `result` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.forum_edit: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.forum_edit: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.forum_poll
+-- Dumping structure for table phpvian.forum_poll
 CREATE TABLE IF NOT EXISTS `forum_poll` (
   `id` int NOT NULL,
-  `name` char(255) CHARACTER SET latin1 NOT NULL,
+  `name` char(255) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
   `p1` mediumint NOT NULL,
   `p2` mediumint NOT NULL,
   `p3` mediumint NOT NULL,
   `p4` mediumint NOT NULL,
-  `p1_name` char(255) CHARACTER SET latin1 NOT NULL,
-  `p2_name` char(255) CHARACTER SET latin1 NOT NULL,
-  `p3_name` char(255) CHARACTER SET latin1 NOT NULL,
-  `p4_name` char(255) CHARACTER SET latin1 NOT NULL,
-  `voters` varchar(400) CHARACTER SET latin1 NOT NULL,
+  `p1_name` char(255) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `p2_name` char(255) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `p3_name` char(255) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `p4_name` char(255) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `voters` varchar(400) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.forum_poll: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.forum_poll: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.forum_post
+-- Dumping structure for table phpvian.forum_post
 CREATE TABLE IF NOT EXISTS `forum_post` (
   `id` smallint NOT NULL AUTO_INCREMENT,
-  `post` longtext CHARACTER SET utf8mb3 NOT NULL,
-  `topic` char(50) CHARACTER SET utf8mb3 NOT NULL,
+  `post` longtext CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `topic` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `owner` smallint NOT NULL,
   `date` int NOT NULL,
   `alliance0` int unsigned NOT NULL,
@@ -655,27 +655,27 @@ CREATE TABLE IF NOT EXISTS `forum_post` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.forum_post: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.forum_post: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.forum_topic
+-- Dumping structure for table phpvian.forum_topic
 CREATE TABLE IF NOT EXISTS `forum_topic` (
   `id` smallint NOT NULL AUTO_INCREMENT,
-  `title` char(50) CHARACTER SET utf8mb3 NOT NULL,
-  `post` longtext CHARACTER SET utf8mb3 NOT NULL,
+  `title` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `post` longtext CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `date` int NOT NULL,
   `post_date` int NOT NULL,
   `cat` smallint NOT NULL,
   `owner` smallint NOT NULL,
   `alliance` smallint NOT NULL,
-  `ends` char(20) CHARACTER SET utf8mb3 NOT NULL,
-  `close` char(20) CHARACTER SET utf8mb3 NOT NULL,
-  `stick` char(20) CHARACTER SET utf8mb3 NOT NULL,
+  `ends` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `close` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `stick` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.forum_topic: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.forum_topic: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.fpost_rules
+-- Dumping structure for table phpvian.fpost_rules
 CREATE TABLE IF NOT EXISTS `fpost_rules` (
   `id` int NOT NULL,
   `forum_id` int NOT NULL,
@@ -685,19 +685,19 @@ CREATE TABLE IF NOT EXISTS `fpost_rules` (
   `ally_tag` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.fpost_rules: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.fpost_rules: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.gold_fin_log
+-- Dumping structure for table phpvian.gold_fin_log
 CREATE TABLE IF NOT EXISTS `gold_fin_log` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `wid` smallint unsigned NOT NULL,
-  `log` char(100) CHARACTER SET utf8mb3 NOT NULL,
+  `log` char(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.gold_fin_log: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.gold_fin_log: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.hero
+-- Dumping structure for table phpvian.hero
 CREATE TABLE IF NOT EXISTS `hero` (
   `heroid` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
@@ -749,15 +749,15 @@ CREATE TABLE IF NOT EXISTS `hero` (
   `itemreturnmspeed` tinyint NOT NULL,
   `lastupdate` int unsigned NOT NULL,
   `lastadv` int unsigned NOT NULL DEFAULT '0',
-  `hash` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `hash` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `hide` tinyint unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`heroid`),
   KEY `uid` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.hero: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.hero: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.heroface
+-- Dumping structure for table phpvian.heroface
 CREATE TABLE IF NOT EXISTS `heroface` (
   `uid` smallint unsigned NOT NULL,
   `gender` tinyint NOT NULL,
@@ -779,17 +779,17 @@ CREATE TABLE IF NOT EXISTS `heroface` (
   `rightHand` smallint NOT NULL,
   `bag` smallint NOT NULL,
   `num` smallint NOT NULL,
-  `hash` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `hash` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.heroface: ~3 rows (aproximadamente)
+-- Dumping data for table phpvian.heroface: ~3 rows (approximately)
 INSERT INTO `heroface` (`uid`, `gender`, `beard`, `ear`, `eye`, `eyebrow`, `face`, `hair`, `mouth`, `nose`, `color`, `foot`, `helmet`, `body`, `shoes`, `horse`, `leftHand`, `rightHand`, `bag`, `num`, `hash`) VALUES
 	(1, 0, 1, 2, 3, 2, 4, 3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, ''),
 	(2, 0, 1, 2, 3, 2, 4, 3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, ''),
 	(4, 0, 1, 2, 3, 2, 4, 3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, '');
 
--- Copiando estrutura para tabela phpvian.heroitems
+-- Dumping structure for table phpvian.heroitems
 CREATE TABLE IF NOT EXISTS `heroitems` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
@@ -804,21 +804,21 @@ CREATE TABLE IF NOT EXISTS `heroitems` (
   KEY `proc` (`proc`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.heroitems: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.heroitems: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.links
+-- Dumping structure for table phpvian.links
 CREATE TABLE IF NOT EXISTS `links` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `userid` smallint unsigned NOT NULL,
-  `name` char(50) CHARACTER SET utf8mb3 NOT NULL,
-  `url` char(150) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `url` char(150) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `pos` smallint unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.links: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.links: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.map_marks
+-- Dumping structure for table phpvian.map_marks
 CREATE TABLE IF NOT EXISTS `map_marks` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint NOT NULL,
@@ -834,9 +834,9 @@ CREATE TABLE IF NOT EXISTS `map_marks` (
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.map_marks: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.map_marks: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.market
+-- Dumping structure for table phpvian.market
 CREATE TABLE IF NOT EXISTS `market` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `vref` smallint unsigned NOT NULL,
@@ -852,9 +852,9 @@ CREATE TABLE IF NOT EXISTS `market` (
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.market: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.market: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.mdata
+-- Dumping structure for table phpvian.mdata
 CREATE TABLE IF NOT EXISTS `mdata` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `target` smallint unsigned NOT NULL,
@@ -878,9 +878,9 @@ CREATE TABLE IF NOT EXISTS `mdata` (
   KEY `send` (`send`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 
--- Copiando dados para a tabela phpvian.mdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.mdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.medal
+-- Dumping structure for table phpvian.medal
 CREATE TABLE IF NOT EXISTS `medal` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `userid` smallint unsigned NOT NULL,
@@ -888,20 +888,20 @@ CREATE TABLE IF NOT EXISTS `medal` (
   `plaats` tinyint unsigned NOT NULL,
   `week` tinyint unsigned NOT NULL,
   `points` bigint NOT NULL,
-  `img` char(8) CHARACTER SET utf8mb3 NOT NULL,
+  `img` char(8) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.medal: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.medal: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.movement
+-- Dumping structure for table phpvian.movement
 CREATE TABLE IF NOT EXISTS `movement` (
   `moveid` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `sort_type` tinyint unsigned NOT NULL DEFAULT '0',
   `from` smallint unsigned NOT NULL DEFAULT '0',
   `to` smallint unsigned NOT NULL DEFAULT '0',
   `ref` mediumint unsigned NOT NULL DEFAULT '0',
-  `data` varchar(400) CHARACTER SET utf8mb3 NOT NULL,
+  `data` varchar(400) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `starttime` int unsigned NOT NULL DEFAULT '0',
   `endtime` int unsigned NOT NULL DEFAULT '0',
   `proc` tinyint unsigned NOT NULL DEFAULT '0',
@@ -913,9 +913,9 @@ CREATE TABLE IF NOT EXISTS `movement` (
   KEY `to` (`to`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.movement: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.movement: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.msg_reports
+-- Dumping structure for table phpvian.msg_reports
 CREATE TABLE IF NOT EXISTS `msg_reports` (
   `id` tinyint unsigned NOT NULL AUTO_INCREMENT,
   `msg_id` smallint unsigned NOT NULL,
@@ -927,9 +927,9 @@ CREATE TABLE IF NOT EXISTS `msg_reports` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.msg_reports: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.msg_reports: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.natarsprogress
+-- Dumping structure for table phpvian.natarsprogress
 CREATE TABLE IF NOT EXISTS `natarsprogress` (
   `lastexpandat` int NOT NULL,
   `lastpopupedvillage` int NOT NULL,
@@ -940,19 +940,19 @@ CREATE TABLE IF NOT EXISTS `natarsprogress` (
   `wwbpreleasedat` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.natarsprogress: ~1 rows (aproximadamente)
+-- Dumping data for table phpvian.natarsprogress: ~0 rows (approximately)
 INSERT INTO `natarsprogress` (`lastexpandat`, `lastpopupedvillage`, `lastpopupat`, `artefactreleased`, `artefactreleasedat`, `wwbpreleased`, `wwbpreleasedat`) VALUES
 	(0, 0, 0, 0, 0, 0, 0);
 
--- Copiando estrutura para tabela phpvian.ndata
+-- Dumping structure for table phpvian.ndata
 CREATE TABLE IF NOT EXISTS `ndata` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
   `toWref` smallint unsigned NOT NULL,
   `ally` smallint unsigned NOT NULL,
-  `topic` varchar(600) CHARACTER SET utf8mb3 NOT NULL,
+  `topic` varchar(600) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `ntype` tinyint unsigned NOT NULL,
-  `data` varchar(600) CHARACTER SET utf8mb3 NOT NULL,
+  `data` varchar(600) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `time` int unsigned NOT NULL,
   `viewed` tinyint unsigned NOT NULL,
   `archive` tinyint unsigned NOT NULL,
@@ -961,22 +961,22 @@ CREATE TABLE IF NOT EXISTS `ndata` (
   KEY `uid` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.ndata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.ndata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.newproc
+-- Dumping structure for table phpvian.newproc
 CREATE TABLE IF NOT EXISTS `newproc` (
   `uid` smallint unsigned NOT NULL AUTO_INCREMENT,
-  `npw` char(45) CHARACTER SET utf8mb3 NOT NULL,
-  `nemail` char(45) CHARACTER SET utf8mb3 NOT NULL,
-  `act` char(10) CHARACTER SET utf8mb3 NOT NULL,
+  `npw` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `nemail` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `act` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `time` int unsigned NOT NULL,
   `proc` tinyint unsigned NOT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.newproc: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.newproc: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.odata
+-- Dumping structure for table phpvian.odata
 CREATE TABLE IF NOT EXISTS `odata` (
   `wref` smallint unsigned NOT NULL,
   `type` tinyint unsigned NOT NULL,
@@ -996,33 +996,33 @@ CREATE TABLE IF NOT EXISTS `odata` (
   `lastupdated` int unsigned NOT NULL,
   `loyalty` tinyint NOT NULL DEFAULT '100',
   `owner` smallint unsigned NOT NULL DEFAULT '2',
-  `name` char(45) CHARACTER SET utf8mb3 NOT NULL DEFAULT 'Unoccupied Oasis',
+  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'Unoccupied Oasis',
   PRIMARY KEY (`wref`),
   KEY `conqured` (`conqured`),
   KEY `loyalty` (`loyalty`),
   KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.odata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.odata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.online
+-- Dumping structure for table phpvian.online
 CREATE TABLE IF NOT EXISTS `online` (
-  `name` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `time` int NOT NULL,
   `sitter` int unsigned NOT NULL,
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.online: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.online: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.raidlist
+-- Dumping structure for table phpvian.raidlist
 CREATE TABLE IF NOT EXISTS `raidlist` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `lid` smallint NOT NULL,
   `towref` smallint unsigned NOT NULL,
   `x` smallint NOT NULL,
   `y` smallint NOT NULL,
-  `distance` char(5) CHARACTER SET utf8mb3 NOT NULL DEFAULT '0',
+  `distance` char(5) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0',
   `t1` int unsigned NOT NULL,
   `t2` int unsigned NOT NULL,
   `t3` int unsigned NOT NULL,
@@ -1037,9 +1037,9 @@ CREATE TABLE IF NOT EXISTS `raidlist` (
   KEY `lid` (`lid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.raidlist: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.raidlist: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.refrence
+-- Dumping structure for table phpvian.refrence
 CREATE TABLE IF NOT EXISTS `refrence` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `player_id` smallint NOT NULL,
@@ -1047,21 +1047,21 @@ CREATE TABLE IF NOT EXISTS `refrence` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.refrence: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.refrence: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.research
+-- Dumping structure for table phpvian.research
 CREATE TABLE IF NOT EXISTS `research` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `vref` int unsigned NOT NULL,
-  `tech` char(3) CHARACTER SET utf8mb3 NOT NULL,
+  `tech` char(3) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `timestamp` int unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.research: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.research: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.route
+-- Dumping structure for table phpvian.route
 CREATE TABLE IF NOT EXISTS `route` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
@@ -1080,9 +1080,9 @@ CREATE TABLE IF NOT EXISTS `route` (
   KEY `wid` (`wid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.route: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.route: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.send
+-- Dumping structure for table phpvian.send
 CREATE TABLE IF NOT EXISTS `send` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `wood` int unsigned NOT NULL,
@@ -1094,9 +1094,9 @@ CREATE TABLE IF NOT EXISTS `send` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.send: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.send: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.stats
+-- Dumping structure for table phpvian.stats
 CREATE TABLE IF NOT EXISTS `stats` (
   `id` mediumint NOT NULL AUTO_INCREMENT,
   `owner` smallint NOT NULL,
@@ -1110,9 +1110,9 @@ CREATE TABLE IF NOT EXISTS `stats` (
   KEY `index` (`id`,`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.stats: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.stats: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.tdata
+-- Dumping structure for table phpvian.tdata
 CREATE TABLE IF NOT EXISTS `tdata` (
   `vref` smallint unsigned NOT NULL,
   `t2` tinyint unsigned NOT NULL DEFAULT '0',
@@ -1158,9 +1158,9 @@ CREATE TABLE IF NOT EXISTS `tdata` (
   PRIMARY KEY (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.tdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.tdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.training
+-- Dumping structure for table phpvian.training
 CREATE TABLE IF NOT EXISTS `training` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `vref` smallint unsigned NOT NULL,
@@ -1178,9 +1178,9 @@ CREATE TABLE IF NOT EXISTS `training` (
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.training: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.training: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.transactions
+-- Dumping structure for table phpvian.transactions
 CREATE TABLE IF NOT EXISTS `transactions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `playerId` int NOT NULL,
@@ -1188,13 +1188,13 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `gold` int NOT NULL,
   `time` int NOT NULL,
   `status` int NOT NULL DEFAULT '0',
-  `orderid` char(50) CHARACTER SET utf8mb3 NOT NULL,
+  `orderid` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.transactions: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.transactions: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.trapped
+-- Dumping structure for table phpvian.trapped
 CREATE TABLE IF NOT EXISTS `trapped` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `hero` tinyint unsigned NOT NULL DEFAULT '0',
@@ -1255,9 +1255,9 @@ CREATE TABLE IF NOT EXISTS `trapped` (
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.trapped: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.trapped: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.units
+-- Dumping structure for table phpvian.units
 CREATE TABLE IF NOT EXISTS `units` (
   `vref` smallint unsigned NOT NULL,
   `hero` tinyint unsigned NOT NULL DEFAULT '0',
@@ -1315,14 +1315,14 @@ CREATE TABLE IF NOT EXISTS `units` (
   PRIMARY KEY (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.units: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.units: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.users
+-- Dumping structure for table phpvian.users
 CREATE TABLE IF NOT EXISTS `users` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
-  `username` char(45) CHARACTER SET utf8mb3 NOT NULL,
-  `password` char(45) CHARACTER SET utf8mb3 NOT NULL,
-  `email` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `username` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `password` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `email` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `tribe` tinyint unsigned NOT NULL,
   `access` tinyint unsigned NOT NULL DEFAULT '1',
   `gold` smallint NOT NULL DEFAULT '0',
@@ -1338,10 +1338,10 @@ CREATE TABLE IF NOT EXISTS `users` (
   `ausilver` smallint NOT NULL DEFAULT '0',
   `bidsilver` smallint NOT NULL DEFAULT '0',
   `gender` tinyint unsigned NOT NULL DEFAULT '0',
-  `birthday` DATE NULL DEFAULT NULL,
-  `location` char(40) CHARACTER SET utf8mb3 NOT NULL DEFAULT '',
-  `desc1` char(255) CHARACTER SET utf8mb3 NOT NULL,
-  `desc2` char(255) CHARACTER SET utf8mb3 NOT NULL,
+  `birthday` date DEFAULT NULL,
+  `location` char(40) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '',
+  `desc1` char(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `desc2` char(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `plus` int unsigned NOT NULL DEFAULT '0',
   `goldclub` int unsigned NOT NULL DEFAULT '0',
   `b1` int unsigned NOT NULL DEFAULT '0',
@@ -1354,8 +1354,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `sit1` int unsigned NOT NULL DEFAULT '0',
   `sit2` int unsigned NOT NULL DEFAULT '0',
   `alliance` int unsigned NOT NULL DEFAULT '0',
-  `sessid` char(166) CHARACTER SET utf8mb3 NOT NULL,
-  `act` char(10) CHARACTER SET utf8mb3 NOT NULL,
+  `sessid` char(166) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `act` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `timestamp` int unsigned NOT NULL DEFAULT '0',
   `ap` int unsigned NOT NULL DEFAULT '0',
   `apall` int unsigned NOT NULL DEFAULT '0',
@@ -1363,11 +1363,11 @@ CREATE TABLE IF NOT EXISTS `users` (
   `dpall` int unsigned NOT NULL DEFAULT '0',
   `protect` int unsigned NOT NULL,
   `quest` tinyint NOT NULL,
-  `fquest` char(20) CHARACTER SET utf8mb3 NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0',
-  `quest_battle` char(30) CHARACTER SET utf8mb3 NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0',
-  `quest_economy` char(20) CHARACTER SET utf8mb3 NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0',
-  `quest_world` char(30) CHARACTER SET utf8mb3 NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0',
-  `gpack` char(60) CHARACTER SET utf8mb3 NOT NULL DEFAULT '/assets/images/',
+  `fquest` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0',
+  `quest_battle` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0',
+  `quest_economy` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0',
+  `quest_world` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0',
+  `gpack` char(60) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '/assets/images/',
   `cp` int unsigned NOT NULL DEFAULT '1',
   `lastupdate` int unsigned NOT NULL,
   `RR` bigint NOT NULL DEFAULT '0',
@@ -1376,25 +1376,25 @@ CREATE TABLE IF NOT EXISTS `users` (
   `clp` bigint NOT NULL DEFAULT '0',
   `oldrank` bigint unsigned NOT NULL DEFAULT '0',
   `activateat` int unsigned NOT NULL,
-  `lang` char(2) CHARACTER SET utf8mb3 NOT NULL DEFAULT 'en',
-  `ancestor` char(30) CHARACTER SET utf8mb3 NOT NULL,
+  `lang` char(2) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'en',
+  `ancestor` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `ancestorgold` int NOT NULL DEFAULT '0',
   `reg2` tinyint NOT NULL DEFAULT '0',
-  `ignore_msg` char(100) CHARACTER SET utf8mb3 NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0',
-  `ip` char(15) CHARACTER SET utf8mb3 NOT NULL,
+  `ignore_msg` char(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0',
+  `ip` char(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `chat_config` tinyint NOT NULL DEFAULT '1',
   `timezone` tinyint NOT NULL DEFAULT '23',
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `UNIQUE` (`username`, `email`) USING BTREE
+  UNIQUE KEY `UNIQUE` (`username`,`email`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.users: ~3 rows (aproximadamente)
+-- Dumping data for table phpvian.users: ~0 rows (approximately)
 INSERT INTO `users` (`id`, `username`, `password`, `email`, `tribe`, `access`, `gold`, `boughtgold`, `giftgold`, `transferedgold`, `Addgold`, `usedgold`, `silver`, `Addsilver`, `giftsilver`, `usedsilver`, `ausilver`, `bidsilver`, `gender`, `birthday`, `location`, `desc1`, `desc2`, `plus`, `goldclub`, `b1`, `b2`, `b3`, `b4`, `b5`, `att`, `def`, `sit1`, `sit2`, `alliance`, `sessid`, `act`, `timestamp`, `ap`, `apall`, `dp`, `dpall`, `protect`, `quest`, `fquest`, `quest_battle`, `quest_economy`, `quest_world`, `gpack`, `cp`, `lastupdate`, `RR`, `Rc`, `ok`, `clp`, `oldrank`, `activateat`, `lang`, `ancestor`, `ancestorgold`, `reg2`, `ignore_msg`, `ip`, `chat_config`, `timezone`) VALUES
 	(1, 'Support', '', 'support@travian.sx', 1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0000-00-00', '', '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 25, '35', '0,0,0,0,0,0,0,0,0,0,0,0,0,0', '0,0,0,0,0,0,0,0,0', '0,0,0,0,0,0,0,0,0,0,0,0,0,0', '/assets/images/', 1, 0, 0, 0, 0, 0, 0, 0, 'en', '', 0, 0, '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0', '', 1, 23),
 	(3, 'Nature', '', 'nature@travian.sx', 4, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0000-00-00', '', '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 25, '35', '0,0,0,0,0,0,0,0,0,0,0,0,0,0', '0,0,0,0,0,0,0,0,0', '0,0,0,0,0,0,0,0,0,0,0,0,0,0', '/assets/images/', 1, 0, 0, 0, 0, 0, 0, 0, 'en', '', 0, 0, '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0', '', 1, 23),
 	(4, 'Multihunter', '', 'multihunter@travian.sx', 4, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0000-00-00', '', '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 25, '35', '0,0,0,0,0,0,0,0,0,0,0,0,0,0', '0,0,0,0,0,0,0,0,0', '0,0,0,0,0,0,0,0,0,0,0,0,0,0', '/assets/images/', 1, 0, 0, 0, 0, 0, 0, 0, 'en', '', 0, 0, '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0', '', 1, 23);
 
--- Copiando estrutura para tabela phpvian.users_setting
+-- Dumping structure for table phpvian.users_setting
 CREATE TABLE IF NOT EXISTS `users_setting` (
   `id` smallint NOT NULL,
   `sitter1_set_1` tinyint NOT NULL,
@@ -1413,13 +1413,13 @@ CREATE TABLE IF NOT EXISTS `users_setting` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=COMPRESSED;
 
--- Copiando dados para a tabela phpvian.users_setting: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.users_setting: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.vdata
+-- Dumping structure for table phpvian.vdata
 CREATE TABLE IF NOT EXISTS `vdata` (
   `wref` int unsigned NOT NULL,
   `owner` int unsigned NOT NULL,
-  `name` char(45) CHARACTER SET utf8mb3 NOT NULL,
+  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `capital` tinyint unsigned NOT NULL,
   `pop` smallint unsigned NOT NULL,
   `cp` smallint unsigned NOT NULL,
@@ -1458,9 +1458,9 @@ CREATE TABLE IF NOT EXISTS `vdata` (
   KEY `cropp` (`cropp`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.vdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.vdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.wdata
+-- Dumping structure for table phpvian.wdata
 CREATE TABLE IF NOT EXISTS `wdata` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `fieldtype` tinyint unsigned NOT NULL,
@@ -1468,16 +1468,16 @@ CREATE TABLE IF NOT EXISTS `wdata` (
   `x` smallint NOT NULL,
   `y` smallint NOT NULL,
   `occupied` tinyint NOT NULL,
-  `image` char(12) CHARACTER SET utf8mb3 NOT NULL,
+  `image` char(12) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `pos` mediumint NOT NULL,
   PRIMARY KEY (`id`),
   KEY `x` (`x`),
   KEY `y` (`y`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.wdata: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.wdata: ~0 rows (approximately)
 
--- Copiando estrutura para tabela phpvian.x_world
+-- Dumping structure for table phpvian.x_world
 CREATE TABLE IF NOT EXISTS `x_world` (
   `id` int NOT NULL DEFAULT '0',
   `x` smallint DEFAULT NULL,
@@ -1488,7 +1488,7 @@ CREATE TABLE IF NOT EXISTS `x_world` (
   KEY `x` (`x`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Copiando dados para a tabela phpvian.x_world: ~0 rows (aproximadamente)
+-- Dumping data for table phpvian.x_world: ~0 rows (approximately)
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
