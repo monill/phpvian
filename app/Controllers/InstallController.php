@@ -49,7 +49,6 @@ class InstallController
         ];
 
         $database = file_exists($this->databaseFile);
-
         $htaccess = file_exists($this->htaccessFile);
 
         return view('install/files', [
@@ -70,7 +69,7 @@ class InstallController
     public function postDatabase()
     {
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            // Verifique se todos os campos foram enviados
+            // Check if all fields have been sent
             if (isset($_POST['db_host'], $_POST['db_name'], $_POST['db_user'], $_POST['db_pass'])) {
                 // Construa o conteúdo do arquivo
                 $content = "<?php\n\nreturn [\n";
@@ -82,28 +81,55 @@ class InstallController
                 $content .= "\t'DB_PASS' => '{$_POST['db_pass']}',\n";
                 $content .= "];\n";
 
-                // Tente criar o arquivo
+                // Try creating the file
                 if (file_put_contents(__DIR__ . "/../../config/database.php", $content) !== false) {
-                    echo "Arquivo de configuração criado com sucesso!";
+                    echo "Configuration file created successfully!";
+                    redirect('/installer/import');
                 } else {
-                    echo "Ocorreu um erro ao criar o arquivo de configuração.";
+                    echo "An error occurred while creating the configuration file.";
                 }
-
             } else {
-                echo "Por favor, preencha todos os campos.";
+                echo "Please fill in all fields.";
             }
         } else {
             echo "Invalid request method.";
         }
     }
 
+    public function import()
+    {
+        $connection = $this->db->testConnection();
+        return view('install/import', ['connection' => $connection]);
+    }
+
     public function importDatabase()
     {
-        $this->db->importSQL($this->databaseFile);
+        try {
+            // Read the contents of the SQL file
+            $sql = file_get_contents($this->databaseFile);
+
+            // Execute the contents of the SQL file as a single query
+            $this->db->exec($sql);
+        } catch (\Exception $e) {
+            echo "Erro ao importar o arquivo SQL: " . $e->getMessage();
+        }
 
         // Redireciona para uma página de confirmação
-        header("Location: confirmation.php");
-        exit;
+        redirect('installer/config');
+    }
+
+    public function config()
+    {
+        return view('install/config');
+    }
+
+    public function postConfig()
+    {
+        if (!input_exists()) {
+            redirect('/installer/config');
+        }
+
+        dd($_POST);
     }
 
 }
