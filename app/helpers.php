@@ -45,7 +45,7 @@ if (!function_exists('config')) {
                 return $config;
             }
         } else {
-            throw new Exception("Configuration file '<b>$file</b>' not found.");
+            throw new Exception("Configuration file '<b>config/{$file}.php</b>' not found.");
         }
     }
 }
@@ -159,12 +159,13 @@ if (!function_exists('md5_gen')) {
 // Function to check the existence of data in the request
 if (!function_exists('input_exists')) {
     function input_exists($type = "POST") {
-        if ($type === "POST") {
-            return !empty($_POST);
-        } elseif ($type === "GET") {
-            return !empty($_GET);
-        } else {
-            return false;
+        switch ($type) {
+            case "POST":
+                return (!empty($_POST)) ? true : false;
+            case "GET":
+                return (!empty($_GET)) ? true : false;
+            default:
+                return false;
         }
     }
 }
