@@ -57,7 +57,6 @@
                                     <table class="requirment-table">
                                         <?php
                                         $error = 0;
-
                                         foreach ($folderPermissions as $key) {
                                             $folder_perm = checkFolderPerm($key);
                                             if ($folder_perm == true) {
@@ -67,7 +66,6 @@
                                                 tableRow(str_replace("../", "", $key)," Required permission: 0775 ",0);
                                             }
                                         }
-
                                         if ($database == true) {
                                             $error = $error+0;
                                             tableRow('Database',' Required "storage/database.sql" available',1);
@@ -75,7 +73,6 @@
                                             $error = $error+1;
                                             tableRow('Database',' Required "storage/database.sql" not available',0);
                                         }
-
                                         if ($htaccess == true) {
                                             $error = $error+0;
                                             tableRow('.htaccess','  Required ".htaccess" available',1);
