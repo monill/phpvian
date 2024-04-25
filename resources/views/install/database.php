@@ -76,7 +76,7 @@
                                     </div>
                                     <div class="info-item">
                                         <div class="information-form-group text-right">
-                                            <button type="submit" class="theme-button choto">Install Now</button>
+                                            <button type="submit" class="theme-button choto">Setup Database</button>
                                         </div>
                                     </div>
                                 </form>
