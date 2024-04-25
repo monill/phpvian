@@ -58,11 +58,17 @@
                                     <table class="requirment-table">
                                         <?php
                                         $error = 0;
-
+                                        if (in_array('mod_rewrite', apache_get_modules())) {
+                                            $error = $error + 0;
+                                            tableRow("Apache", "mod_rewrite is enabled",1);
+                                        } else {
+                                            $error = $error + 1;
+                                            tableRow("Apache", "mod_rewrite is not enabled",0);
+                                        }
                                         if ($phpversion == true) {
                                             $error = $error + 0;
                                             tableRow("PHP", "Required PHP version 8.1 or higher",1);
-                                        }else{
+                                        } else {
                                             $error = $error + 1;
                                             tableRow("PHP", "Required PHP version 8.1 or higher",0);
                                         }
@@ -70,7 +76,7 @@
                                             $extension = isExtensionAvailable($key);
                                             if ($extension == true) {
                                                 tableRow($key, "Required ".strtoupper($key)." PHP Extension",1);
-                                            }else{
+                                            } else {
                                                 $error += 1;
                                                 tableRow($key, "Required ".strtoupper($key)." PHP Extension",0);
                                             }
