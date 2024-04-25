@@ -7,14 +7,14 @@ use PHPvian\Libs\Session;
 
 class Controller
 {
-    protected $db, $loginFingerPrint;
+    protected $loginFingerPrint;
+    protected Database $db;
 
     public function __construct()
     {
         $this->db = new Database();
         $this->loginFingerPrint = config('login', 'login_fingerprint');
         Session::startSession();
-        //$this->checkLoggedIn();
     }
 
     protected function checkLoggedIn()
@@ -27,22 +27,18 @@ class Controller
 
     protected function isUserLoggedIn()
     {
-        if (Session::get("userID") || Session::get("loggedIN")) {
-            if ($this->loginFingerPrint) {
-                $loginString = $this->generateLoginString();
-                $storedString = Session::get("loginFingerPrint");
+        // Checks if the user is logged in
+        $loggedIn = Session::get("userID") || Session::get("loggedIN");
 
-                if ($storedString !== null && $storedString === $loginString) {
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return true;
-            }
-        } else {
-            return false;
+        // If the user is logged in and fingerprint login is enabled,
+        // checks if the stored fingerprint matches the currently generated one
+        if ($loggedIn && $this->loginFingerPrint) {
+            $currentLoginString = $this->generateLoginString();
+            $storedLoginString = Session::get("loginFingerPrint");
+            return ($storedLoginString !== null && $storedLoginString === $currentLoginString);
         }
+
+        return $loggedIn;
     }
 
     /**
