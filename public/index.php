@@ -13,10 +13,12 @@ if (file_exists(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'vendor/autoload.php'))
 
 require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app/routes.php';
 
-// Set timezone
-date_default_timezone_set('America/Sao_Paulo');
+// Define o caminho do arquivo de log de erros
+$logFilePath = __DIR__ . "/../storage/logs/php-error.txt";
+ini_set("error_log", $logFilePath);
 
-error_reporting(E_ALL ^ E_NOTICE);
+// Configurações para exibir e registrar todos os tipos de erros
+error_reporting(E_ALL); // ^ E_NOTICE
 ini_set("display_errors", true);
 ini_set("log_errors", true);
-ini_set("error_log", __DIR__ . "../storage/logs/php-error.txt");
+
