@@ -63,28 +63,29 @@
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="speed">Speed:</label>
-                                                <input type="text" name="speed" id="speed" value="200" required>
+                                                <input type="number" name="speed" id="speed" value="200" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="roundlenght">Round Lenght:</label>
-                                                <input type="text" name="roundlenght" id="roundlenght" value="7" required>
+                                                <input type="number" name="roundlenght" id="roundlenght" value="7" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="incspeed">Troop Speed:</label>
-                                                <input type="text" name="incspeed" id="incspeed" value="50" required>
+                                                <input type="number" name="incspeed" id="incspeed" value="50" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="heroattrspeed">Hero Power Speed:</label>
-                                                <input type="text" name="heroattrspeed" id="heroattrspeed" value="2" required>
+                                                <input type="number" name="heroattrspeed" id="heroattrspeed" value="2" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="itemattrspeed">Item Power Speed:</label>
-                                                <input type="text" name="itemattrspeed" id="itemattrspeed" value="3" required>
+                                                <input type="number" name="itemattrspeed" id="itemattrspeed" value="3" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="wmax">World Size:</label>
-                                                <select class="form-control" name="wmax" id="wmax">
-                                                    <option value="100" selected="selected">100x100</option>
+                                                <select class="form-control" name="world_max" id="wmax">
+                                                    <option value="50" selected="selected">50x50</option>
+                                                    <option value="100">100x100</option>
                                                     <option value="250">250x250</option>
                                                     <option value="350">350x350</option>
                                                     <option value="400">400x400</option>
@@ -104,7 +105,7 @@
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="server_url">Server url:</label>
-                                                <input type="text" name="server_url" id="server_url" value="http://<?php echo $_SERVER['HTTP_HOST']; ?>/" required>
+                                                <input type="text" name="server_url" id="server_url" value="<?= http_host(); ?>" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="storagemultiplier">Storage Multiplier:</label>
@@ -117,12 +118,12 @@
                                                     <option value="1200">20 min</option>
                                                     <option value="1800">30 min</option>
                                                     <option value="3600">1 hour</option>
-                                                    <option value="10800">3 Hour</option>
+                                                    <option value="10800">3 hours</option>
                                                     <option value="21600">6 hours</option>
                                                     <option value="43200">12 hours</option>
-                                                    <option value="86400">1 Day</option>
-                                                    <option value="172800">2 Days</option>
-                                                    <option value="259200">3 Days</option>
+                                                    <option value="86400">1 day</option>
+                                                    <option value="172800">2 days</option>
+                                                    <option value="259200">3 days</option>
                                                 </select>
                                             </div>
                                             <div class="information-form-group col-sm-6">
@@ -132,48 +133,48 @@
                                                     <option value="1200">20 min</option>
                                                     <option value="1800">30 min</option>
                                                     <option value="3600">1 hour</option>
-                                                    <option value="10800">3 Hour</option>
+                                                    <option value="10800">3 hour</option>
                                                     <option value="21600">6 hours</option>
                                                     <option value="43200">12 hours</option>
-                                                    <option value="86400">1 Day</option>
-                                                    <option value="172800">2 Days</option>
-                                                    <option value="259200">3 Days</option>
-                                                    <option value="604800">7 Days</option>
-                                                    <option value="1209600">14 Days</option>
+                                                    <option value="86400">1 day</option>
+                                                    <option value="172800">2 days</option>
+                                                    <option value="259200">3 days</option>
+                                                    <option value="604800">7 days</option>
+                                                    <option value="1209600">14 days</option>
                                                 </select>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="plus_time">Plus Duration:</label>
                                                 <select class="form-control" name="plus_time" id="plus_time">
                                                     <option value="43200" selected="selected">12 hours</option>
-                                                    <option value="86400">1 Days</option>
-                                                    <option value="172800">2 Days</option>
-                                                    <option value="259200">3 Days</option>
-                                                    <option value="345600">4 Days</option>
-                                                    <option value="432000">5 Days</option>
-                                                    <option value="518400">6 Days</option>
-                                                    <option value="604800">7 Days</option>
+                                                    <option value="86400">1 day</option>
+                                                    <option value="172800">2 days</option>
+                                                    <option value="259200">3 days</option>
+                                                    <option value="345600">4 days</option>
+                                                    <option value="432000">5 days</option>
+                                                    <option value="518400">6 days</option>
+                                                    <option value="604800">7 days</option>
                                                 </select>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="plus_production">Plus Production Duration:</label>
                                                 <select class="form-control" name="plus_production" id="plus_production">
                                                     <option value="43200" selected="selected">12 hours</option>
-                                                    <option value="86400">1 Days</option>
-                                                    <option value="172800">2 Days</option>
-                                                    <option value="259200">3 Days</option>
-                                                    <option value="345600">4 Days</option>
-                                                    <option value="432000">5 Days</option>
-                                                    <option value="518400">6 Days</option>
-                                                    <option value="604800">7 Days</option>
+                                                    <option value="86400">1 day</option>
+                                                    <option value="172800">2 days</option>
+                                                    <option value="259200">3 days</option>
+                                                    <option value="345600">4 days</option>
+                                                    <option value="432000">5 days</option>
+                                                    <option value="518400">6 days</option>
+                                                    <option value="604800">7 days</option>
                                                 </select>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="auction_time">Auction Duration:</label>
                                                 <select class="form-control" name="auction_time" id="auction_time">
-                                                    <option value="1200">20 mins</option>
-                                                    <option value="1800">30 mins</option>
-                                                    <option value="3600" selected="selected">1 hours</option>
+                                                    <option value="1200">20 min</option>
+                                                    <option value="1800">30 min</option>
+                                                    <option value="3600" selected="selected">1 hour</option>
                                                     <option value="10800">3 hours</option>
                                                     <option value="21600">6 hours</option>
                                                     <option value="28800">8 hours</option>
@@ -183,7 +184,7 @@
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="ts_threshold">Turn Threshold:</label>
-                                                <input type="text" name="ts_threshold" id="ts_threshold" value="20" required>
+                                                <input type="number" name="ts_threshold" id="ts_threshold" value="20" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="medalinterval">Medals interval:</label>
@@ -314,7 +315,7 @@
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="stats">Stats Time:</label>
-                                                <input type="text" name="stats" id="stats" value="21600" required>
+                                                <input type="number" name="stats" id="stats" value="21600" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <label for="quest">Quests:</label>
@@ -371,13 +372,6 @@
                                                     <option value="0" selected="selected">Slow</option>
                                                     <option value="1">Normal</option>
                                                     <option value="2">Fast</option>
-                                                </select>
-                                            </div>
-                                            <div class="information-form-group col-sm-6">
-                                                <label for="error">Error Reporting:</label>
-                                                <select class="form-control" name="error" id="error">
-                                                    <option value="error_reporting (E_ALL ^ E_NOTICE);" selected="selected">Yes</option>
-                                                    <option value="error_reporting (0);">No</option>
                                                 </select>
                                             </div>
                                             <div class="information-form-group col-sm-6">
