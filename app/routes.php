@@ -21,6 +21,14 @@ $route->get('/installer/import', InstallController::class, 'import');
 $route->post('/installer/import', InstallController::class, 'importDatabase');
 $route->get('/installer/config', InstallController::class, 'config');
 $route->post('/installer/config', InstallController::class, 'postConfig');
+$route->get('/installer/world', InstallController::class, 'world');
+$route->post('/installer/world', InstallController::class, 'createWorld');
+$route->get('/installer/multihunter', InstallController::class, 'multihunter');
+$route->post('/installer/multihunter', InstallController::class, 'setMultihunter');
+$route->get('/installer/oasis', InstallController::class, 'oasis');
+$route->post('/installer/oasis', InstallController::class, 'setOasis');
+
+
 //End installer
 $route->get('/404', ErrorsController::class, 'deny');
 $route->get('/500', ErrorsController::class, 'server');
