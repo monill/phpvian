@@ -1,6 +1,7 @@
 <?php
 
 use PHPvian\Libs\Lang;
+use PHPvian\Models\Config;
 use PHPvian\Views\View;
 
 if (!function_exists('md5_gen')) {
@@ -280,4 +281,18 @@ function checkFolderPerm($name){
     return $perm >= '0775';
 }
 
+if (!function_exists('setting')) {
+    function setting($value)
+    {
+        $config = new Config();
+        return $config->getSettingValue($value);
+    }
+}
 
+if (!function_exists('http_host')) {
+    function http_host()
+    {
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+        return $protocol . '://' . $_SERVER['HTTP_HOST'];
+    }
+}
