@@ -32,7 +32,7 @@ class Database extends PDO
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $exc) {
-            exit("Query execution error: " . $exc->getMessage());
+            throw new \RuntimeException("Query execution error: " . $exc->getMessage());
         }
     }
 
@@ -40,7 +40,7 @@ class Database extends PDO
     {
         foreach ($data as $key => $value) {
             if (!is_numeric($value) && !is_string($value) && !is_bool($value) && !is_null($value)) {
-                throw new InvalidArgumentException("Invalid data type for column $key.");
+                throw new \InvalidArgumentException("Invalid data type for column $key.");
             }
         }
     }
