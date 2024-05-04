@@ -6,8 +6,10 @@ use PHPvian\Libs\Database;
 
 class User
 {
-    private $db;
-    public $id, $username, $email, $password, $status, $banned = null;
+	protected $table = 'users';
+	
+    private $db, $password, $id;
+    public $username, $email, $status, $banned = null;
 
     public function __construct()
     {
