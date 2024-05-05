@@ -2,14 +2,14 @@
 
 namespace PHPvian\Models;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 
 class Model
 {
-    protected $db;
+    public $conn;
 
     public function __construct()
     {
-        $this->db = new Database();
+        $this->conn = new Connection();
     }
 }
