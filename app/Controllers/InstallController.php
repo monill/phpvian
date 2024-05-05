@@ -2,14 +2,17 @@
 
 namespace PHPvian\Controllers;
 
+use PHPvian\Libs\Connection;
 use PHPvian\Libs\Database;
+use PHPvian\Models\Admin;
 
 class InstallController
 {
-    private $db, $databaseFile, $htaccessFile;
+    private $conn, $db, $databaseFile, $htaccessFile;
 
     public function __construct()
     {
+        $this->conn = new Connection();
         $this->db = new Database();
         $this->databaseFile = dirname(__DIR__) . '/../storage/database.sql';
         $this->htaccessFile = dirname(__DIR__) . '/../public/.htaccess';
@@ -97,23 +100,18 @@ class InstallController
 
     public function import()
     {
-        $connection = $this->db->testConnection();
+        $connection = $this->conn->testConnection();
         return view('install/import', ['connection' => $connection]);
     }
 
     public function importDatabase()
     {
         try {
-            // Read the contents of the SQL file
             $sql = file_get_contents($this->databaseFile);
-
-            // Execute the contents of the SQL file as a single query
-            $this->db->exec($sql);
+            $this->conn->exec($sql);
         } catch (\Exception $e) {
             echo "Erro ao importar o arquivo SQL: " . $e->getMessage();
         }
-
-        // Redireciona para uma página de confirmação
         redirect('installer/config');
     }
 
@@ -128,7 +126,7 @@ class InstallController
             redirect('/installer/config');
         }
 
-        $this->db->insert('config', [
+        $this->conn->insert('config', [
             'server_name' => input('servername'),
             'speed' => input('speed'),
             'roundlenght' => input('roundlenght'),
@@ -229,7 +227,7 @@ class InstallController
                     default => 'grassland' . random_int(0, 11),
                 };
 
-                $this->db->insert('wdata', [
+                $this->conn->insert('wdata', [
                     'fieldtype' => $ftype,
                     'oasistype' => $otype,
                     'x' => $x,
@@ -249,6 +247,100 @@ class InstallController
     }
 
     public function setMultihunter()
+    {
+        $password = input('mhpwd');
+
+        if (!$password) {
+            return;
+        }
+
+        $this->insertUsers($password);
+
+        $status = false;
+
+        $admin = new Admin();
+
+        $wid = $admin->getWref(1, 0);
+        $status = $this->db->getVillageState($wid);
+        if ($status == false) {
+            $this->db->setFieldTaken($wid);
+            $this->db->addVillage($wid, 4, 'Multihunter', 1);
+            $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
+            $this->db->addUnits($wid);
+            $this->db->addTech($wid);
+            $this->db->addABTech($wid);
+        }
+
+        $wid = $admin->getWref(0, 0);
+        $status = $this->db->getVillageState($wid);
+        if ($status == false) {
+            $this->db->setFieldTaken($wid);
+            $this->db->addVillage($wid, 2, 'Natars', 1);
+            $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
+            $this->db->addUnits($wid);
+            $this->db->addTech($wid);
+            $this->db->addABTech($wid);
+        }
+        $this->conn->update('vdata', ['pop' => 781], 'owner = :uid', ['uid' => 2]);
+        $speed = setting('speed');
+        $this->conn->update('units', ['u41' => 274700 * $speed, 'u42' => 995231 * $speed, 'u43' => 10000, 'u44' => 3048 * $speed, 'u45' => 964401 * $speed, 'u46' => 617602 * $speed, 'u47' => 6034 * $speed, 'u48' => 3040 * $speed, 'u49' => 1, 'u50' => 9], 'vref = :wid', ['wid' => $wid]);
+
+        for ($i = 1; $i <= 13; $i++) {
+            $nareadis = setting('natars_max');
+
+            do {
+                $x = rand(3, intval(floor($nareadis)));
+                $y = rand(3, intval(floor($nareadis)));
+                if (rand(1, 10) > 5) {
+                    $x = $x * -1;
+                }
+                if (rand(1, 10) > 5) {
+                    $y = $y * -1;
+                }
+                $distance = sqrt(($x * $x) + ($y * $y));
+                $villageId = $admin->getWref($x, $y);
+                $status = $this->db->getVillageState($villageId);
+            } while (($distance > $nareadis) || $status != 0);
+
+            if ($status == false) {
+                $this->db->setFieldTaken($wid);
+                $this->db->addVillage($wid, 2, 'Natars', '1');
+                $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
+                $this->db->addUnits($wid);
+                $this->db->addTech($wid);
+                $this->db->addABTech($wid);
+
+                $this->conn->update('vdata', ['pop' => 238], 'wref = :wid', ['wid' => $wid]);
+                $this->conn->update('vdata', ['name' => 'WW Village', 'capital' => 0, 'natar' => 1], 'wref = :wid', ['wid' => $wid]);
+                $this->conn->update('units', ['u41' => rand(3000, 6000) * $speed, 'u42' => rand(4500, 6000) * $speed, 'u43' => 10000, 'u44' => rand(635, 1575) * $speed, 'u45' => rand(3600, 5700) * $speed, 'u46' => rand(4500, 6000) * $speed, 'u47' => rand(1500, 2700) * $speed, 'u48' => rand(300, 900) * $speed, 'u49' => 0, 'u50' => 9], 'vref = :wid', ['wid' => $wid]);
+                $this->conn->update('fdata', ['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16], 'vref = :wid', ['wid' => $wid]);
+            }
+        }
+
+        redirect('/installer/oasis');
+    }
+
+    protected function insertUsers($password)
+    {
+        $users = [
+            ['username' => 'Support', 'password' => md5($password), 'email' => 'support@phpvian.com', 'tribe' => 1, 'access' => 8, 'timestamp' => time(), 'desc1' => '[#support]', 'desc2' => '[#support]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
+            ['username' => 'Natars', 'password' => md5($password), 'email' => 'natars@phpvian.com', 'tribe' => 5, 'access' => 8, 'timestamp' => time(), 'desc1' => '[#natars]', 'desc2' => '[#natars]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
+            ['username' => 'Nature', 'password' => md5($password), 'email' => 'nature@phpvian.com', 'tribe' => 4, 'access' => 2, 'timestamp' => time(), 'desc1' => '[#nature]', 'desc2' => '[#nature]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
+            ['username' => 'Multihunter', 'password' => md5($password), 'email' => 'multihunter@phpvian.com', 'tribe' => 4, 'access' => 9, 'timestamp' => time(), 'desc1' => '[#multihunter]', 'desc2' => '[#multihunter]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
+        ];
+
+        foreach ($users as $user) {
+            $this->conn->insert('users', $user);
+        }
+    }
+
+
+    public function oasis()
+    {
+        return view('install/oasis');
+    }
+
+    public function setOasis()
     {
         dd($_POST);
     }
