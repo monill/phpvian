@@ -2,11 +2,10 @@
 
 namespace PHPvian\Models;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 
 class Config extends Model
 {
-
     public function __construct()
     {
         parent::__construct();
@@ -14,11 +13,11 @@ class Config extends Model
 
     public function getSettings()
     {
-        $settings = $this->db->select('config');
+        $settings = $this->conn->select('config');
         if (empty($settings)) {
             return [];
         }
-        return $settings[0];
+        return $settings;
     }
 
     public function updateSettings(array $newSettings)
@@ -26,7 +25,7 @@ class Config extends Model
         $currentSettings = $this->getSettings();
         $updatedSettings = array_merge($currentSettings, $newSettings);
 
-        $this->db->update('config', ['config' => json_encode($updatedSettings)], '1');
+        $this->conn->update('config', ['config' => json_encode($updatedSettings)], '1');
     }
 
     public function getSettingValue($key)
