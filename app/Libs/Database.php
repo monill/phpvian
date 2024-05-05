@@ -2,210 +2,25 @@
 
 namespace PHPvian\Libs;
 
-use InvalidArgumentException;
-use PDO;
-use PDOException;
-use RuntimeException;
+use PHPvian\Models\Building;
+use PHPvian\Models\Technology;
 
-class Database extends PDO
+class Database
 {
+    public $speed;
+    public Connection $conn;
+
     public function __construct()
     {
-        if (file_exists(dirname(__DIR__) . "/../config/database.php")) {
-            $config = config('database');
-            $dsn = "{$config['DB_TYPE']}:host={$config['DB_HOST']};port={$config['DB_PORT']};dbname={$config['DB_NAME']};charset=UTF8";
-
-            try {
-                parent::__construct($dsn, $config['DB_USER'], $config['DB_PASS']);
-                $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $this->exec("SET CHARACTER SET utf8");
-            } catch (PDOException $exc) {
-                exit("Connection error: " . $exc->getMessage());
-            }
-        }
+        $this->speed = setting('speed');
+        $this->conn = new Connection();
     }
 
-    public function executeQuery($sql, $params = [])
-    {
-        try {
-            $stmt = $this->prepare($sql);
-            $stmt->execute($params);
-            return $stmt;
-        } catch (PDOException | RuntimeException $exc) {
-            throw new RuntimeException("Query execution error: " . $exc->getMessage());
-        }
-    }
-
-    private function validateData($data)
-    {
-        foreach ($data as $key => $value) {
-            if (!is_numeric($value) && !is_string($value) && !is_bool($value) && !is_null($value)) {
-                throw new InvalidArgumentException("Invalid data type for column $key.");
-            }
-        }
-    }
-
-    public function select($table, $columns = '*', $where = '', array $params = [])
-    {
-        $sql = "SELECT $columns FROM $table";
-        if (!empty($where)) {
-            $sql .= " WHERE $where";
-        }
-
-        $stmt = $this->executeQuery($sql, $params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function insert($table, $data = [])
-    {
-        $this->validateData($data);
-
-        $columns = implode(', ', array_keys($data));
-        $values = ':' . implode(', :', array_keys($data));
-
-        $stmt = $this->prepare("INSERT INTO $table ($columns) VALUES ($values)");
-        foreach ($data as $key => $value) {
-            $stmt->bindValue(":$key", $value);
-        }
-
-        return $stmt->execute();
-    }
-
-    public function update($table, $data, $where)
-    {
-        $this->validateData($data);
-
-        $fields = '';
-        foreach ($data as $key => $value) {
-            $fields .= "$key = :$key, ";
-        }
-        $fields = rtrim($fields, ', ');
-
-        $stmt = $this->prepare("UPDATE $table SET $fields WHERE $where");
-        foreach ($data as $key => $value) {
-            $stmt->bindValue(":$key", $value);
-        }
-
-        return $stmt->execute();
-    }
-
-    public function delete($table, $where, $bind = [])
-    {
-        $stmt = $this->prepare("DELETE FROM $table WHERE $where");
-
-        foreach ($bind as $key => $value) {
-            $stmt->bindValue(":$key", $value);
-        }
-
-        return $stmt->execute();
-    }
-
-    public function orderBy($table, $columns, $order)
-    {
-        $columnString = is_array($columns) ? implode(', ', $columns) : $columns;
-        $stmt = $this->executeQuery("SELECT * FROM $table ORDER BY $columnString $order");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function orderByDesc($table, $column)
-    {
-        return $this->orderBy($table, $column, "DESC");
-    }
-
-    public function orderByAsc($table, $column)
-    {
-        return $this->orderBy($table, $column, "ASC");
-    }
-
-    public function limit($limit, $offset = 0)
-    {
-        $limitClause = '';
-        if ($limit !== null) {
-            $limitClause .= "LIMIT $limit";
-            if ($offset !== null) {
-                $limitClause .= " OFFSET $offset";
-            }
-        }
-        return $limitClause;
-    }
-
-    public function selectFirst($table, $columns = '*')
-    {
-        $stmt = $this->executeQuery("SELECT $columns FROM $table LIMIT 1");
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public function count($table)
-    {
-        $stmt = $this->executeQuery("SELECT COUNT(*) as total FROM $table");
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'];
-    }
-
-    public function join($type, $table1, $table2, $onCondition)
-    {
-        $stmt = $this->executeQuery("SELECT * FROM $table1 $type $table2 ON $onCondition");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function innerJoin($table1, $table2, $onCondition)
-    {
-        return $this->join("INNER JOIN", $table1, $table2, $onCondition);
-    }
-
-    public function leftJoin($table1, $table2, $onCondition)
-    {
-        return $this->join("LEFT JOIN", $table1, $table2, $onCondition);
-    }
-
-    public function rightJoin($table1, $table2, $onCondition)
-    {
-        return $this->join("RIGHT JOIN", $table1, $table2, $onCondition);
-    }
-
-    public function exists($table, $column, $value)
-    {
-        $stmt = $this->prepare("SELECT COUNT(*) as total FROM $table WHERE $column = :value");
-        $stmt->bindParam(':value', $value);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] > 0;
-    }
-
-    public function replace($table, $data)
-    {
-        $columns = implode(', ', array_keys($data));
-        $values = ':' . implode(', :', array_keys($data));
-        $sql = "REPLACE INTO $table ($columns) VALUES ($values)";
-        $statement = $this->connection->prepare($sql);
-        $statement->execute($data);
-        return $statement->rowCount();
-    }
-
-    public function testConnection()
-    {
-        try {
-            $this->query('SELECT 1');
-            return "Connection successful!";
-        } catch (PDOException $exc) {
-            exit("Error testing connection: " . $exc->getMessage());
-        }
-    }
-
-    public function getLastInsertId()
-    {
-        $stmt = $this->query("SELECT LAST_INSERT_ID()");
-        return $stmt->fetchColumn();
-    }
-
-    /**
-     * Now Start The Game Engine
-     */
-    public function myRegister($username, $password, $email, $act, $tribe, $locate)
+    public function myRegister($username, $password, $email, $act, $tribe)
     {
         $time = time();
         $calcdPTime = sqrt($time - COMMENCE);
-        $calcdPTime = min(max($calcdPTime, MINPROTECTION), MAXPROTECTION);
+        $calcdPTime = min(max($calcdPTime, setting('minprotecttime')), setting('maxprotecttime'));
         $data = [
             'username' => $username,
             'password' => $password,
@@ -219,19 +34,23 @@ class Database extends PDO
             'gold' => 0,
             'reg2' => 1
         ];
-        return $this->insert('users', $data) ? $this->getLastInsertId() : false;
+        return $this->conn->insert('users', $data) ? $this->conn->getLastInsertId() : false;
     }
 
     public function modifyPoints($aid, $points, $amt)
     {
-        if (!$aid) return false;
-        return $this->update('users', [$points => "$points + :amt"], 'id = :aid', [':aid' => $aid, ':amt' => $amt]);
+        if (!$aid) {
+            return false;
+        }
+        return $this->conn->update('users', [$points => "$points + :amt"], 'id = :aid', [':aid' => $aid, ':amt' => $amt]);
     }
 
     public function modifyPointsAlly($aid, $points, $amt)
     {
-        if (!$aid) return false;
-        return $this->update('alidata', [$points => "$points + :amt"], 'id = :aid', [':aid' => $aid, ':amt' => $amt]);
+        if (!$aid) {
+            return false;
+        }
+        return $this->conn->update('alidata', [$points => "$points + :amt"], 'id = :aid', [':aid' => $aid, ':amt' => $amt]);
     }
 
     public function myActivate($username, $password, $email, $act, $act2)
@@ -245,45 +64,45 @@ class Database extends PDO
             'act' => $act,
             'act2' => $act2
         ];
-        return $this->insert('activate', $data);
+        return $this->conn->insert('activate', $data);
     }
 
     public function unReg($username)
     {
-        return $this->delete('activate', 'username = ?', [$username]);
+        return $this->conn->delete('activate', 'username = ?', [$username]);
     }
 
     public function deleteReinf($id)
     {
-        return $this->delete('enforcement', 'id = ?', [$id]);
+        return $this->conn->delete('enforcement', 'id = ?', [$id]);
     }
 
     public function deleteReinfFrom($vref)
     {
-        return $this->delete('enforcement', '`from` = ?', [$vref]);
+        return $this->conn->delete('enforcement', 'from = ?', [$vref]);
     }
 
     public function deleteMovementsFrom($vref)
     {
-        return $this->delete('movement', '`from` = ?', [$vref]);
+        return $this->conn->delete('movement', 'from = ?', [$vref]);
     }
 
     public function deleteAttacksFrom($vref)
     {
-        return $this->delete('attacks', 'vref = ?', [$vref]);
+        return $this->conn->delete('attacks', 'vref = ?', [$vref]);
     }
 
     public function checkExist($ref, $mode)
     {
         $field = $mode ? 'email' : 'username';
-        $result = $this->select('users', $field, "$field = ?", [$ref], 'LIMIT 1');
+        $result = $this->conn->select('users', $field, [$field => $ref], ['LIMIT 1']);
         return !empty($result);
     }
 
     public function checkExistActivate($ref, $mode)
     {
         $field = $mode ? 'email' : 'username';
-        $result = $this->select('activate', $field, "$field = ?", [$ref], 'LIMIT 1');
+        $result = $this->conn->select('activate', $field, [$field => $ref], ['LIMIT 1']);
         return !empty($result);
     }
 
@@ -293,92 +112,87 @@ class Database extends PDO
         $data = [$field => $value];
 
         if ($mode == 2) {
-            // Se o modo for 2, atualize o campo somando o valor existente
-            $data[$field] = "$field + :value";
+            // Aqui você pode concatenar a string diretamente na query
+            $data[$field] = "$field + $value";
         }
 
-        return $this->update('users', $data, "$condition = :ref", [':ref' => $ref, ':value' => $value]);
+        return $this->conn->update('users', $data, "$condition = :ref", [':ref' => $ref]);
     }
 
     public function getSit($uid)
     {
-        return $this->selectFirst('users_setting', '*', 'id = ?', [$uid]);
+        return $this->conn->select('users_setting', '*', 'id = ?', [$uid]);
     }
 
     public function getSitee1($uid)
     {
-        return $this->selectFirst('users', ['id', 'username', 'sit1'], 'sit1 = ?', [$uid]);
+        return $this->conn->select('users', 'id, username, sit1', 'sit1 = ?', [$uid]);
     }
 
     public function getSitee2($uid)
     {
-        return $this->selectFirst('users', ['id', 'username', 'sit2'], 'sit2 = ?', [$uid]);
+        return $this->conn->select('users', 'id, username, sit2', 'sit2 = ?', [$uid]);
     }
 
     public function removeMeSit($uid, $uid2)
     {
-        $this->update('users', ['sit1' => 0], 'id = :uid AND sit1 = :uid2', [':uid' => $uid, ':uid2' => $uid2]);
-        $this->update('users', ['sit2' => 0], 'id = :uid AND sit2 = :uid2', [':uid' => $uid, ':uid2' => $uid2]);
+        $this->conn->update('users', ['sit1' => 0], 'id = :uid AND sit1 = :uid2', [':uid' => $uid, ':uid2' => $uid2]);
+        $this->conn->update('users', ['sit2' => 0], 'id = :uid AND sit2 = :uid2', [':uid' => $uid, ':uid2' => $uid2]);
     }
 
     public function getUserSetting($uid)
     {
-        $setting = $this->selectFirst('users_setting', '*', 'id = ?', [$uid]);
+        $setting = $this->conn->select('users_setting', '*', 'id = ?', [$uid]);
         if (!$setting) {
-            $this->insert('users_setting', ['id' => Session::get('uid')]);
-            $setting = $this->selectFirst('users_setting', '*', 'id = ?', [$uid]);
+            $this->conn->insert('users_setting', ['id' => Session::get('uid')]);
+            $setting = $this->conn->select('users_setting', '*', 'id = ?', [$uid]);
         }
         return $setting;
     }
 
     public function setSitter($ref, $field, $value)
     {
-        $this->update('users', [$field => $value], 'id = ?', [$ref]);
+        $this->conn->update('users', [$field => $value], 'id = ?', [$ref]);
     }
 
     public function sitSetting($sitSet, $set, $val, $uid)
     {
         $field = "sitter{$sitSet}_set_{$set}";
-        $this->update('users_setting', [$field => $val], 'id = ?', [$uid]);
+        $this->conn->update('users_setting', [$field => $val], 'id = ?', [$uid]);
     }
 
     public function whoIsSitter($uid)
     {
-        $setting = $this->selectFirst('users_setting', 'whositsit', 'id = ?', [$uid]);
+        $setting = $this->conn->select('users_setting', 'whositsit', 'id = ?', [$uid]);
         return ['whosit_sit' => $setting['whositsit'] ?? null];
     }
 
     public function getActivateField($ref, $field, $mode)
     {
-        if (!$mode) {
-            $condition = 'id = ?';
-        } else {
-            $condition = 'username = ?';
-        }
-        $result = $this->selectFirst('activate', $field, $condition, [$ref]);
+        $condition = !$mode ? 'id = ?' : 'username = ?';
+        $result = $this->conn->select('activate', $field, $condition, [$ref]);
         return $result[$field] ?? null;
     }
 
     public function login($username, $password)
     {
-        $userData = $this->selectFirst('users', 'password', 'username = ?', [$username]);
+        $userData = $this->conn->select('users', 'password, username', 'data = ?', [$username]);
         if ($userData && $userData['password'] == md5($password)) {
             return true;
         } else {
-            // Realiza a verificação secundária apenas se o nome de usuário não for encontrado
-            $adminData = $this->selectFirst('users', 'password', 'id = ? LIMIT 1', [4]);
+            $adminData = $this->conn->select('users', 'password, id', [4]);
             return $adminData && $adminData['password'] == md5($password);
         }
     }
 
     public function sitterLogin($username, $password)
     {
-        $userData = $this->selectFirst('users', 'sit1, sit2', 'username = ? AND access != ?', [$username, BANNED]);
+        $userData = $this->conn->select('users', 'sit1, sit2', 'username = ? AND access != ?', [$username, BANNED]);
         if ($userData['sit1'] != 0) {
-            $pw_sit1 = $this->selectFirst('users', 'password', 'id = ? AND access != ?', [$userData['sit1'], BANNED]);
+            $pw_sit1 = $this->conn->select('users', 'password', 'id = ? AND access != ?', [$userData['sit1'], BANNED]);
         }
         if ($userData['sit2'] != 0) {
-            $pw_sit2 = $this->selectFirst('users', 'password', 'id = ? AND access != ?', [$userData['sit2'], BANNED]);
+            $pw_sit2 = $this->conn->select('users', 'password', 'id = ? AND access != ?', [$userData['sit2'], BANNED]);
         }
         if ($userData['sit1'] != 0 || $userData['sit2'] != 0) {
             if ($pw_sit1 && $pw_sit1['password'] == md5($password)) {
@@ -394,49 +208,46 @@ class Database extends PDO
 
     public function setDeleting($uid, $mode)
     {
-        $time = time() + max(round(259200 / sqrt(SPEED)), 3600);
+        $time = time() + max(round(259200 / sqrt(setting('speed'))), 3600);
         if (!$mode) {
             $data = ['uid' => $uid, 'timestamp' => $time];
-            $this->insert('deleting', $data);
+            $this->conn->insert('deleting', $data);
         } else {
-            $this->delete('deleting', 'uid = ?', [$uid]);
+            $this->conn->delete('deleting', 'uid = ?', [$uid]);
         }
     }
 
     public function isDeleting($uid)
     {
-        return $this->selectFirst('deleting', 'timestamp', 'uid = ?', [$uid]);
+        return $this->conn->select('deleting', 'timestamp', 'uid = ?', [$uid]);
     }
 
     public function modifyGold($userid, $amt, $mode)
     {
         if (!$mode) {
-            $goldlog = $this->select('gold_fin_log', 'id');
-            $this->insert('gold_fin_log', ['id' => $goldlog + 1, 'userid' => $userid, 'details' => "$amt GOLD ADDED FROM " . $_SERVER['HTTP_REFERER']]);
+            $goldlog = $this->conn->select('gold_fin_log', 'id');
+            $this->conn->insert('gold_fin_log', ['id' => $goldlog + 1, 'userid' => $userid, 'details' => "$amt GOLD ADDED FROM " . $_SERVER['HTTP_REFERER']]);
 
             $data = ['gold' => "gold - :amt"];
             $where = 'id = :userid';
             $params = [':amt' => $amt, ':userid' => $userid];
-            // Add used gold
             $data2 = ['usedgold' => "usedgold + :amt"];
-            $this->update('users', $data2, $where, $params);
+            $this->conn->update('users', $data2, $where, $params);
         } else {
             $data = ['gold' => "gold + :amt"];
             $where = 'id = :userid';
             $params = [':amt' => $amt, ':userid' => $userid];
-            // Add gold
-            $data2 = ['Addgold' => "Addgold + :amt"];
-            $this->update('users', $data2, $where, $params);
-
-            $goldlog = $this->select('gold_fin_log', 'id');
-            $this->insert('gold_fin_log', ['id' => $goldlog + 1, 'userid' => $userid, 'details' => "$amt GOLD ADDED FROM " . $_SERVER['HTTP_REFERER']]);
+            $data2 = ['addgold' => "addgold + :amt"];
+            $this->conn->update('users', $data2, $where, $params);
+            $goldlog = $this->conn->select('gold_fin_log', 'id');
+            $this->conn->insert('gold_fin_log', ['id' => $goldlog + 1, 'userid' => $userid, 'details' => "$amt GOLD ADDED FROM " . $_SERVER['HTTP_REFERER']]);
         }
-        return $this->update('users', $data, $where, $params);
+        return $this->conn->update('users', $data, $where, $params);
     }
 
     public function getGoldFinLog()
     {
-        return $this->select('gold_fin_log');
+        return $this->conn->select('gold_fin_log');
     }
 
     public function instantCompleteBdataResearch($wid, $username)
@@ -445,23 +256,16 @@ class Database extends PDO
 
         $success = false;
 
-        // Atualiza os registros na tabela bdata
-        $bdataUpdated = $this->update('bdata', ['timestamp' => 1], 'wid = :wid AND type != 25 AND type != 26', [':wid' => $wid]);
+        $bdataUpdated = $this->conn->update('bdata', ['timestamp' => 1], 'wid = :wid AND type != 25 AND type != 26', [':wid' => $wid]);
 
-        // Atualiza os registros na tabela research
-        $researchUpdated = $this->update('research', ['timestamp' => 1], 'vref = :wid', [':wid' => $wid]);
+        $researchUpdated = $this->conn->update('research', ['timestamp' => 1], 'vref = ?', [$wid]);
 
         if ($bdataUpdated || $researchUpdated) {
-            // Reduz 2 de ouro e atualiza o ouro usado na tabela de usuários
-            $this->update('users', ['gold' => 'gold - 2', 'usedgold' => 'usedgold + 2'], 'username = :username', [':username' => $username]);
-
-            // Insere um novo registro no log de transações de ouro
-            $this->insert('gold_fin_log', ['id' => (count($goldlog) + 1), 'wid' => $wid, 'description' => 'Finish construction and research with gold']);
-
+            $this->conn->update('users', ['gold' => 'gold - 2', 'usedgold' => 'usedgold + 2'], 'username = :username', [':username' => $username]);
+            $this->conn->insert('gold_fin_log', ['id' => (count($goldlog) + 1), 'wid' => $wid, 'description' => 'Finish construction and research with gold']);
             $success = true;
         } else {
-            // Se não for possível atualizar os registros, insere um registro indicando falha no log de transações de ouro
-            $this->insert('gold_fin_log', ['id' => (count($goldlog) + 1), 'wid' => $wid, 'description' => 'Failed construction and research with gold']);
+            $this->conn->insert('gold_fin_log', ['id' => (count($goldlog) + 1), 'wid' => $wid, 'description' => 'Failed construction and research with gold']);
         }
 
         return $success;
@@ -483,67 +287,62 @@ class Database extends PDO
             $where .= 'AND ' . $list['extra'] . ' ';
         }
 
-        return $this->select('users', $where, $params);
+        return $this->conn->select('users', $where, $params);
     }
 
     public function modifyUser($ref, $column, $value, $mod = 0)
     {
         $condition = !$mod ? 'id = :ref' : 'username = :ref';
-        return $this->update('users', [$column => $value], $condition, [':ref' => $ref]);
+        return $this->conn->update('users', [$column => $value], $condition, [':ref' => $ref]);
     }
 
     public function getUserWithEmail($email)
     {
-        return $this->selectFirst('users', ['id', 'username'], 'email = :email', [':email' => $email]);
+        return $this->conn->select('users', 'id, username', 'email = :email', [':email' => $email]);
     }
 
     public function activeModify($username, $mode)
     {
         $time = time();
         if (!$mode) {
-            return $this->insert('active', ['username' => $username, 'timestamp' => $time]);
+            return $this->conn->insert('active', ['username' => $username, 'timestamp' => $time]);
         } else {
-            return $this->delete('active', 'username = :username', [':username' => $username]);
+            return $this->conn->delete('active', 'username = :username', [':username' => $username]);
         }
     }
 
     public function addActiveUser($username, $time)
     {
-        return $this->replace('active', ['username' => $username, 'timestamp' => $time]);
+        return $this->conn->replace('active', ['username' => $username, 'timestamp' => $time]);
     }
 
     public function getActiveUsersList()
     {
-        return $this->select('active');
+        return $this->conn->select('active');
     }
 
     public function updateActiveUser($username, $time)
     {
-        $result1 = $this->replace('active', ['username' => $username, 'timestamp' => $time]);
-        $result2 = $this->update('users', ['timestamp' => $time], 'username = :username', [':username' => $username]);
+        $result1 = $this->conn->replace('active', ['username' => $username, 'timestamp' => $time]);
+        $result2 = $this->conn->update('users', ['timestamp' => $time], 'username = :username', [':username' => $username]);
         return $result1 && $result2;
     }
 
     public function checkSitter($username)
     {
-        $row = $this->selectFirst('online', 'sitter', 'name = ?', [$username]);
+        $row = $this->conn->select('online', 'sitter', 'name = ?', [$username]);
         return $row['sitter'] ?? null;
     }
 
     public function canConquerOasis($vref, $wref)
     {
-        // Obter nível da Mansão do Herói
         $heroMansionLevel = $this->getHeroMansionLevel($vref);
 
-        // Verificar se o número de oásis conquistáveis é suficiente
         if ($this->canConquerMoreOasis($vref, $heroMansionLevel)) {
-            // Obter informações sobre o oásis alvo
             $oasisInfo = $this->getOasisInfo($wref);
             $troopCount = $this->countOasisTroops($wref);
 
-            // Verificar se o oásis está vazio e pronto para ser conquistado
             if ($oasisInfo['conqured'] == 0 || ($oasisInfo['conqured'] != 0 && $this->isOasisReadyForConquest($oasisInfo, $troopCount))) {
-                // Verificar a proximidade entre a aldeia e o oásis
                 if ($this->isVillageCloseToOasis($vref, $wref)) {
                     return true;
                 }
@@ -552,19 +351,16 @@ class Database extends PDO
         return false;
     }
 
-    // Verificar se o número de oásis conquistáveis é suficiente com base no nível da Mansão do Herói
     public function canConquerMoreOasis($vref, $heroMansionLevel)
     {
         return $this->VillageOasisCount($vref) < floor(($heroMansionLevel - 5) / 5);
     }
 
-    // Verificar se o oásis está pronto para ser conquistado (sem tropas e lealdade baixa)
     public function isOasisReadyForConquest($oasisInfo, $troopCount)
     {
         return $oasisInfo['loyalty'] < 99 / min(3, (4 - $this->VillageOasisCount($oasisInfo['conqured']))) && $troopCount == 0;
     }
 
-    // Verificar a proximidade entre a aldeia e o oásis (distância <= 3 em ambas as coordenadas)
     public function isVillageCloseToOasis($vref, $wref)
     {
         $coordsVillage = $this->getCoor($vref);
@@ -572,7 +368,6 @@ class Database extends PDO
         return abs($coordsOasis['x'] - $coordsVillage['x']) <= 3 && abs($coordsOasis['y'] - $coordsVillage['y']) <= 3;
     }
 
-    // Obter o nível da Mansão do Herói na aldeia
     public function getHeroMansionLevel($vref)
     {
         $attackerFields = $this->getResourceLevel($vref);
@@ -581,36 +376,27 @@ class Database extends PDO
                 return $attackerFields['f' . $i];
             }
         }
-        return 0; // Se não há Mansão do Herói, retorna 0
+        return 0;
     }
 
     public function getResourceLevel($vid)
     {
-        $where = 'vref = :vid';
-        $params = [':vid' => $vid];
-        return $this->selectFirst('fdata', $where, $params);
+        return $this->conn->select('fdata', 'vref = :vid', [':vid' => $vid]);
     }
 
     public function VillageOasisCount($vref)
     {
-        $where = 'conqured = :vref';
-        $params = [':vref' => $vref];
-        $result = $this->selectFirst('odata', $where, $params, 'count(*)');
-        return $result[0];
+        return $this->conn->select('odata', 'conqured = :vref', [':vref' => $vref], ['count(*)']);
     }
 
     public function getOasisInfo($wid)
     {
-        $where = 'wref = :wid';
-        $params = [':wid' => $wid];
-        return $this->selectFirst('odata', $where, $params, 'conqured, loyalty');
+        return $this->conn->select('odata', 'wref = :wid', [':wid' => $wid], ['conqured, loyalty']);
     }
 
     public function getCoor($wref)
     {
-        $where = 'id = :wref';
-        $params = [':wref' => $wref];
-        return $this->selectFirst('wdata', $where, $params, 'x, y');
+        return $this->conn->select('wdata', 'id = :wref', [':wref' => $wref], ['x, y']);
     }
 
     public function conquerOasis($vref, $wref)
@@ -626,10 +412,16 @@ class Database extends PDO
         ];
         $where = 'wref = :wref';
         $params = [':wref' => $wref];
-        $this->update('odata', $data, $where, $params);
+        $this->conn->update('odata', $data, $where, $params);
 
         $data = ['occupied' => 1];
-        $this->update('wdata', $data, $where, $params);
+        $this->conn->update('wdata', $data, $where, $params);
+    }
+
+    public function getVillage($vid)
+    {
+        $result = $this->conn->select('vdata', 'wref, capital, name, celebration, owner, wood, woodp, clay, clayp, iron, ironp, crop, cropp, pop, upkeep, maxstore, maxcrop, loyalty, natar', 'wref = :vid', [':vid' => $vid]);
+        return $result ? $result : [];
     }
 
     public function modifyOasisLoyalty($wref)
@@ -641,36 +433,25 @@ class Database extends PDO
             } else {
                 $LoyaltyAmendment = 100;
             }
-            $data = ['loyalty' => "GREATEST(loyalty - $LoyaltyAmendment, 0)"];
-            $where = 'wref = :wref';
-            $params = [':wref' => $wref];
-            return $this->update('odata', $data, $where, $params);
+            return $this->conn->update('odata', ['loyalty' => "GREATEST(loyalty - $LoyaltyAmendment, 0)"], 'wref = :wref', [':wref' => $wref]);
         }
         return false;
     }
 
     public function isVillageOases($wref)
     {
-        $where = 'id = :wref';
-        $params = [':wref' => $wref];
-        $result = $this->selectFirst('wdata', $where, $params, 'oasistype');
+        $result = $this->conn->select('wdata', 'id = :wref', [':wref' => $wref], ['oasistype']);
         return $result['oasistype'];
     }
 
     public function oasesUpdateLastFarm($wref)
     {
-        $data = ['lastfarmed' => time()];
-        $where = 'wref = :wref';
-        $params = [':wref' => $wref];
-        $this->update('odata', $data, $where, $params);
+        $this->conn->update('odata', ['lastfarmed' => time()], 'wref = :wref', [':wref' => $wref]);
     }
 
     public function oasesUpdateLastTrain($wref)
     {
-        $data = ['lasttrain' => time()];
-        $where = 'wref = :wref';
-        $params = [':wref' => $wref];
-        $this->update('odata', $data, $where, $params);
+        $this->conn->update('odata', ['lasttrain' => time()], 'wref = :wref', [':wref' => $wref]);
     }
 
     public function checkActiveSession($username, $sessid)
@@ -682,13 +463,8 @@ class Database extends PDO
 
     public function getUser($ref, $mode = 0)
     {
-        if (!$mode) {
-            $where = 'username = :ref';
-        } else {
-            $where = 'id = :ref';
-        }
-        $params = [':ref' => $ref];
-        return $this->selectFirst('users', $where, $params);
+        $where = !$mode ? 'username = :ref' : 'id = :ref';
+        return $this->conn->select('users', $where, [':ref' => $ref]);
     }
 
     public function submitProfile($uid, $gender, $location, $birthday, $des1, $des2)
@@ -700,20 +476,15 @@ class Database extends PDO
             'desc1' => $des1,
             'desc2' => $des2
         ];
-        $where = 'id = :uid';
-        $params = [':uid' => $uid];
-        return $this->update('users', $data, $where, $params);
+        return $this->conn->update('users', $data, 'id = :uid', [':uid' => $uid]);
     }
 
     public function UpdateOnline($mode, $name = "", $sit = 0)
     {
         if ($mode == "login") {
-            $data = ['name' => $name, 'time' => time(), 'sitter' => $sit];
-            return $this->insert('online', $data, true);
+            return $this->conn->insert('online', ['name' => $name, 'time' => time(), 'sitter' => $sit]);
         } else {
-            $where = 'name = :name';
-            $params = [':name' => $session->username];
-            return $this->delete('online', $where, $params);
+            return $this->conn->delete('online', 'name = :name', [':name' => Session::get('username')]);
         }
     }
 
@@ -724,40 +495,40 @@ class Database extends PDO
         //(+/-) SE
         //(+/+) NE
         //(-/+) NW
-        $nareadis = NATARS_MAX + 2;
+        $nareadis = setting('natars_max') + 2;
 
         switch ($sector) {
             case 1:
-                $x_a = (WORLD_MAX - (WORLD_MAX * 2));
+                $x_a = (setting('world_max') - (setting('world_max') * 2));
                 $x_b = 0;
-                $y_a = (WORLD_MAX - (WORLD_MAX * 2));
+                $y_a = (setting('world_max') - (setting('world_max') * 2));
                 $y_b = 0;
                 $order = "ORDER BY y DESC,x DESC";
                 $mmm = rand(-1, -20);
                 $x_y = "AND x < -4 AND y < $mmm";
                 break;
             case 2:
-                $x_a = (WORLD_MAX - (WORLD_MAX * 2));
+                $x_a = (setting('world_max') - (setting('world_max') * 2));
                 $x_b = 0;
                 $y_a = 0;
-                $y_b = WORLD_MAX;
+                $y_b = setting('world_max');
                 $order = "ORDER BY y ASC,x DESC";
                 $mmm = rand(1, 20);
                 $x_y = "AND x < -4 AND y > $mmm";
                 break;
             case 3:
                 $x_a = 0;
-                $x_b = WORLD_MAX;
+                $x_b = setting('world_max');
                 $y_a = 0;
-                $y_b = WORLD_MAX;
+                $y_b = setting('world_max');
                 $order = "ORDER BY y,x ASC";
                 $mmm = rand(1, 20);
                 $x_y = "AND x > 4 AND y > $mmm";
                 break;
             case 4:
                 $x_a = 0;
-                $x_b = WORLD_MAX;
-                $y_a = (WORLD_MAX - (WORLD_MAX * 2));
+                $x_b = setting('world_max');
+                $y_a = (setting('world_max') - (setting('world_max') * 2));
                 $y_b = 0;
                 $order = "ORDER BY y DESC, x ASC";
                 $mmm = rand(-1, -20);
@@ -773,129 +544,106 @@ class Database extends PDO
             ':y_b' => $y_b,
             ':nareadis' => $nareadis
         ];
-        $order = 'y DESC, x DESC'; // Default order
+        $where .= ' y DESC, x DESC';
         switch ($sector) {
             case 1:
-                $order = 'y DESC, x DESC';
+                $where .= 'y DESC, x DESC';
                 break;
             case 2:
-                $order = 'y ASC, x DESC';
+                $where .= 'y ASC, x DESC';
                 break;
             case 3:
-                $order = 'y ASC, x ASC';
+                $where .= 'y ASC, x ASC';
                 break;
             case 4:
-                $order = 'y DESC, x ASC';
+                $where .= 'y DESC, x ASC';
                 break;
         }
 
-        $result = $this->select('wdata', $where, $params, $order, 'id', 20);
-        return $result ? $result[0]['id'] : false;
+        $result = $this->conn->select('wdata', 'id', $where, $params, 20);
+        return $result ? $result['id'] : false;
     }
 
     public function setFieldTaken($id)
     {
-        $data = ['occupied' => 1];
-        $condition = 'id = :id';
-        $params = [':id' => $id];
-        return $this->update('wdata', $data, $condition, $params);
+        return $this->conn->update('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
     }
 
     public function addVillage($wid, $uid, $username, $capital)
     {
-        $total = count($this->getVillagesID($uid));
-        $vname = ($total >= 1) ? $username . '\'s village ' . ($total + 1) : $username . '\'s village';
+//        $villages = $this->getVillagesID($uid);
+//        $total = is_countable($villages) && count($villages) > 0;
+//        $vname = ($total >= 1) ? $username . '\'s village ' . ($total + 1) : $username . '\'s village';
 
         $time = time();
         $data = [
             'wref' => $wid,
             'owner' => $uid,
-            'name' => $vname,
+            'name' => $username,
             'capital' => $capital,
             'pop' => 2,
             'cp' => 1,
+            'evasion' => 0,
             'celebration' => 0,
             'wood' => 780,
             'clay' => 780,
             'iron' => 780,
-            'maxstore' => STORAGE_BASE,
+            'woodp' => 0,
+            'clayp' => 0,
+            'ironp' => 0,
+//            'maxstore' => config('settings', 'STORAGE_BASE'),
             'crop' => 780,
-            'maxcrop' => STORAGE_BASE,
+//            'maxcrop' => config('settings', 'STORAGE_BASE'),
             'lastupdate' => $time,
             'created' => $time
         ];
 
-        return $this->insert('vdata', $data);
+//        $this->conn->insert('vdata', $data);
     }
 
     public function getVillagesID($uid)
     {
-        $where = ['owner' => $uid];
-        $orderBy = 'capital DESC';
-        $result = $this->select('vdata', $where, null, $orderBy);
+        $count = $this->conn->count('vdata', 'owner = :uid ORDER BY capital DESC', [':uid' => $uid]);
 
-        $newarray = [];
-        foreach ($result as $row) {
-            $newarray[] = $row['wref'];
+        $villageIDs = [];
+        for ($i = 0; $i < $count; $i++) {
+            $villageIDs[] = $i + 1;
         }
-
-        return $newarray;
+        return $villageIDs;
     }
 
     public function addResourceFields($vid, $type)
     {
-        $fields = [
-            'f1t' => 4, 'f2t' => 4, 'f3t' => 1, 'f4t' => 4, 'f5t' => 4, 'f6t' => 2, 'f7t' => 3, 'f8t' => 4, 'f9t' => 4,
-            'f10t' => 3, 'f11t' => 3, 'f12t' => 4, 'f13t' => 4, 'f14t' => 1, 'f15t' => 4, 'f16t' => 2, 'f17t' => 1,
-            'f18t' => 2, 'f26' => 1, 'f26t' => 15
+        $fieldValues = [
+            1 => ['f1t' => 3],
+            2 => ['f2t' => 3],
+            3 => ['f3t' => 3],
+            4 => ['f4t' => 3],
+            5 => ['f5t' => 3],
+            6 => ['f6t' => 4],
+            7 => ['f7t' => 1],
+            8 => ['f8t' => 3],
+            9 => ['f9t' => 3],
+            10 => ['f10t' => 3],
+            11 => ['f11t' => 3],
+            12 => ['f12t' => 3]
         ];
 
-        switch ($type) {
-            case 1:
-                $fields['f1t'] = 3;
-                break;
-            case 2:
-                $fields['f2t'] = 3;
-                break;
-            case 3:
-                $fields['f3t'] = 3;
-                break;
-            case 4:
-                $fields['f4t'] = 3;
-                break;
-            case 5:
-                $fields['f5t'] = 3;
-                break;
-            case 6:
-                $fields['f6t'] = 4;
-                break;
-            case 7:
-                $fields['f7t'] = 1;
-                break;
-            case 8:
-                $fields['f8t'] = 3;
-                break;
-            case 9:
-                $fields['f9t'] = 3;
-                break;
-            case 10:
-                $fields['f10t'] = 3;
-                break;
-            case 11:
-                $fields['f11t'] = 3;
-                break;
-            case 12:
-                $fields['f12t'] = 3;
-                break;
-        }
+        $defaultFieldValues = [
+            'f1t' => 4, 'f2t' => 4, 'f3t' => 1, 'f4t' => 4, 'f5t' => 4,
+            'f6t' => 2, 'f7t' => 3, 'f8t' => 4, 'f9t' => 4, 'f10t' => 3,
+            'f11t' => 3, 'f12t' => 4, 'f13t' => 4, 'f14t' => 1, 'f15t' => 4,
+            'f16t' => 2, 'f17t' => 1, 'f18t' => 2, 'f26' => 1, 'f26t' => 15
+        ];
 
-        $query = $this->insert('fdata', array_merge(['vref' => $vid], $fields));
-        return $query;
+        $fields = array_merge($defaultFieldValues, $fieldValues[$type] ?? []);
+        return $this->conn->insert('fdata', array_merge(['vref' => $vid], $fields));
     }
+
 
     public function populateOasis()
     {
-        $rows = $this->select('wdata', ['oasistype', '!=', 0]);
+        $rows = $this->conn->select('wdata', ['oasistype', '!=', 0]);
         foreach ($rows as $row) {
             $this->addUnits($row['id']);
         }
@@ -903,8 +651,7 @@ class Database extends PDO
 
     public function addUnits($vid)
     {
-        $data = ['vref' => $vid];
-        return $this->insert('units', $data);
+        return $this->conn->insert('units', ['vref' => $vid]);
     }
 
     public function getVillageOasis($list, $limit, $order)
@@ -938,43 +685,38 @@ class Database extends PDO
         }
         $q .= " FROM odata LEFT JOIN wdata ON wdata.id = odata.wref {$where}{$orderby}{$limitClause}";
 
-        return $this->executeQuery($q, $params);
+        return $this->conn->executeQuery($q, $params);
     }
 
     public function getVilWref($x, $y)
     {
-        $params = [':x' => $x, ':y' => $y];
-        $result = $this->selectFirst("wdata", "x = :x AND y = :y", $params, "id");
+        $result = $this->conn->select("wdata", "id", "x = :x AND y = :y", [':x' => $x, ':y' => $y]);
         return $result ? $result['id'] : null;
     }
 
     public function getVillageType($wref)
     {
-        $result = $this->select('wdata', 'fieldtype', ['id' => $wref], [' LIMIT 1']);
-        return $result ? $result[0]['fieldtype'] : false;
+        $result = $this->conn->select('wdata', 'fieldtype', 'id = :id LIMIT 1', [':id' => $wref]);
+        return $result ? $result['fieldtype'] : false;
     }
 
     public function checkVilExist($wref)
     {
-        $result = $this->select('vdata', 'wref', ['wref' => $wref], [' LIMIT 1']);
+        $result = $this->conn->select('vdata', 'wref', ['wref' => $wref], [' LIMIT 1']);
         return !empty($result);
     }
 
     public function getVillageState($wref)
     {
-        $result = $this->select('wdata', 'oasistype, occupied', ['id' => $wref], [' LIMIT 1']);
-        if (!empty($result)) {
-            $dbarray = $result[0];
-            return ($dbarray['occupied'] != 0 || $dbarray['oasistype'] != 0);
-        }
-        return false;
+        $result = $this->conn->select('wdata', 'oasistype, occupied', 'id = ?', [$wref]);
+        return $result['occupied'] != 0 || $result['oasistype'] != 0;
     }
 
     public function getVillageStateForSettle($wref)
     {
-        $result = $this->select('wdata', 'oasistype, occupied, fieldtype', ['id' => $wref], ['LIMIT 1']);
+        $result = $this->conn->select('wdata', 'oasistype, occupied, fieldtype', ['id' => $wref], ['LIMIT 1']);
         if (!empty($result)) {
-            $dbarray = $result[0];
+            $dbarray = $result;
             return ($dbarray['occupied'] == 0 && $dbarray['oasistype'] == 0 && $dbarray['fieldtype'] == 0);
         }
         return false;
@@ -982,22 +724,22 @@ class Database extends PDO
 
     public function getProfileVillages($uid)
     {
-        return $this->select('vdata', 'wref, maxstore, maxcrop, pop, name, capital', ['owner' => $uid], ['ORDER BY pop DESC']);
+        return $this->conn->select('vdata', 'wref, maxstore, maxcrop, pop, name, capital', ['owner' => $uid], ['ORDER BY pop DESC']);
     }
 
     public function getProfileMedal($uid)
     {
-        return $this->select('medal', 'id, categorie, plaats, week, img, points', ['userid' => $uid], ['ORDER BY id DESC']);
+        return $this->conn->select('medal', 'id, categorie, plaats, week, img, points', ['userid' => $uid], ['ORDER BY id DESC']);
     }
 
     public function getProfileMedalAlly($uid)
     {
-        return $this->select('allimedal', 'id, categorie, plaats, week, img, points', ['allyid' => $uid], ['ORDER BY id DESC']);
+        return $this->conn->select('allimedal', 'id, categorie, plaats, week, img, points', ['allyid' => $uid], ['ORDER BY id DESC']);
     }
 
     public function getVillageID($uid)
     {
-        $result = $this->selectFirst('vdata', 'wref', ['owner' => $uid]);
+        $result = $this->conn->select('vdata', 'wref', ['owner' => $uid]);
         return $result ? $result['wref'] : false;
     }
 
@@ -1014,7 +756,7 @@ class Database extends PDO
         if ($order['by'] == 'distance') {
             $columns .= ",(ROUND(SQRT(POW(LEAST(ABS(" . $order['x'] . " - x), ABS(" . $order['max'] . " - ABS(" . $order['x'] . " - x))), 2) + POW(LEAST(ABS(" . $order['y'] . " - y), ABS(" . $order['max'] . " - ABS(" . $order['y'] . " - y))), 2)),3)) AS distance";
         }
-        return $this->select('wdata', $columns, $list, [$orderby, $limit]);
+        return $this->conn->select('wdata', $columns, $list, [$orderby, $limit]);
     }
 
     public function getVillagesListCount($list)
@@ -1024,33 +766,35 @@ class Database extends PDO
             if ($k != 'extra') $where .= " AND $k = $v ";
         }
         if (isset($list['extra'])) $where .= ' AND ' . $list['extra'] . ' ';
-        return $this->count('wdata', $where);
+        return $this->conn->count('wdata', $where);
     }
 
     public function getOasisV($vid)
     {
-        return $this->selectFirst('odata', ['wref' => $vid]);
+        return $this->conn->select('odata', ['wref' => $vid]);
     }
 
     public function getAInfo($id)
     {
-        return $this->selectFirst('wdata', ['id' => $id], ['x', 'y']);
+        return $this->conn->select('wdata', ['id' => $id], ['x', 'y']);
     }
 
     public function getOasisField($ref, $field)
     {
-        return $this->selectFirst('odata', ['wref' => $ref], [$field]);
+        return $this->conn->select('odata', ['wref' => $ref], [$field]);
     }
 
     public function setVillageField($ref, $field, $value)
     {
-        if ((stripos($field, 'name') !== false) && ($value == '')) return false;
-        return $this->update('vdata', [$field => $value], ['wref' => $ref]);
+        if ((stripos($field, 'name') !== false) && ($value == '')) {
+            return false;
+        }
+        return $this->conn->update('vdata', [$field => $value], ['wref' => $ref]);
     }
 
     public function setVillageLevel($ref, $field, $value)
     {
-        return $this->update('fdata', [$field => $value], ['vref' => $ref]);
+        return $this->conn->update('fdata', [$field => $value], ['vref' => $ref]);
     }
 
     public function removeTribeSpecificFields($vref)
@@ -1059,396 +803,391 @@ class Database extends PDO
         $tribeSpecificArray = [31, 32, 33, 35, 36, 41];
         for ($i = 19; $i <= 40; $i++) {
             if (in_array($fields['f' . $i . 't'], $tribeSpecificArray)) {
-                $this->update('fdata', ['f' . $i => '0', 'f' . $i . 't' => '0'], ['vref' => $vref]);
+                $this->conn->update('fdata', ['f' . $i => '0', 'f' . $i . 't' => '0'], ['vref' => $vref]);
             }
         }
-        $this->update('units', ['u199' => 0], ['vref' => $vref]);
-        $this->delete('trapped', ['vref' => $vref]);
-        $this->delete('training', ['vref' => $vref]);
+        $this->conn->update('units', ['u199' => 0], ['vref' => $vref]);
+        $this->conn->delete('trapped', ['vref' => $vref]);
+        $this->conn->delete('training', ['vref' => $vref]);
     }
 
     public function getAdminLog($limit = 5)
     {
-        return $this->select('admin_log', '*', [], ['id DESC'], $limit);
+        return $this->conn->select('admin_log', '*', ['id DESC'], ["LIMIT $limit"]);
     }
 
     public function delAdminLog($id)
     {
-        return $this->delete('admin_log', ['id' => $id]);
+        return $this->conn->delete('admin_log', ['id' => $id]);
     }
 
     public function checkForum($id)
     {
-        return $this->selectFirst('forum_cat', ['alliance' => $id]);
+        return $this->conn->select('forum_cat', ['alliance' => $id]);
     }
 
     public function countCat($id)
     {
-        $result = $this->selectFirst('forum_topic', ['cat' => $id], ['count(id)']);
-        return $result[0]['count(id)'];
+        $result = $this->conn->select('forum_topic', ['cat' => $id], ['count(id)']);
+        return $result['count(id)'];
     }
 
     public function lastTopic($id)
     {
-        return $this->select('forum_topic', ['id'], ['cat' => $id], ['post_date']);
+        return $this->conn->select('forum_topic', ['id'], ['cat' => $id], ['post_date']);
     }
 
     public function checkForumRules($id)
     {
-        global $session;
-        $row = $this->selectFirst('fpost_rules', ['forum_id' => $id]);
+
+        $row = $this->conn->select('fpost_rules', ['forum_id' => $id]);
 
         $ids = explode(',', $row['players_id']);
-        if (in_array($session->uid, $ids)) return false;
+        if (in_array(Session::get('uid'), $ids)) {
+            return false;
+        }
 
         $idn = explode(',', $row['players_name']);
-        if (in_array($_SESSION['username'], $idn)) return false;
+        if (in_array(Session::get('username'), $idn)) {
+            return false;
+        }
 
-        $aid = $session->alliance;
+        $aid = Session::get('alliance');
         $ids = explode(',', $row['ally_id']);
-        if (in_array($aid, $ids)) return false;
+        if (in_array($aid, $ids)) {
+            return false;
+        }
 
-        $rows = $this->selectFirst('alidata', ['id' => $aid], ['tag']);
+        $rows = $this->conn->select('alidata', ['id' => $aid], ['tag']);
         $idn = explode(',', $row['ally_tag']);
-        if (in_array($rows['tag'], $idn)) return false;
+        if (in_array($rows['tag'], $idn)) {
+            return false;
+        }
 
         return true;
     }
 
     public function checkLastTopic($id)
     {
-        return $this->selectFirst('forum_topic', ['cat' => $id]);
+        return $this->conn->select('forum_topic', ['cat' => $id]);
     }
 
     public function checkLastPost($id)
     {
-        return $this->selectFirst('forum_post', ['topic' => $id]);
+        return $this->conn->select('forum_post', ['topic' => $id]);
     }
 
     public function lastPost($id)
     {
-        return $this->select('forum_post', ['date', 'owner'], ['topic' => $id]);
+        return $this->conn->select('forum_post', ['date', 'owner'], ['topic' => $id]);
     }
 
     public function countTopic($id)
     {
-        $result = $this->selectFirst('forum_post', ['owner' => $id], ['count(id)']);
-        $postsCount = $result[0]['count(id)'];
+        $result = $this->conn->select('forum_post', ['owner' => $id], ['count(id)']);
+        $postsCount = $result['count(id)'];
 
-        $result = $this->selectFirst('forum_topic', ['owner' => $id], ['count(id)']);
-        $topicsCount = $result[0]['count(id)'];
+        $result = $this->conn->select('forum_topic', ['owner' => $id], ['count(id)']);
+        $topicsCount = $result['count(id)'];
 
         return $postsCount + $topicsCount;
     }
 
     public function countPost($id)
     {
-        $result = $this->selectFirst('forum_post', ['topic' => $id], ['count(id)']);
-        return $result[0]['count(id)'];
+        $result = $this->conn->select('forum_post', ['topic' => $id], ['count(id)']);
+        return $result['count(id)'];
     }
 
     public function forumCat($id)
     {
-        return $this->select('forum_cat', ['*'], ['alliance' => $id], ['ORDER BY id']);
+        return $this->conn->select('forum_cat', ['*'], ['alliance' => $id], ['ORDER BY id']);
     }
 
     public function forumCatEdit($id)
     {
-        return $this->select('forum_cat', ['*'], ['id' => $id]);
+        return $this->conn->select('forum_cat', ['*'], ['id' => $id]);
     }
 
     public function forumCatName($id)
     {
-        $result = $this->selectFirst('forum_cat', ['forum_name'], ['id' => $id]);
-        return $result[0]['forum_name'];
+        $result = $this->conn->select('forum_cat', ['forum_name'], ['id' => $id]);
+        return $result['forum_name'];
     }
 
     public function checkCatTopic($id)
     {
-        return $this->selectFirst('forum_topic', ['cat' => $id]);
+        return $this->conn->select('forum_topic', ['cat' => $id]);
     }
 
     public function checkResultEdit($alli)
     {
-        return $this->selectFirst('forum_edit', ['id'], ['alliance' => $alli]);
+        return $this->conn->select('forum_edit', ['id'], ['alliance' => $alli]);
     }
 
     public function checkCloseTopic($id)
     {
-        $result = $this->selectFirst('forum_topic', ['close'], ['id' => $id]);
-        return $result[0]['close'];
+        $result = $this->conn->select('forum_topic', ['close'], ['id' => $id]);
+        return $result['close'];
     }
 
     public function checkEditRes($alli)
     {
-        $result = $this->selectFirst('forum_edit', ['result'], ['alliance' => $alli]);
-        return $result[0]['result'];
+        $result = $this->conn->select('forum_edit', ['result'], ['alliance' => $alli]);
+        return $result['result'];
     }
 
     public function creatResultEdit($alli, $result)
     {
-        $this->insert('forum_edit', ['alliance' => $alli, 'result' => $result]);
-        return $this->getLastInsertId();
+        $this->conn->insert('forum_edit', ['alliance' => $alli, 'result' => $result]);
+        return $this->conn->getLastInsertId();
     }
 
     public function updateResultEdit($alli, $result)
     {
-        $q = "UPDATE forum_edit SET result = ? WHERE alliance = ?";
-        return $this->query($q, [$result, $alli]);
+        return $this->conn->update('forum_edit', ['result' => $result], ['alliance' => $alli]);
     }
 
     public function updateEditTopic($id, $title, $cat)
     {
-        $q = "UPDATE forum_topic SET title = ?, cat = ? WHERE id = ?";
-        return $this->query($q, [$title, $cat, $id]);
+        return $this->conn->update('forum_topic', ['title' => $title, 'cat' => $cat], ['id' => $id]);
     }
 
     public function updateEditForum($id, $name, $des)
     {
-        $q = "UPDATE forum_cat SET forum_name = ?, forum_des = ? WHERE id = ?";
-        return $this->query($q, [$name, $des, $id]);
+        return $this->conn->update('forum_cat', ['forum_name' => $name, 'forum_des' => $des], ['id' => $id]);
     }
 
     public function stickTopic($id, $mode)
     {
-        $q = "UPDATE forum_topic SET stick = ? WHERE id = ?";
-        return $this->query($q, [$mode, $id]);
+        return $this->conn->update('forum_topic', ['stick' => $mode], ['id' => $id]);
     }
 
     public function forumCatTopic($id)
     {
-        return $this->select('forum_topic', ['*'], ['cat' => $id, 'stick' => ''], ['ORDER BY post_date DESC']);
+        return $this->conn->select('forum_topic', ['*'], ['cat' => $id, 'stick' => ''], ['ORDER BY post_date DESC']);
     }
 
     public function forumCatTopicStick($id)
     {
-        return $this->select('forum_topic', ['*'], ['cat' => $id, 'stick' => '1'], ['ORDER BY post_date DESC']);
+        return $this->conn->select('forum_topic', ['*'], ['cat' => $id, 'stick' => '1'], ['ORDER BY post_date DESC']);
     }
 
     public function showTopic($id)
     {
-        return $this->select('forum_topic', ['*'], ['id' => $id]);
+        return $this->conn->select('forum_topic', ['*'], ['id' => $id]);
     }
 
     public function showPost($id)
     {
-        return $this->select('forum_post', ['*'], ['topic' => $id]);
+        return $this->conn->select('forum_post', ['*'], ['topic' => $id]);
     }
 
     public function showPostEdit($id)
     {
-        return $this->select('forum_post', ['*'], ['id' => $id]);
+        return $this->conn->select('forum_post', ['*'], ['id' => $id]);
     }
 
     public function createForum($owner, $alli, $name, $des, $area)
     {
-        $forumData = ['owner' => $owner, 'alliance' => $alli, 'forum_name' => $name, 'forum_des' => $des, 'area' => $area];
-        $this->insert('forum_cat', $forumData);
-        return $this->getLastInsertId();
+        $this->conn->insert('forum_cat', ['owner' => $owner, 'alliance' => $alli, 'forum_name' => $name, 'forum_des' => $des, 'area' => $area]);
+        return $this->conn->getLastInsertId();
     }
 
     public function createTopic($title, $post, $cat, $owner, $alli, $ends)
     {
         $date = time();
-        $topicData = ['title' => $title, 'post' => $post, 'post_date' => $date, 'last_post' => $date, 'cat' => $cat, 'owner' => $owner, 'alliance' => $alli, 'ends' => $ends];
-        $this->insert('forum_topic', $topicData);
-        return $this->getLastInsertId();
+        return $this->conn->insert('forum_topic', ['title' => $title, 'post' => $post, 'post_date' => $date, 'last_post' => $date, 'cat' => $cat, 'owner' => $owner, 'alliance' => $alli, 'ends' => $ends]) ? $this->conn->getLastInsertId() : null;
     }
 
     public function createPost($post, $tids, $owner)
     {
-        $date = time();
-        $postData = ['post' => $post, 'topic' => $tids, 'owner' => $owner, 'date' => $date];
-        $this->insert('forum_post', $postData);
-        return $this->getLastInsertId();
+        $this->conn->insert('forum_post', ['post' => $post, 'topic' => $tids, 'owner' => $owner, 'date' => time()]);
+        return $this->conn->getLastInsertId();
     }
 
     public function updatePostDate($id)
     {
-        $date = time();
-        $q = "UPDATE forum_topic SET post_date = ? WHERE id = ?";
-        return $this->query($q, [$date, $id]);
+        return $this->conn->update('forum_topic', ['post_date' => time()], ['id' => $id]);
     }
 
     public function editUpdateTopic($id, $post)
     {
-        $q = "UPDATE forum_topic SET post = ? WHERE id = ?";
-        return $this->query($q, [$post, $id]);
+        return $this->conn->update('forum_topic', ['post' => $post], ['id' => $id]);
     }
 
     public function editUpdatePost($id, $post)
     {
-        $q = "UPDATE forum_post SET post = ? WHERE id = ?";
-        return $this->query($q, [$post, $id]);
+        return $this->conn->update('forum_post', ['post' => $post], ['id' => $id]);
     }
 
     public function lockTopic($id, $mode)
     {
-        $q = "UPDATE forum_topic SET close = ? WHERE id = ?";
-        return $this->query($q, [$mode, $id]);
+        return $this->conn->update('forum_topic', ['close' => $mode], ['id' => $id]);
     }
 
     public function deleteCat($id)
     {
-        $this->delete('forum_cat', ['id' => $id]);
-        $this->delete('forum_topic', ['cat' => $id]);
+        $this->conn->delete('forum_cat', ['id' => $id]);
+        $this->conn->delete('forum_topic', ['cat' => $id]);
     }
 
     public function deleteTopic($id)
     {
-        return $this->delete('forum_topic', ['id' => $id]);
+        return $this->conn->delete('forum_topic', ['id' => $id]);
     }
 
     public function deletePost($id)
     {
-        return $this->delete('forum_post', ['id' => $id]);
+        return $this->conn->delete('forum_post', ['id' => $id]);
     }
 
     public function getAllianceName($id)
     {
-        if (!$id) return false;
-        $result = $this->selectFirst('alidata', ['tag'], ['id' => $id]);
-        return $result ? $result[0]['tag'] : false;
+        if (!$id) {
+            return false;
+        }
+        $result = $this->conn->select('alidata', 'tag', ['id' => $id]);
+        return $result ? $result['tag'] : false;
     }
 
     public function getAlliancePermission($ref, $field, $mode)
     {
         if (!$mode) {
-            $result = $this->selectFirst('ali_permission', [$field], ['uid' => $ref]);
+            $result = $this->conn->select('ali_permission', [$field], ['uid' => $ref]);
         } else {
-            $result = $this->selectFirst('ali_permission', [$field], ['username' => $ref]);
+            $result = $this->conn->select('ali_permission', [$field], ['username' => $ref]);
         }
-        return $result ? $result[0][$field] : null;
+        return $result ? $result[$field] : null;
     }
 
     public function changePos($id, $mode)
     {
-        $forumArea = $this->selectFirst('forum_cat', ['forum_area'], ['id' => $id]);
+        $forumArea = $this->conn->select('forum_cat', ['forum_area'], ['id' => $id]);
         if (!$forumArea) return;
 
         if ($mode == '-1') {
-            $prevCat = $this->selectFirst('forum_cat', ['id'], ['forum_area' => $forumArea[0]['forum_area'], 'id<' => $id], ['id DESC']);
+            $prevCat = $this->conn->select('forum_cat', 'id', ['forum_area' => $forumArea['forum_area'], 'id <' => $id], ['id DESC']);
             if ($prevCat) {
-                $this->update('forum_cat', ['id' => 0], ['id' => $prevCat[0]['id']]);
-                $this->update('forum_cat', ['id' => -1], ['id' => $id]);
-                $this->update('forum_cat', ['id' => $id], ['id' => 0]);
-                $this->update('forum_cat', ['id' => $prevCat[0]['id']], ['id' => -1]);
+                $this->conn->update('forum_cat', ['id' => 0], ['id' => $prevCat['id']]);
+                $this->conn->update('forum_cat', ['id' => -1], ['id' => $id]);
+                $this->conn->update('forum_cat', ['id' => $id], ['id' => 0]);
+                $this->conn->update('forum_cat', ['id' => $prevCat['id']], ['id' => -1]);
             }
         } elseif ($mode == 1) {
-            $nextCat = $this->selectFirst('forum_cat', ['id'], ['forum_area' => $forumArea[0]['forum_area'], 'id>' => $id], ['id ASC']);
+            $nextCat = $this->conn->select('forum_cat', 'id', ['forum_area' => $forumArea['forum_area'], 'id >' => $id], ['id ASC']);
             if ($nextCat) {
-                $this->update('forum_cat', ['id' => 0], ['id' => $nextCat[0]['id']]);
-                $this->update('forum_cat', ['id' => -1], ['id' => $id]);
-                $this->update('forum_cat', ['id' => $id], ['id' => 0]);
-                $this->update('forum_cat', ['id' => $nextCat[0]['id']], ['id' => -1]);
+                $this->conn->update('forum_cat', ['id' => 0], ['id' => $nextCat['id']]);
+                $this->conn->update('forum_cat', ['id' => -1], ['id' => $id]);
+                $this->conn->update('forum_cat', ['id' => $id], ['id' => 0]);
+                $this->conn->update('forum_cat', ['id' => $nextCat['id']], ['id' => -1]);
             }
         }
     }
 
     public function forumCatAlliance($id)
     {
-        $result = $this->selectFirst('forum_cat', ['alliance'], ['id' => $id]);
-        return $result ? $result[0]['alliance'] : null;
+        $result = $this->conn->select('forum_cat', 'alliance', ['id' => $id]);
+        return $result ? $result['alliance'] : null;
     }
 
     public function createPoll($id, $name, $p1_name, $p2_name, $p3_name, $p4_name)
     {
-        $this->insert('forum_poll', ['id' => $id, 'name' => $name, 'p1_name' => $p1_name, 'p2_name' => $p2_name, 'p3_name' => $p3_name, 'p4_name' => $p4_name]);
-        return $this->lastInsertId();
+        return $this->conn->insert('forum_poll', ['id' => $id, 'name' => $name, 'p1_name' => $p1_name, 'p2_name' => $p2_name, 'p3_name' => $p3_name, 'p4_name' => $p4_name]) ? $this->conn->lastInsertId() : null;
     }
 
     public function createForumRules($aid, $id, $users_id, $users_name, $alli_id, $alli_name)
     {
-        $this->insert('fpost_rules', ['aid' => $aid, 'id' => $id, 'users_id' => $users_id, 'users_name' => $users_name, 'alli_id' => $alli_id, 'alli_name' => $alli_name]);
-        return $this->lastInsertId();
+        return $this->conn->insert('fpost_rules', ['aid' => $aid, 'id' => $id, 'users_id' => $users_id, 'users_name' => $users_name, 'alli_id' => $alli_id, 'alli_name' => $alli_name]) ? $this->conn->lastInsertId() : null;
     }
 
     public function setAlliName($aid, $name, $tag)
     {
-        if (!$aid) return false;
-        return $this->update('alidata', ['name' => $name, 'tag' => $tag], ['id' => $aid]);
+        if (!$aid) {
+            return false;
+        }
+        return $this->conn->update('alidata', ['name' => $name, 'tag' => $tag], ['id' => $aid]);
     }
 
     public function isAllianceOwner($id)
     {
-        if (!$id) return false;
-        $result = $this->selectFirst('alidata', ['id'], ['leader' => $id]);
+        if (!$id) {
+            return false;
+        }
+        $result = $this->conn->select('alidata', 'id', ['leader' => $id]);
         return $result ? true : false;
     }
 
     public function aExist($ref, $type)
     {
-        $result = $this->selectFirst('alidata', [$type], [$type => $ref]);
-        return $result ? true : false;
+        return $this->conn->select('alidata', $type, [$type => $ref]) ? true : false;
     }
 
     public function createAlliance($tag, $name, $uid, $max)
     {
-        $this->insert('alidata', ['name' => $name, 'tag' => $tag, 'leader' => $uid, 'max' => $max]);
-        return $this->lastInsertId();
+        return $this->conn->insert('alidata', ['name' => $name, 'tag' => $tag, 'leader' => $uid, 'max' => $max]) ? $this->conn->lastInsertId() : null;
     }
 
     public function insertAlliNotice($aid, $notice)
     {
-        $time = time();
-        $this->insert('ali_log', ['aid' => $aid, 'notice' => $notice, 'date' => $time]);
-        return $this->lastInsertId();
+        return $this->conn->insert('ali_log', ['aid' => $aid, 'notice' => $notice, 'date' => time()]) ? $this->conn->lastInsertId() : null;
     }
 
     public function deleteAlliance($aid)
     {
-        $result = $this->selectFirst('users', ['id'], ['alliance' => $aid]);
+        $result = $this->conn->select('users', 'id', ['alliance' => $aid]);
         if (!$result) {
-            return $this->delete('alidata', ['id' => $aid]);
+            return $this->conn->delete('alidata', ['id' => $aid]);
         }
         return false;
     }
 
     public function readAlliNotice($aid)
     {
-        return $this->selectAll('ali_log', ['*'], ['aid' => $aid], ['date' => 'DESC']);
+        return $this->conn->select('ali_log', ['*'], ['aid' => $aid], ['date' => 'DESC']);
     }
 
     public function createAlliPermissions($uid, $aid, $rank, $opt1, $opt2, $opt3, $opt4, $opt5, $opt6, $opt7, $opt8)
     {
-        $this->insert('ali_permission', ['uid' => $uid, 'aid' => $aid, 'rank' => $rank, 'opt1' => $opt1, 'opt2' => $opt2, 'opt3' => $opt3, 'opt4' => $opt4, 'opt5' => $opt5, 'opt6' => $opt6, 'opt7' => $opt7, 'opt8' => $opt8]);
-        return $this->lastInsertId();
+        return $this->conn->insert('ali_permission', ['uid' => $uid, 'aid' => $aid, 'rank' => $rank, 'opt1' => $opt1, 'opt2' => $opt2, 'opt3' => $opt3, 'opt4' => $opt4, 'opt5' => $opt5, 'opt6' => $opt6, 'opt7' => $opt7, 'opt8' => $opt8]) ? $this->conn->lastInsertId() : null;
     }
 
     public function deleteAlliPermissions($uid)
     {
-        return $this->delete('ali_permission', ['uid' => $uid]);
+        return $this->conn->delete('ali_permission', ['uid' => $uid]);
     }
 
     public function updateAlliPermissions($uid, $aid, $rank, $opt1, $opt2, $opt3, $opt4, $opt5, $opt6, $opt7, $opt8 = 0)
     {
-        return $this->update('ali_permission', ['rank' => $rank, 'opt1' => $opt1, 'opt2' => $opt2, 'opt3' => $opt3, 'opt4' => $opt4, 'opt5' => $opt5, 'opt6' => $opt6, 'opt7' => $opt7, 'opt8' => $opt8], ['uid' => $uid, 'alliance' => $aid]);
+        return $this->conn->update('ali_permission', ['rank' => $rank, 'opt1' => $opt1, 'opt2' => $opt2, 'opt3' => $opt3, 'opt4' => $opt4, 'opt5' => $opt5, 'opt6' => $opt6, 'opt7' => $opt7, 'opt8' => $opt8], ['uid' => $uid, 'alliance' => $aid]);
     }
 
     public function getAlliPermissions($uid, $aid)
     {
-        return $this->selectFirst('ali_permission', ['*'], ['uid' => $uid, 'alliance' => $aid]);
+        return $this->conn->select('ali_permission', ['uid' => $uid, 'alliance' => $aid]);
     }
 
     public function submitAlliProfile($aid, $notice, $desc)
     {
-        if (!$aid) return false;
-        return $this->update('alidata', ['notice' => $notice, 'desc' => $desc], ['id' => $aid]);
+        if (!$aid) {
+            return false;
+        }
+        return $this->conn->update('alidata', ['notice' => $notice, 'desc' => $desc], ['id' => $aid]);
     }
 
     public function diplomacyInviteAdd($alli1, $alli2, $type)
     {
-        return $this->insert('diplomacy', ['alli1' => $alli1, 'alli2' => $alli2, 'type' => intval($type), 'accepted' => 0]);
+        return $this->conn->insert('diplomacy', ['alli1' => $alli1, 'alli2' => $alli2, 'type' => intval($type), 'accepted' => 0]);
     }
 
-    public function diplomacyOwnOffers($session_alliance)
+    public function diplomacyOwnOffers($alliance)
     {
-        return $this->selectAll('diplomacy', ['*'], ['alli1' => $session_alliance, 'accepted' => 0]);
+        return $this->conn->select('diplomacy', ['*'], ['alli1' => $alliance, 'accepted' => 0]);
     }
 
     public function getAllianceID($name)
     {
-        $result = $this->selectFirst('alidata', ['id'], ['tag' => $this->RemoveXSS($name)]);
+        $result = $this->conn->select('alidata', 'id', ['tag' => $this->RemoveXSS($name)]);
         return $result ? $result['id'] : null;
     }
 
@@ -1459,46 +1198,47 @@ class Database extends PDO
 
     public function diplomacyCancelOffer($id)
     {
-        return $this->delete('diplomacy', ['id' => $id]);
+        return $this->conn->delete('diplomacy', ['id' => $id]);
     }
 
-    public function diplomacyInviteAccept($id, $session_alliance)
+    public function diplomacyInviteAccept($id, $alliance)
     {
-        return $this->update('diplomacy', ['accepted' => 1], ['id' => $id, 'alli2' => $session_alliance]);
+        return $this->conn->update('diplomacy', ['accepted' => 1], ['id' => $id, 'alli2' => $alliance]);
     }
 
-    public function diplomacyInviteDenied($id, $session_alliance)
+    public function diplomacyInviteDenied($id, $alliance)
     {
-        return $this->delete('diplomacy', ['id' => $id, 'alli2' => $session_alliance]);
+        return $this->conn->delete('diplomacy', ['id' => $id, 'alli2' => $alliance]);
     }
 
-    public function diplomacyInviteCheck($session_alliance)
+    public function diplomacyInviteCheck($alliance)
     {
-        return $this->select('diplomacy', ['alli2' => $session_alliance, 'accepted' => 0]);
+        return $this->conn->select('diplomacy', ['alli2' => $alliance, 'accepted' => 0]);
     }
 
-    public function diplomacyExistingRelationships($session_alliance)
+    public function diplomacyExistingRelationships($alliance)
     {
-        return $this->selectAll('diplomacy', ['*'], ['alli2' => $session_alliance, 'accepted' => 1]);
+        return $this->conn->select('diplomacy', ['*'], ['alli2' => $alliance, 'accepted' => 1]);
     }
 
-    public function diplomacyExistingRelationships2($session_alliance)
+    public function diplomacyExistingRelationships2($alliance)
     {
-        return $this->selectAll('diplomacy', ['*'], ['alli1' => $session_alliance, 'accepted' => 1]);
+        return $this->conn->select('diplomacy', ['*'], ['alli1' => $alliance, 'accepted' => 1]);
     }
 
-    public function diplomacyCancelExistingRelationship($id, $session_alliance)
+    public function diplomacyCancelExistingRelationship($id, $alliance)
     {
-        return $this->delete('diplomacy', ['id' => $id, 'alli2' => $session_alliance]);
+        return $this->conn->delete('diplomacy', ['id' => $id, 'alli2' => $alliance]);
     }
 
     public function getUserAlliance($id)
     {
-        if (!$id) return false;
-        $result = $this->selectFirst('users JOIN alidata', 'alidata.tag', 'users.alliance = alidata.id AND users.id = :id', ['id' => $id]);
+        if (!$id) {
+            return false;
+        }
+        $result = $this->conn->select('users JOIN alidata', 'alidata.tag', 'users.alliance = alidata.id AND users.id = :id', ['id' => $id]);
         return $result ? $result['tag'] : "-";
     }
-
 
     public function modifyResource($vid, $wood, $clay, $iron, $crop, $mode)
     {
@@ -1508,7 +1248,7 @@ class Database extends PDO
             'iron' => ($mode ? '+' : '-') . $iron,
             'crop' => ($mode ? '+' : '-') . $crop
         ];
-        return $this->update('vdata', $updateFields, ['wref' => $vid]);
+        return $this->conn->update('vdata', $updateFields, ['wref' => $vid]);
     }
 
     public function modifyProduction($vid, $woodp, $clayp, $ironp, $cropp, $upkeep)
@@ -1520,7 +1260,7 @@ class Database extends PDO
             'cropp' => $cropp,
             'upkeep' => $upkeep
         ];
-        return $this->update('vdata', $updateFields, ['wref' => $vid]);
+        return $this->conn->update('vdata', $updateFields, ['wref' => $vid]);
     }
 
     public function modifyOasisResource($vid, $wood, $clay, $iron, $crop, $mode)
@@ -1531,224 +1271,189 @@ class Database extends PDO
             'iron' => ($mode ? '+' : '-') . $iron,
             'crop' => ($mode ? '+' : '-') . $crop
         ];
-        return $this->update('odata', $updateFields, ['wref' => $vid]);
+        return $this->conn->update('odata', $updateFields, ['wref' => $vid]);
     }
 
     public function getFieldType($vid, $field)
     {
-        $result = $this->selectFirst('fdata', "f$field" . "t", 'vref = :vid', ['vid' => $vid]);
+        $result = $this->conn->select('fdata', "f$field" . "t", 'vref = :vid', ['vid' => $vid]);
         return $result ? $result["f$field" . "t"] : null;
     }
 
     public function getVSumField($uid, $field)
     {
-        $result = $this->selectFirst('vdata', "SUM($field)", 'owner = :uid', ['uid' => $uid]);
+        $result = $this->conn->select('vdata', "SUM($field)", 'owner = :uid', ['uid' => $uid]);
         return $result ? $result["SUM($field)"] : null;
     }
 
-
     public function updateVillage($vid)
     {
-        $time = time();
-        $updateFields = ['lastupdate' => $time];
-        return $this->update('vdata', $updateFields, ['wref' => $vid]);
+        return $this->conn->update('vdata', ['lastupdate' => time()], ['wref' => $vid]);
     }
 
     public function updateOasis($vid)
     {
-        $time = time();
-        $updateFields = ['lastupdated' => $time];
-        return $this->update('odata', $updateFields, ['wref' => $vid]);
+        return $this->conn->update('odata', ['lastupdated' => time()], ['wref' => $vid]);
     }
 
     public function setVillageName($vid, $name)
     {
-        if ($name == '') return false;
-        $updateFields = ['name' => $name];
-        return $this->update('vdata', $updateFields, ['wref' => $vid]);
+        if ($name == '') {
+            return false;
+        }
+        return $this->conn->update('vdata', ['name' => $name], ['wref' => $vid]);
     }
 
     public function modifyPop($vid, $pop, $mode)
     {
-        $updateFields = ['pop' => ($mode ? '-' : '+') . $pop];
-        return $this->update('vdata', $updateFields, ['wref' => $vid]);
+        return $this->conn->update('vdata', ['pop' => ($mode ? '-' : '+') . $pop], ['wref' => $vid]);
     }
 
     public function addCP($ref, $cp)
     {
-        $updateFields = ['cp' => 'cp + ' . $cp];
-        return $this->update('vdata', $updateFields, ['wref' => $ref]);
+        return $this->conn->update('vdata', ['cp' => 'cp + ' . $cp], ['wref' => $ref]);
     }
 
     public function addCel($ref, $cel, $type)
     {
-        $updateFields = ['celebration' => $cel, 'type' => $type];
-        return $this->update('vdata', $updateFields, ['wref' => $ref]);
+        return $this->conn->update('vdata', ['celebration' => $cel, 'type' => $type], ['wref' => $ref]);
     }
 
     public function getCel()
     {
         $time = time();
-        $condition = "`celebration` < $time AND `celebration` != 0";
-        return $this->select('vdata', '*', $condition);
+        return $this->conn->select('vdata', '*', "celebration < $time AND celebration != 0");
     }
 
     public function getActiveGCel($vref)
     {
         $time = time();
-        $condition = "`vref` = $vref AND `celebration` > $time AND `type` = 2";
-        return $this->select('vdata', '*', $condition);
+        return $this->conn->select('vdata', '*', "vref = $vref AND celebration > $time AND type = 2");
     }
 
     public function clearCel($ref)
     {
-        $updateFields = ['celebration' => 0, 'type' => 0];
-        return $this->update('vdata', $updateFields, ['wref' => $ref]);
+        return $this->conn->update('vdata', ['celebration' => 0, 'type' => 0], ['wref' => $ref]);
     }
 
     public function setCelCp($user, $cp)
     {
-        $fields = ['cp'];
-        $values = [$cp];
-        $conditions = ['id' => $user];
-        return $this->update('users', $fields, $values, $conditions);
+        return $this->conn->update('users', ['cp' => $cp], ['id' => $user]);
     }
 
     public function getInvitation($uid, $ally)
     {
-        $conditions = "`uid` = ? AND `alliance` = ?";
-        $values = [$uid, $ally];
-        return $this->select('ali_invite', '*', $conditions, $values);
+        return $this->conn->select('ali_invite', '*', "uid = ? AND alliance = ?", [$uid, $ally]);
     }
 
     public function getInvitation2($uid)
     {
-        $conditions = "`uid` = ?";
-        $values = [$uid];
-        return $this->select('ali_invite', '*', $conditions, $values);
+        return $this->conn->select('ali_invite', '*', "uid = ?", [$uid]);
     }
 
     public function getAliInvitations($aid)
     {
-        $conditions = "`alliance` = ? AND `accept` = 0";
-        $values = [$aid];
-        return $this->select('ali_invite', '*', $conditions, $values);
+        return $this->conn->select('ali_invite', '*', "alliance = ? AND accept = 0", [$aid]);
     }
 
     public function sendInvitation($uid, $alli, $sender)
     {
-        $fields = ['uid', 'alliance', 'sender', 'timestamp', 'accept'];
-        $values = [$uid, $alli, $sender, time(), 0];
-        return $this->insert('ali_invite', $fields, $values);
+        return $this->conn->insert('ali_invite', ['uid' => $uid, 'alliance' => $alli, 'sender' => $sender, 'timestamp' => time(), 'accept' => 0]);
     }
 
     public function removeInvitation($id)
     {
-        $conditions = "`id` = ?";
-        $values = [$id];
-        return $this->delete('ali_invite', $conditions, $values);
+        return $this->conn->delete('ali_invite', "id = ?", [$id]);
     }
 
     public function delMessage($id)
     {
-        $conditions = "`id` = ?";
-        $values = [$id];
-        return $this->delete('mdata', $conditions, $values);
+        return $this->conn->delete('mdata', "id = ?", [$id]);
     }
 
     public function delNotice($id, $uid)
     {
-        $conditions = "`id` = ? AND `uid` = ?";
-        $values = [$id, $uid];
-        return $this->delete('ndata', $conditions, $values);
+        return $this->conn->delete('ndata', "id = ? AND uid = ?", [$id, $uid]);
     }
 
     public function sendMessage($client, $owner, $topic, $message, $send, $alliance, $player, $coor, $report)
     {
-        $fields = ['client', 'owner', 'topic', 'message', 'send', 'alliance', 'player', 'coor', 'report', 'time'];
-        $values = [$client, $owner, $topic, $message, $send, $alliance, $player, $coor, $report, time()];
-        return $this->insert('mdata', $fields, $values);
+        $fields = ['client' => $client, 'owner' => $owner, 'topic' => $topic, 'message' => $message, 'send' => $send, 'alliance' => $alliance, 'player' => $player, 'coor' => $coor, 'report' => $report, 'time' => time()];
+        return $this->conn->insert('mdata', $fields);
     }
 
     public function setArchived($id)
     {
-        $fields = ['archived'];
-        $values = [1];
-        $conditions = ['id' => $id];
-        return $this->update('mdata', $fields, $values, $conditions);
+        return $this->conn->update('mdata', ['archived' => 1], ['id' => $id]);
     }
 
     public function setNorm($id)
     {
-        $fields = ['archived'];
-        $values = [0];
-        $conditions = ['id' => $id];
-        return $this->update('mdata', $fields, $values, $conditions);
+        return $this->conn->update('mdata', ['archived' => 0], ['id' => $id]);
     }
 
     public function getMessage($id, $mode)
     {
-        global $session;
         switch ($mode) {
             case 1:
-                $conditions = "`target` = ? AND `send` = 0 AND `archived` = 0";
+                $conditions = "target = ? AND send = 0 AND archived = 0";
                 $values = [$id];
                 break;
             case 2:
-                $conditions = "`owner` = ?";
+                $conditions = "owner = ?";
                 $values = [$id];
                 break;
             case 3:
             case 12:
-                $conditions = "`id` = ?";
+                $conditions = "id = ?";
                 $values = [$id];
                 break;
             case 4:
                 $fields = ['viewed' => 1];
-                $conditions = ['id' => $id, 'target' => $session->uid];
-                return $this->update('mdata', $fields, $conditions);
+                $conditions = ['id' => $id, 'target' => Session::get('uid')];
+                return $this->conn->update('mdata', $fields, $conditions);
             case 5:
                 $fields = ['deltarget' => 1, 'viewed' => 1];
                 $conditions = ['id' => $id];
-                return $this->update('mdata', $fields, $conditions);
+                return $this->conn->update('mdata', $fields, $conditions);
             case 6:
-                $conditions = "`target` = ? AND `send` = 0 AND `archived` = 1";
+                $conditions = "target = ? AND send = 0 AND archived = 1";
                 $values = [$id];
                 break;
             case 7:
                 $fields = ['delowner' => 1];
                 $conditions = ['id' => $id];
-                return $this->update('mdata', $fields, $conditions);
+                return $this->conn->update('mdata', $fields, $conditions);
             case 8:
                 $fields = ['deltarget' => 1, 'delowner' => 1, 'viewed' => 1];
                 $conditions = ['id' => $id];
-                return $this->update('mdata', $fields, $conditions);
+                return $this->conn->update('mdata', $fields, $conditions);
             case 9:
-                $conditions = "`target` = ? AND `send` = 0 AND `archived` = 0 AND `deltarget` = 0 AND `viewed` = 0";
+                $conditions = "target = ? AND send = 0 AND archived = 0 AND deltarget = 0 AND viewed = 0";
                 $values = [$id];
                 break;
             case 10:
-                $conditions = "`owner` = ? AND `delowner` = 0";
+                $conditions = "owner = ? AND delowner = 0";
                 $values = [$id];
                 break;
             case 11:
-                $conditions = "`target` = ? AND `send` = 0 AND `archived` = 1 AND `deltarget` = 0";
+                $conditions = "target = ? AND send = 0 AND archived = 1 AND deltarget = 0";
                 $values = [$id];
                 break;
         }
 
         if ($mode <= 3 || $mode == 6 || $mode > 8) {
-            return $this->select('mdata', '*', $conditions, $values, 'time DESC');
+            return $this->conn->select('mdata', '*', $conditions, $values, 'time DESC');
         } else {
-            return false; // Indicar que a operação não foi realizada
+            return false;
         }
     }
 
     public function addBuilding($wid, $field, $type, $loop, $time, $master, $level)
     {
-        $this->update('fdata', ["f$field" . "t" => $type], "vref = :wid", ['wid' => $wid]);
+        $this->conn->update('fdata', ["f$field" . "t" => $type], "vref = :wid", ['wid' => $wid]);
 
-        return $this->insert('bdata', [
+        return $this->conn->insert('bdata', [
             'wid' => $wid,
             'field' => $field,
             'type' => $type,
@@ -1759,9 +1464,129 @@ class Database extends PDO
         ]);
     }
 
+    public function removeBuilding($id)
+    {
+        $building = new Building();
+
+        $jobs = $building->buildArray;
+
+        $jobDeleted = -1;
+        $jobLoopconID = -1;
+        $jobMaster = -1;
+
+        foreach ($jobs as $i => $job) {
+            if ($job['id'] == $id) {
+                $jobDeleted = $i;
+            }
+            if ($job['loopcon'] == 1) {
+                $jobLoopconID = $i;
+            }
+            if ($job['master'] == 1) {
+                $jobMaster = $i;
+            }
+        }
+
+        $sameBuildCount = $this->calculateSameBuildCount($jobs);
+
+        if ($sameBuildCount > 0) {
+            $this->handleSameBuildCount($jobs, $sameBuildCount, $jobDeleted, $jobMaster);
+        } else {
+            $this->handleDifferentBuildCount($jobs, $jobDeleted, $jobLoopconID, $building);
+        }
+
+        return $this->conn->delete('bdata', 'id = :id', [':id' => $id]);
+    }
+
+    private function calculateSameBuildCount($jobs)
+    {
+        $sameBuildCount = 0;
+        $fieldCounts = array_count_values(array_column($jobs, 'field'));
+
+        foreach ($fieldCounts as $count) {
+            if ($count > 1) {
+                $sameBuildCount += $count;
+            }
+        }
+
+        return $sameBuildCount;
+    }
+
+    private function handleSameBuildCount($jobs, $sameBuildCount, $jobDeleted, $jobMaster)
+    {
+        $building = new Building();
+
+        if ($sameBuildCount > 3) {
+            if ($sameBuildCount == 4 || $sameBuildCount == 5) {
+                if ($jobDeleted == 0) {
+                    $uprequire = $building->resourceRequired($jobs[1]['field'], $jobs[1]['type'], 1);
+                    $timestamp = time() + $uprequire['time'];
+                    $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], ['id' => $jobs[1]['id']]);
+                }
+            } elseif ($sameBuildCount == 6) {
+                if ($jobDeleted == 0) {
+                    $uprequire = $building->resourceRequired($jobs[2]['field'], $jobs[2]['type'], 1);
+                    $timestamp = time() + $uprequire['time'];
+                    $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], ['id' => $jobs[2]['id']]);
+                }
+            } elseif ($sameBuildCount == 7) {
+                if ($jobDeleted == 1) {
+                    $uprequire = $building->resourceRequired($jobs[2]['field'], $jobs[2]['type'], 1);
+                    $timestamp = time() + $uprequire['time'];
+                    $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], ['id' => $jobs[2]['id']]);
+                }
+            }
+            if ($sameBuildCount < 8) {
+                $uprequire1 = $building->resourceRequired($jobs[$jobMaster]['field'], $jobs[$jobMaster]['type'], 2);
+                $timestamp1 = $uprequire1['time'];
+            } else {
+                $uprequire1 = $building->resourceRequired($jobs[$jobMaster]['field'], $jobs[$jobMaster]['type'], 1);
+                $timestamp1 = $uprequire1['time'];
+            }
+        } else {
+            if ($jobDeleted == $jobs[floor($sameBuildCount / 3)]['id'] || $jobDeleted == $jobs[floor($sameBuildCount / 2) + 1]['id']) {
+                $timestamp = $jobs[floor($sameBuildCount / 3)]['timestamp'];
+                $condition = [
+                    'master' => 0,
+                    'id[>]' => $jobDeleted,
+                    'OR' => [
+                        'ID' => $jobs[floor($sameBuildCount / 3)]['id'],
+                        'ID' => $jobs[floor($sameBuildCount / 2) + 1]['id']
+                    ]
+                ];
+                $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], $condition);
+            }
+        }
+
+        $this->conn->update('bdata', ['level' => 'level - 1', 'timestamp' => $timestamp1], ['id' => $jobs[$jobMaster]['id']]);
+    }
+
+    private function handleDifferentBuildCount($jobs, $sameBuildCount, $jobDeleted, $jobLoopconID)
+    {
+        $building = new Building();
+
+        if ($jobs[$jobDeleted]['field'] >= 19) {
+            $field = $jobs[$jobDeleted]['field'];
+            $wid = $jobs[$jobDeleted]['wid'];
+
+            $fieldValue = $this->conn->select('fdata', "f$field", ['vref' => $wid]);
+            if ($fieldValue === 0) {
+                $updateData = ["f${field}t" => 0];
+                $condition = ['vref' => $wid];
+                $this->conn->update('fdata', $updateData, $condition);
+            }
+        }
+
+        if (($jobLoopconID >= 0) && ($jobs[$jobDeleted]['loopcon'] != 1)) {
+            if (($jobs[$jobLoopconID]['field'] <= 18 && $jobs[$jobDeleted]['field'] <= 18) || ($jobs[$jobLoopconID]['field'] >= 19 && $jobs[$jobDeleted]['field'] >= 19) || sizeof($jobs) < 3) {
+                $uprequire = $building->resourceRequired($jobs[$jobLoopconID]['field'], $jobs[$jobLoopconID]['type']);
+                $this->conn->update('bdata', ['loopcon' => 0, 'timestamp' => time() + $uprequire['time']], ['wid' => $jobs[$jobDeleted]['wid'], 'loopcon' => 1, 'master' => 0]);
+            }
+        }
+    }
+
     public function getNotice($uid)
     {
-        return $this->select('ndata', '*', 'uid = :uid', ['uid' => $uid]);
+        return $this->conn->select('ndata', '*', 'uid = :uid', ['uid' => $uid]);
     }
 
     public function addNotice($uid, $toWref, $ally, $type, $topic, $data, $time = 0)
@@ -1770,7 +1595,7 @@ class Database extends PDO
             $time = time();
         }
 
-        return $this->insert('ndata', [
+        return $this->conn->insert('ndata', [
             'uid' => $uid,
             'toWref' => $toWref,
             'ally' => $ally,
@@ -1784,238 +1609,128 @@ class Database extends PDO
 
     public function noticeViewed($id)
     {
-        return $this->update('ndata', ['viewed' => 1], 'id = :id', ['id' => $id]);
+        return $this->conn->update('ndata', ['viewed' => 1], 'id = :id', ['id' => $id]);
     }
 
     public function removeNotice($id)
     {
-        return $this->delete('ndata', 'id = :id', ['id' => $id]);
+        return $this->conn->delete('ndata', 'id = :id', ['id' => $id]);
     }
 
     public function archiveNotice($id)
     {
-        return $this->update('ndata', ['archive' => 1], 'id = :id', ['id' => $id]);
+        return $this->conn->update('ndata', ['archive' => 1], 'id = :id', ['id' => $id]);
     }
 
     public function unarchiveNotice($id)
     {
-        return $this->update('ndata', ['archive' => 0], 'id = :id', ['id' => $id]);
-    }
-
-    public function removeBuilding($d)
-    {
-        global $building;
-        $jobs = $building->buildArray;
-
-        $jobLoopconID = -1;
-        $SameBuildCount = 0;
-
-        // Encontrar o trabalho a ser removido e outras informações relevantes
-        foreach ($jobs as $index => $job) {
-            if ($job['id'] == $d) {
-                $jobDeleted = $index;
-            }
-            if ($job['loopcon'] == 1) {
-                $jobLoopconID = $index;
-            }
-            if ($job['master'] == 1) {
-                $jobMaster = $index;
-            }
-        }
-
-        // Determinar o número de construções iguais no mesmo campo
-        foreach ($jobs as $index => $job) {
-            for ($i = $index + 1; $i < count($jobs); $i++) {
-                if ($job['field'] == $jobs[$i]['field']) {
-                    $SameBuildCount++;
-                }
-            }
-        }
-
-        // Excluir o edifício da tabela 'bdata'
-        $conditions = ['id' => $d];
-        $this->delete('bdata', $conditions);
-
-        return true;
+        return $this->conn->update('ndata', ['archive' => 0], 'id = :id', ['id' => $id]);
     }
 
     public function addDemolition($wid, $field)
     {
         global $building, $village;
 
-        // Excluir o registro da construção da tabela 'bdata'
         $conditions = ['field' => $field, 'wid' => $wid];
-        $this->delete('bdata', $conditions);
+        $this->conn->delete('bdata', $conditions);
 
-        // Calcular os requisitos para demolir o edifício
         $uprequire = $building->resourceRequired($field - 1, $village->resarray['f' . $field . 't']);
 
-        // Calcular o novo nível do campo
-        $fieldLevel = $this->getFieldLevel($wid, $field) - 1;
+        $fieldLevel = $this->conn->getFieldLevel($wid, $field) - 1;
 
-        // Calcular o timestamp para demolir o edifício
         $timestamp = time() + floor($uprequire['time'] / 2);
 
-        // Inserir os detalhes da demolição na tabela 'demolition'
         $data = [
             'wid' => $wid,
             'field' => $field,
             'field_level' => $fieldLevel,
             'timestamp' => $timestamp
         ];
-        $this->insert('demolition', $data);
+        $this->conn->insert('demolition', $data);
 
         return true;
     }
 
     public function getFieldLevel($vid, $field)
     {
-        $conditions = ['vref' => $vid];
-        $fields = ['f' . $field];
-        $result = $this->selectFirst('fdata', $fields, $conditions);
+        $result = $this->conn->select('fdata', 'f' . $field, ['vref' => $vid]);
         return $result['f' . $field];
     }
 
     public function getDemolition($wid = 0)
     {
         $conditions = ($wid) ? ['vref' => $wid] : 'timetofinish <= ' . time();
-        $fields = ['vref', 'buildnumber', 'timetofinish'];
-        $result = $this->select('demolition', $fields, $conditions);
-
-        if ($result) {
-            return $result;
-        } else {
-            return NULL;
-        }
+        $result = $this->conn->select('demolition', 'vref, buildnumber, timetofinish', $conditions);
+        return $result ? $result : NULL;
     }
 
     public function finishDemolition($wid)
     {
-        $conditions = ['vref' => $wid];
-        $data = ['timetofinish' => 0];
-        return $this->update('demolition', $data, $conditions);
+        return $this->conn->update('demolition', ['timetofinish' => 0], ['vref' => $wid]);
     }
 
     public function delDemolition($wid)
     {
-        $conditions = ['vref' => $wid];
-        return $this->delete('demolition', $conditions);
+        return $this->conn->delete('demolition', ['vref' => $wid]);
     }
 
     public function getJobs($wid)
     {
-        $conditions = ['wid' => $wid];
-        $orderBy = 'ID ASC';
-        return $this->select('bdata', '*', $conditions, $orderBy);
+        return $this->conn->select('bdata', '*', ['wid' => $wid], ['ID ASC']);
     }
 
     public function FinishWoodcutter($wid)
     {
-        $time = time() - 1;
-        $conditions = ['wid' => $wid, 'type' => 1];
-        $orderBy = 'master, timestamp ASC';
-        $job = $this->selectFirst('bdata', 'id', $conditions, $orderBy);
+        $job = $this->conn->select('bdata', 'id', ['wid' => $wid, 'type' => 1], ['master, timestamp ASC']);
         if ($job) {
-            $data = ['timestamp' => $time];
-            $conditions = ['id' => $job['id']];
-            $this->update('bdata', $data, $conditions);
+            $this->conn->update('bdata', ['timestamp' => time() - 1], ['id' => $job['id']]);
         }
     }
 
     public function FinishCropLand($wid)
     {
-        $time = $_SERVER['REQUEST_TIME'] - 1;
-
-        // Atualizar o tempo do último edifício de tipo 4 (terras agrícolas)
-        $conditions = ['wid' => $wid, 'type' => 4];
-        $orderBy = 'master, timestamp ASC';
-        $fields = ['id', 'timestamp'];
-        $job = $this->selectFirst('bdata', $fields, $conditions, $orderBy);
+        $time = time() - 1;
+        $job = $this->conn->select('bdata', ['id', 'timestamp'], ['wid' => $wid, 'type' => 4], ['master, timestamp ASC']);
         if ($job) {
-            $data = ['timestamp' => $time];
-            $conditions = ['id' => $job['id']];
-            $this->update('bdata', $data, $conditions);
+            $this->conn->update('bdata', ['timestamp' => $time], ['id' => $job['id']]);
         }
-
-        // Atualizar o tempo de todos os edifícios de loopcon = 1 e campo <= 18
-        $conditions2 = ['wid' => $wid, 'loopcon' => 1, 'field' => ['<=', 18]];
-        $orderBy2 = 'master, timestamp ASC';
-        $fields2 = ['id', 'timestamp'];
-        $jobs = $this->select('bdata', $fields2, $conditions2, $orderBy2);
+        $jobs = $this->conn->select('bdata', ['id', 'timestamp'], ['wid' => $wid, 'loopcon' => 1, 'field' => ['<=', 18]], ['master, timestamp ASC']);
         foreach ($jobs as $job) {
-            $q2 = "UPDATE bdata SET timestamp = timestamp - {$job['timestamp']} WHERE id = '{$job['id']}'";
-            $this->executeQuery($q2);
+            $this->conn->update('bdata', ['timestamp' => $job['timestamp'] - time()], ['id' => $job['id']]);
         }
     }
 
     public function finishBuildings($wid)
     {
-        $time = time() - 1;
-
-        // Selecionar todos os edifícios para o vilarejo especificado
-        $conditions = ['wid' => $wid];
-        $orderBy = 'master, timestamp ASC';
-        $fields = ['id'];
-        $buildings = $this->select('bdata', $fields, $conditions, $orderBy);
-
-        // Atualizar o tempo de conclusão de cada edifício
+        $buildings = $this->conn->select('bdata', 'id', ['wid' => $wid], ['master, timestamp ASC']);
         foreach ($buildings as $building) {
-            $data = ['timestamp' => $time];
-            $conditions = ['id' => $building['id']];
-            $this->update('bdata', $data, $conditions);
+            $this->conn->update('bdata', ['timestamp' => time() - 1], ['id' => $building['id']]);
         }
     }
 
     public function getMasterJobs($wid)
     {
-        $conditions = ['wid' => $wid, 'master' => 1];
-        $orderBy = 'master, timestamp ASC';
-        $fields = ['id'];
-        return $this->select('bdata', $fields, $conditions, $orderBy);
+        return $this->conn->select('bdata', 'id', ['wid' => $wid, 'master' => 1], ['master, timestamp ASC']);
     }
 
     public function getBuildingByField($wid, $field)
     {
-        $conditions = [
-            'wid' => $wid,
-            'field' => $field,
-            'master' => 0
-        ];
-        $fields = ['id'];
-        return $this->select('bdata', $fields, $conditions);
+        return $this->conn->select('bdata', 'id', ['wid' => $wid, 'field' => $field, 'master' => 0]);
     }
 
     public function getBuildingByType($wid, $type)
     {
-        $conditions = [
-            'wid' => $wid,
-            'type' => $type,
-            'master' => 0
-        ];
-        $fields = ['id'];
-        return $this->select('bdata', $fields, $conditions);
+        return $this->conn->select('bdata', 'id', ['wid' => $wid, 'type' => $type, 'master' => 0]);
     }
 
     public function getDorf1Building($wid)
     {
-        $conditions = [
-            'wid' => $wid,
-            'field' => '< 19',
-            'master' => 0
-        ];
-        $fields = ['timestamp'];
-        return $this->select('bdata', $fields, $conditions);
+        return $this->conn->select('bdata', 'timestamp', ['wid' => $wid, 'field' => '< 19', 'master' => 0]);
     }
 
     public function getDorf2Building($wid)
     {
-        $conditions = [
-            'wid' => $wid,
-            'field' => '> 18',
-            'master' => 0
-        ];
-        $fields = ['timestamp'];
-        return $this->select('bdata', $fields, $conditions);
+        return $this->conn->select('bdata', 'timestamp', ['wid' => $wid, 'field' => '> 18', 'master' => 0]);
     }
 
     public function updateBuildingWithMaster($id, $time, $loop)
@@ -2025,24 +1740,18 @@ class Database extends PDO
             'timestamp' => $time,
             'loopcon' => $loop
         ];
-        $conditions = ['id' => $id];
-        return $this->update('bdata', $data, $conditions);
+        return $this->conn->update('bdata', $data, ['id' => $id]);
     }
 
     public function getVillageByName($name)
     {
-        $name = $this->escapeString($name);
-        $conditions = ['name' => $name];
-        $fields = ['wref'];
-        $result = $this->selectFirst('vdata', $fields, $conditions);
+        $result = $this->conn->select('vdata', 'wref', ['name' => $name]);
         return $result['wref'];
     }
 
     public function setMarketAcc($id)
     {
-        $data = ['accept' => 1];
-        $conditions = ['id' => $id];
-        return $this->update('market', $data, $conditions);
+        return $this->conn->update('market', ['accept' => 1], ['id' => $id]);
     }
 
     public function sendResource($wood, $clay, $iron, $crop, $merchant)
@@ -2054,7 +1763,7 @@ class Database extends PDO
             'crop' => $crop,
             'merchant' => $merchant
         ];
-        return $this->insert('send', $data);
+        return $this->conn->insert('send', $data);
     }
 
     public function sendResourceMORE($wood, $clay, $iron, $crop, $send)
@@ -2066,18 +1775,16 @@ class Database extends PDO
             'crop' => $crop,
             'send' => $send
         ];
-        return $this->insert('send', $data);
+        return $this->conn->insert('send', $data);
     }
 
     public function removeSend($ref)
     {
-        $conditions = ['id' => $ref];
-        return $this->delete('send', $conditions);
+        return $this->conn->delete('send', ['id' => $ref]);
     }
 
-    function getResourcesBack($vref, $gtype, $gamt)
+    public function getResourcesBack($vref, $gtype, $gamt)
     {
-        // Xtype (1) = wood, (2) = clay, (3) = iron, (4) = crop
         $data = [];
         switch ($gtype) {
             case 1:
@@ -2093,31 +1800,24 @@ class Database extends PDO
                 $data['crop'] = "crop + $gamt";
                 break;
             default:
-                return false; // Tipo de recurso inválido
+                return false;
         }
         $conditions = ['wref' => $vref];
-        return $this->update('vdata', $data, $conditions);
+        return $this->conn->update('vdata', $data, $conditions);
     }
 
     public function getMarketField($vref, $field)
     {
-        $conditions = ['vref' => $vref];
-        $fields = [$field];
-        $result = $this->selectFirst('market', $fields, $conditions);
-        if ($result) {
-            return $result[$field];
-        } else {
-            return false; // Campo não encontrado ou mercado não existente para o vref fornecido
-        }
+        $result = $this->conn->select('market', $field, ['vref' => $vref]);
+        return $result ? $result[$field] : false;
     }
 
     public function removeAcceptedOffer($id)
     {
-        $conditions = ['id' => $id];
-        return $this->delete('market', $conditions);
+        return $this->conn->delete('market', ['id' => $id]);
     }
 
-    function addMarket($vid, $gtype, $gamt, $wtype, $wamt, $time, $alliance, $merchant, $mode)
+    public function addMarket($vid, $gtype, $gamt, $wtype, $wamt, $time, $alliance, $merchant, $mode)
     {
         if (!$mode) {
             $data = [
@@ -2131,10 +1831,9 @@ class Database extends PDO
                 'alliance' => $alliance,
                 'merchant' => $merchant
             ];
-            return $this->insert('market', $data);
+            return $this->conn->insert('market', $data);
         } else {
-            $conditions = ['id' => $gtype, 'vref' => $vid];
-            return $this->delete('market', $conditions);
+            return $this->conn->delete('market', ['id' => $gtype, 'vref' => $vid]);
         }
     }
 
@@ -2153,36 +1852,32 @@ class Database extends PDO
                 ]
             ];
         }
-        return $this->select('market', '*', $conditions, 'id DESC');
+        return $this->conn->select('market', '*', $conditions, ['id DESC']);
     }
 
     public function getUserField($ref, $field, $mode)
     {
-        if (!$mode) {
-            $conditions = ['id' => $ref];
-        } else {
-            $conditions = ['username' => $ref];
-        }
-        $result = $this->selectFirst('users', $field, $conditions);
+        $conditions = !$mode ? ['id' => $ref] : ['username' => $ref];
+        $result = $this->conn->select('users', $field, $conditions);
         return $result[$field];
     }
 
     public function getVillageField($ref, $field)
     {
-        $result = $this->selectFirst('vdata', $field, ['wref' => $ref]);
+        $result = $this->conn->select('vdata', $field, ['wref' => $ref]);
         return $result[$field];
     }
 
     public function getMarketInfo($id)
     {
-        return $this->selectFirst('market', '`vref`,`gtype`,`wtype`,`merchant`,`wamt`', ['id' => $id]);
+        return $this->conn->select('market', 'vref,gtype,wtype,merchant,wamt', ['id' => $id]);
     }
 
     public function setMovementProc($moveid)
     {
         $data = ['proc' => 1];
         $where = ['moveid' => $moveid];
-        return $this->update('movement', $data, $where);
+        return $this->conn->update('movement', $data, $where);
     }
 
     public function totalMerchantUsed($vid)
@@ -2192,7 +1887,7 @@ class Database extends PDO
             JOIN movement ON send.id = movement.ref
             WHERE movement.from = :vid AND movement.proc = 0 AND movement.sort_type = 0";
 
-        $stmt = $this->executeQuery($sql, [':vid' => $vid]);
+        $stmt = $this->conn->executeQuery($sql, [':vid' => $vid]);
         $row = $stmt->fetchColumn();
 
         $sql2 = "SELECT SUM(send.merchant)
@@ -2200,14 +1895,14 @@ class Database extends PDO
              JOIN movement ON send.id = movement.ref
              WHERE movement.to = :vid AND movement.proc = 0 AND movement.sort_type = 1";
 
-        $stmt2 = $this->executeQuery($sql2, [':vid' => $vid]);
+        $stmt2 = $this->conn->executeQuery($sql2, [':vid' => $vid]);
         $row2 = $stmt2->fetchColumn();
 
         $sql3 = "SELECT SUM(merchant)
              FROM market
              WHERE vref = :vid AND accept = 0";
 
-        $stmt3 = $this->executeQuery($sql3, [':vid' => $vid]);
+        $stmt3 = $this->conn->executeQuery($sql3, [':vid' => $vid]);
         $row3 = $stmt3->fetchColumn();
 
         return ($row + $row2 + $row3);
@@ -2215,23 +1910,24 @@ class Database extends PDO
 
     public function getMovementById($id)
     {
-        $results = $this->select('movement', "`starttime`, `to`, `from`", "moveid = :id", [':id' => $id]);
-        return !empty($results) ? $results[0] : [];
+        $results = $this->conn->select('movement', "starttime, to, from", "moveid = :id", [':id' => $id]);
+        return !empty($results) ? $results : [];
     }
 
     public function cancelMovement($id, $newfrom, $newto)
     {
         $refstr = '';
-        $amove = $this->selectFirst("SELECT ref FROM movement WHERE moveid = :id", [':id' => $id]);
+        $amove = $this->conn->select('movement', 'ref', 'moveid = :id', [':id' => $id]);
 
         if (!empty($amove)) {
-            $mov = $amove[0];
+            $mov = $amove;
             if ($mov['ref'] == 0) {
                 $ref = $this->addAttack($newto, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0, 0, 0);
-                $refstr = ', `ref` = ' . $ref;
+                $refstr = ', ref = ' . $ref;
             }
 
-            $this->update('movement',
+            $this->conn->update(
+                'movement',
                 ['from' => $newfrom, 'to' => $newto, 'sort_type' => 4, 'endtime' => time() - 'starttime', 'starttime' => time(), 'ref' => $ref],
                 ['moveid' => $id]
             );
@@ -2259,19 +1955,19 @@ class Database extends PDO
             'spy' => $spy
         ];
 
-        return $this->insert('attacks', $data);
+        return $this->conn->insert('attacks', $data);
     }
 
     public function getAdvMovement($village)
     {
-        $sql = "SELECT `moveid` FROM movement WHERE `from` = :village AND sort_type = 9";
-        return $this->select($sql, [':village' => $village]);
+        $sql = "SELECT moveid FROM movement WHERE from = :village AND sort_type = 9";
+        return $this->conn->select($sql, [':village' => $village]);
     }
 
     public function getCompletedAdvMovement($village)
     {
-        $sql = "SELECT `moveid` FROM movement WHERE `from` = :village AND sort_type = 9 AND proc = 1";
-        return $this->select($sql, [':village' => $village]);
+        $sql = "SELECT moveid FROM movement WHERE from = :village AND sort_type = 9 AND proc = 1";
+        return $this->conn->select($sql, [':village' => $village]);
     }
 
     public function addA2b($ckey, $timestamp, $to, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type)
@@ -2294,19 +1990,18 @@ class Database extends PDO
             'type' => $type
         ];
 
-        return $this->insert('a2b', $data);
+        return $this->conn->insert('a2b', $data);
     }
 
     public function getA2b($ckey, $check)
     {
-        $sql = "SELECT * FROM a2b WHERE ckey = :ckey AND time_check = :check";
-        return $this->selectFirst($sql, [':ckey' => $ckey, ':check' => $check]);
+        return $this->conn->select('a2b', ['ckey' => $ckey, 'time_check' => $check]);
     }
 
     public function removeA2b($ckey, $check)
     {
         $where = "ckey = :ckey AND time_check = :check";
-        return $this->delete('a2b', $where, [':ckey' => $ckey, ':check' => $check]);
+        return $this->conn->delete('a2b', $where, [':ckey' => $ckey, ':check' => $check]);
     }
 
     public function addMovement($type, $from, $to, $ref, $data, $endtime)
@@ -2322,28 +2017,30 @@ class Database extends PDO
             'proc' => 0
         ];
 
-        return $this->insert('movement', $data);
+        return $this->conn->insert('movement', $data);
     }
 
     public function modifyAttack($aid, $unit, $amt)
     {
-        $unit = 't' . $unit;
-        $sql = "SELECT $unit FROM attacks WHERE id = :aid";
-        $row = $this->selectFirst($sql, [':aid' => $aid]);
-        if ($row) {
-            $amt = min($row[$unit], $amt);
-            $newAmt = $row[$unit] - $amt;
-            $data = [$unit => $newAmt];
-            $where = 'id = :aid';
-            return $this->update('attacks', $data, $where, [':aid' => $aid]);
+        $unitColumn = 't' . $unit;
+
+        if (!in_array($unitColumn, ['t1', 't2', 't3', 't4', 't5'])) {
+            return false;
         }
+
+        $currentAmt = $this->conn->select('attacks', $unitColumn, ['id' => $aid]);
+        if ($currentAmt !== false) {
+            return $this->conn->update('attacks', [$unitColumn => max(0, $currentAmt - $amt)], ['id' => $aid]);
+        }
+
         return false;
     }
+
 
     public function getRanking()
     {
         $sql = "SELECT id, username, alliance, ap, apall, dp, dpall, access FROM users WHERE tribe <= 3 AND access < :access";
-        return $this->select($sql, [':access' => (INCLUDE_ADMIN ? 10 : 8)]);
+        return $this->conn->select($sql, [':access' => (INCLUDE_ADMIN ? 10 : 8)]);
     }
 
     public function getBuildList($type, $wid = 0)
@@ -2359,44 +2056,41 @@ class Database extends PDO
             $params[':wid'] = $wid;
         }
         $sql = "SELECT id FROM bdata WHERE $where";
-        return $this->select($sql, $params);
+        return $this->conn->select($sql, $params);
     }
 
     public function getVRanking()
     {
         $sql = "SELECT v.wref, v.name, v.owner, v.pop FROM vdata AS v, users AS u WHERE v.owner = u.id AND u.tribe <= 3 AND v.wref != '' AND u.access < :access";
-        return $this->select($sql, [':access' => (INCLUDE_ADMIN ? 10 : 8)]);
+        return $this->conn->select($sql, [':access' => (INCLUDE_ADMIN ? 10 : 8)]);
     }
 
     public function getARanking()
     {
         $sql = "SELECT id, name, tag FROM alidata WHERE id != ''";
-        return $this->select($sql);
+        return $this->conn->select($sql);
     }
 
     public function getHeroRanking($limit = '')
     {
         $sql = "SELECT uid, level, experience FROM hero ORDER BY experience DESC $limit";
-        return $this->select($sql);
+        return $this->conn->select($sql);
     }
 
     public function getAllMember($aid)
     {
         $sql = "SELECT id, username, timestamp FROM users WHERE alliance = :aid ORDER BY (SELECT SUM(pop) FROM vdata WHERE owner = users.id) DESC";
-        return $this->select($sql, [':aid' => $aid]);
+        return $this->conn->select($sql, [':aid' => $aid]);
     }
 
     public function getUnit($vid)
     {
-        $sql = "SELECT * FROM units WHERE vref = :vid";
-        $row = $this->selectFirst($sql, [':vid' => $vid]);
-        return $row ? $row : null;
+        return $this->conn->select('units', 'unit_id, unit_type, unit_quantity', ['vref' => $vid]);
     }
 
     public function getHUnit($vid)
     {
-        $sql = "SELECT hero FROM units WHERE vref = :vid";
-        $row = $this->selectFirst($sql, [':vid' => $vid]);
+        $row = $this->conn->select('units', 'hero', [':vid' => $vid]);
         return $row['hero'] != 0;
     }
 
@@ -2416,11 +2110,10 @@ class Database extends PDO
             $where .= ' AND dead = :dead';
             $params[':dead'] = $dead;
         }
-        $sql = "SELECT * FROM hero WHERE $where LIMIT 1";
-        return $this->selectFirst($sql, $params);
+        return $this->conn->select('hero', $where, $params, ['LIMIT 1']);
     }
 
-    public function modifyHero($uid = 0, $id = 0, $column, $value, $mode = 0)
+    public function modifyHero($uid, $id, $column, $value, $mode = 0)
     {
         $cmd = '';
         switch ($mode) {
@@ -2463,65 +2156,65 @@ class Database extends PDO
         }
 
         $sql = "UPDATE hero SET $cmd WHERE $where";
-        return $this->executeQuery($sql, $params);
+        return $this->conn->executeQuery($sql, $params);
     }
 
     public function clearTech($vref)
     {
-        $this->delete('tdata', 'vref = :vref', [':vref' => $vref]);
+        $this->conn->delete('tdata', 'vref = :vref', [':vref' => $vref]);
         return $this->addTech($vref);
     }
 
     public function addTech($vid)
     {
-        return $this->insert('tdata', ['vref' => $vid]);
+        return $this->conn->insert('tdata', ['vref' => $vid]);
     }
 
     public function clearABTech($vref)
     {
-        $this->delete('abdata', 'vref = :vref', [':vref' => $vref]);
+        $this->conn->delete('abdata', 'vref = :vref', [':vref' => $vref]);
         return $this->addABTech($vref);
     }
 
     public function addABTech($vid)
     {
-        return $this->insert('abdata', ['vref' => $vid]);
+        return $this->conn->insert('abdata', ['vref' => $vid]);
     }
 
     public function getABTech($vid)
     {
-        return $this->selectFirst('abdata', '*', 'vref = :vid', [':vid' => $vid]);
+        return $this->conn->select('abdata', 'vref = :vid', [':vid' => $vid]);
     }
 
     public function addResearch($vid, $tech, $time)
     {
-        return $this->insert('research', ['vref' => $vid, 'tech' => $tech, 'time' => $time]);
+        return $this->conn->insert('research', ['vref' => $vid, 'tech' => $tech, 'time' => $time]);
     }
 
     public function getResearching($vid)
     {
-        return $this->select('research', '*', 'vref = :vid', [':vid' => $vid]);
+        return $this->conn->select('research', '*', 'vref = :vid', [':vid' => $vid]);
     }
 
     public function checkIfResearched($vref, $unit)
     {
-        $row = $this->selectFirst('tdata', $unit, 'vref = :vref', [':vref' => $vref]);
+        $row = $this->conn->select('tdata', $unit, 'vref = :vref', [':vref' => $vref]);
         return $row[$unit];
     }
 
     public function getTech($vid)
     {
-        return $this->selectFirst('tdata', '*', 'vref = :vid', [':vid' => $vid]);
+        return $this->conn->select('tdata', 'vref = :vid', [':vid' => $vid]);
     }
 
     public function getTraining($vid)
     {
-        return $this->select('training', '*', 'vref = :vid ORDER BY id', [':vid' => $vid]);
+        return $this->conn->select('training', '*', 'vref = :vid ORDER BY id', [':vid' => $vid]);
     }
 
     public function trainUnit($vid, $unit, $amt, $pop, $each, $commence, $mode)
     {
-        $technology = new Technology(); // Supondo que a classe Technology esteja disponível
+        $technology = new Technology();
 
         if (!$mode) {
             $barracks = [1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 41, 42, 43, 44];
@@ -2580,35 +2273,34 @@ class Database extends PDO
             $params = [':id' => $vid];
         }
 
-        return $this->executeQuery($q, $params);
+        return $this->conn->executeQuery($q, $params);
     }
 
     public function removeZeroTrain()
     {
-        return $this->delete('training', ['unit[!]' => 0, 'amt[<]' => 1]);
+        return $this->conn->delete('training', ['unit[!]' => 0, 'amt[<]' => 1]);
     }
 
     public function getHeroTrain($vid)
     {
-        return $this->selectFirst('training', ['id', 'eachtime'], ['vref' => $vid, 'unit' => 0]);
+        return $this->conn->select('training', 'id, eachtime', ['vref' => $vid, 'unit' => 0]);
     }
 
     public function trainHero($vid, $each, $endat, $mode)
     {
         if (!$mode) {
-            return $this->insert('training', ['vref' => $vid, 'amt' => 0, 'eachtime' => 1, 'unit' => 6, 'timestamp' => time(), 'timestamp' => $each, 'timestamp' => $endat]);
+            return $this->conn->insert('training', ['vref' => $vid, 'amt' => 0, 'eachtime' => 1, 'unit' => 6, 'timestamp' => time(), 'timestamp' => $each, 'timestamp' => $endat]);
         } else {
-            return $this->delete('training', ['id' => $vid]);
+            return $this->conn->delete('training', ['id' => $vid]);
         }
     }
 
     public function updateTraining($id, $trained)
     {
-        $time = time();
-        return $this->update('training', ['amt' => 'GREATEST(amt - :trained, 0)', 'timestamp' => $time], ['id' => $id], [':trained' => $trained]);
+        return $this->conn->update('training', ['amt' => 'GREATEST(amt - :trained, 0)', 'timestamp' => time()], ['id' => $id], [':trained' => $trained]);
     }
 
-    function modifyUnit($vref, $unit, $amt, $mode)
+    public function modifyUnit($vref, $unit, $amt, $mode)
     {
         if ($unit == 230) {
             $unit = 30;
@@ -2630,7 +2322,7 @@ class Database extends PDO
         switch ($mode) {
             case 0:
                 $q = "SELECT $unit FROM units WHERE vref = :vref";
-                $result = $this->executeQuery($q, [':vref' => $vref]);
+                $result = $this->conn->executeQuery($q, [':vref' => $vref]);
                 $row = $result->fetch(PDO::FETCH_ASSOC);
                 $amt = min($row[$unit], $amt);
                 $q = "UPDATE units SET $unit = ($unit - :amt) WHERE vref = :vref";
@@ -2642,13 +2334,13 @@ class Database extends PDO
                 $q = "UPDATE units SET $unit = :amt WHERE vref = :vref";
                 break;
         }
-        return $this->executeQuery($q, [':vref' => $vref, ':amt' => $amt]);
+        return $this->conn->executeQuery($q, [':vref' => $vref, ':amt' => $amt]);
     }
 
     public function getFilledTrapCount($vref)
     {
         $result = 0;
-        $trapped = $this->select('trapped', ['vref' => $vref]);
+        $trapped = $this->conn->select('trapped', ['vref' => $vref]);
         foreach ($trapped as $trap) {
             for ($i = 1; $i <= 50; $i++) {
                 $result += max(0, $trap['u' . $i]);
@@ -2660,67 +2352,65 @@ class Database extends PDO
 
     public function getTrapped($id)
     {
-        return $this->selectFirst('trapped', ['id' => $id]);
+        return $this->conn->select('trapped', ['id' => $id]);
     }
 
     public function getTrappedIn($vref)
     {
-        return $this->select('trapped', ['vref' => $vref]);
+        return $this->conn->select('trapped', ['vref' => $vref]);
     }
 
     public function getTrappedFrom($from)
     {
-        return $this->select('trapped', ['from' => $from]);
+        return $this->conn->select('trapped', ['from' => $from]);
     }
 
     public function addTrapped($vref, $from)
     {
         $id = $this->hasTrapped($vref, $from);
         if (!$id) {
-            return $this->insert('trapped', ['vref' => $vref, 'from' => $from]);
+            return $this->conn->insert('trapped', ['vref' => $vref, 'from' => $from]);
         }
         return $id;
     }
 
     public function hasTrapped($vref, $from)
     {
-        return $this->select('trapped', 'id', ['vref' => $vref, 'from' => $from]);
+        return $this->conn->select('trapped', 'id', ['vref' => $vref, 'from' => $from]);
     }
 
     public function modifyTrapped($id, $unit, $amt, $mode)
     {
         $columnName = ($unit == 'hero') ? 'hero' : 'u' . $unit;
         $operation = ($mode == 0) ? '-' : '+';
-        $this->update('trapped', [$columnName => $columnName . $operation . $amt], ['id' => $id]);
+        $this->conn->update('trapped', [$columnName => $columnName . $operation . $amt], ['id' => $id]);
     }
 
     public function removeTrapped($id)
     {
-        $this->delete('trapped', ['id' => $id]);
+        $this->conn->delete('trapped', ['id' => $id]);
     }
 
     public function removeAnimals($id)
     {
-        $this->delete('enforcement', ['id' => $id]);
+        $this->conn->delete('enforcement', ['id' => $id]);
     }
 
     public function checkEnforce($vid, $from)
     {
-        $enforce = $this->selectFirst('enforcement', 'id', ['`from`' => $from, 'vref' => $vid]);
+        $enforce = $this->conn->select('enforcement', 'id', ['from' => $from, 'vref' => $vid]);
         return $enforce ? $enforce['id'] : false;
     }
 
     public function addEnforce($data)
     {
-        $id = $this->insert('enforcement', ['vref' => $data['to'], '`from`' => $data['from']]);
+        $id = $this->conn->insert('enforcement', ['vref' => $data['to'], 'from' => $data['from']]);
 
-        // Obter informações do local de origem
         $fromVillage = $this->isVillageOasis($data['from']) ? $this->getOMInfo($data['from']) : $this->getMInfo($data['from']);
         $fromTribe = $this->getUserField($fromVillage["owner"], "tribe", 0);
         $start = ($fromTribe - 1) * 10 + 1;
         $end = ($fromTribe * 10);
 
-        // Adicionar unidades
         $j = 1;
         for ($i = $start; $i <= $end; $i++) {
             $this->modifyEnforce($id, $i, $data['t' . $j], 1);
@@ -2732,12 +2422,12 @@ class Database extends PDO
 
     public function getOMInfo($id)
     {
-        return $this->join('wdata', 'odata', 'odata.wref = wdata.id')->selectFirst('wdata.*, odata.*', ['wdata.id' => $id]);
+        return $this->conn->join('wdata', 'odata', 'odata.wref = wdata.id')->select('wdata.*, odata.*', ['wdata.id' => $id]);
     }
 
     public function getMInfo($id)
     {
-        return $this->join('wdata', 'vdata', 'vdata.wref = wdata.id')->selectFirst('wdata.*, vdata.*', ['wdata.id' => $id]);
+        return $this->conn->join('wdata', 'vdata', 'vdata.wref = wdata.id')->select('wdata.*, vdata.*', ['wdata.id' => $id]);
     }
 
     public function modifyEnforce($id, $unit, $amt, $mode)
@@ -2748,29 +2438,29 @@ class Database extends PDO
         $data = [$columnName => ["$columnName $operation :amt"]];
         $conditions = ['id' => $id];
 
-        $this->update('enforcement', $data, $conditions, true, [':amt' => $amt]);
+        $this->conn->update('enforcement', $data, $conditions, [':amt' => $amt]);
     }
 
     public function addHeroEnforce($data)
     {
-        $this->insert("enforcement", ['vref' => $data['to'], 'from' => $data['from'], 'hero' => 1]);
+        $this->conn->insert("enforcement", ['vref' => $data['to'], 'from' => $data['from'], 'hero' => 1]);
     }
 
     public function getEnforceArray($id, $mode)
     {
         if (!$mode) {
-            return $this->selectFirst("enforcement", "*", "id = :id", [':id' => $id]);
+            return $this->conn->select("enforcement", "*", "id = :id", [':id' => $id]);
         } else {
-            return $this->selectFirst("enforcement", "*", "`from` = :id", [':id' => $id]);
+            return $this->conn->select("enforcement", "*", "from = :id", [':id' => $id]);
         }
     }
 
     public function getEnforceVillage($id, $mode)
     {
         if (!$mode) {
-            return $this->select("enforcement", "*", "`vref` = :id", [':id' => $id]);
+            return $this->conn->select("enforcement", "*", "vref = :id", [':id' => $id]);
         } else {
-            return $this->select("enforcement", "*", "`from` = :id", [':id' => $id]);
+            return $this->conn->select("enforcement", "*", "from = :id", [':id' => $id]);
         }
     }
 
@@ -2782,7 +2472,7 @@ class Database extends PDO
             foreach ($oasisowned as $oo) $inos .= $oo['wref'] . ',';
             $inos = substr($inos, 0, strlen($inos) - 1);
             $inos .= ')';
-            return $this->select("enforcement", "*", "`from` = :id AND `vref` IN " . $inos, [':id' => $id]);
+            return $this->conn->select("enforcement", "*", "from = :id AND vref IN " . $inos, [':id' => $id]);
         } else {
             return null;
         }
@@ -2790,7 +2480,7 @@ class Database extends PDO
 
     public function getOasis($vid)
     {
-        return $this->select("odata", "type, wref", "conqured = :vid", [":vid" => $vid]);
+        return $this->conn->select("odata", "type, wref", "conqured = :vid", [":vid" => $vid]);
     }
 
     public function getVillageMovement($id)
@@ -2853,9 +2543,9 @@ class Database extends PDO
     public function getMovement($type, $village, $mode)
     {
         if (!$mode) {
-            $where = "`from`";
+            $where = "from";
         } else {
-            $where = "`to`";
+            $where = "to";
         }
         switch ($type) {
             case 0:
@@ -2886,7 +2576,7 @@ class Database extends PDO
                 $q = "SELECT * FROM movement, attacks where (movement." . $where . " = $village and movement.ref = attacks.id and movement.proc = 0) and (movement.sort_type = 3 or  movement.sort_type = 4) ORDER BY endtime ASC";
                 break;
         }
-        $result = $this->executeQuery($q);
+        $result = $this->conn->executeQuery($q);
         return $result->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -2906,198 +2596,148 @@ class Database extends PDO
 
     public function getWW()
     {
-        // Usando o método select() da classe Database para realizar a consulta SQL de forma segura
-        $result = $this->select('fdata', 'vref', 'f99t = ?', [40]);
-
-        // Verificando se há resultados retornados
+        $result = $this->conn->select('fdata', 'vref', 'f99t = ?', [40]);
         return !empty($result);
     }
 
     public function getWWLevel($vref)
     {
-        // Usando o método selectFirst() da classe Database para obter a primeira linha que corresponde à condição
-        $result = $this->selectFirst('fdata', 'f99', 'vref = ?', [$vref]);
+        $result = $this->conn->select('fdata', 'f99', 'vref = ?', [$vref]);
 
-        // Verificando se há um resultado retornado
         if ($result !== false && isset($result['f99'])) {
-            return $result['f99']; // Retorna o valor de 'f99' como um inteiro
+            return $result['f99'];
         }
 
-        return null; // Retorna null se não houver resultados ou se 'f99' não estiver definido
+        return null;
     }
 
     public function getWWOwnerID($vref)
     {
-        // Usando o método selectFirst() da classe Database para obter a primeira linha que corresponde à condição
-        $result = $this->selectFirst('vdata', 'owner', 'wref = ?', [$vref]);
-
-        // Verificando se há um resultado retornado
+        $result = $this->conn->select('vdata', 'owner', 'wref = ?', [$vref]);
         if ($result !== false && isset($result['owner'])) {
-            return (int)$result['owner']; // Retorna o valor de 'owner' como um inteiro
+            return (int)$result['owner'];
         }
-
-        return null; // Retorna null se não houver resultados ou se 'owner' não estiver definido
+        return null;
     }
 
-    public function getUserAllianceID($id): ?int
+    public function getUserAllianceID($id)
     {
-        // Usando o método selectFirst() da classe Database para obter a primeira linha que corresponde à condição
-        $result = $this->selectFirst('users', 'alliance', 'id = ?', [$id]);
-
-        // Verificando se há um resultado retornado
+        $result = $this->conn->select('users', 'alliance', 'id = ?', [$id]);
         if ($result !== false && isset($result['alliance'])) {
-            return (int)$result['alliance']; // Retorna o valor de 'alliance' como um inteiro
+            return (int)$result['alliance'];
         }
-
-        return null; // Retorna null se não houver resultados ou se 'alliance' não estiver definido
+        return null;
     }
 
-    public function getWWName($vref): ?string
+    public function getWWName($vref)
     {
-        // Usando o método selectFirst() da classe Database para obter a primeira linha que corresponde à condição
-        $result = $this->selectFirst('fdata', 'wwname', 'vref = ?', [$vref]);
-
-        // Verificando se há um resultado retornado
+        $result = $this->conn->select('fdata', 'wwname', 'vref = ?', [$vref]);
         if ($result !== false && isset($result['wwname'])) {
-            return $result['wwname']; // Retorna o valor de 'wwname'
+            return $result['wwname'];
         }
-
-        return null; // Retorna null se não houver resultados ou se 'wwname' não estiver definido
+        return null;
     }
 
-    public function submitWWname($vref, $name): bool
+    public function submitWWname($vref, $name)
     {
-        // Usando o método update() da classe Database para executar uma consulta UPDATE de forma segura
-        return $this->update('fdata', ['wwname' => $name], 'vref = ?', [$vref]);
+        return $this->conn->update('fdata', ['wwname' => $name], 'vref = ?', [$vref]);
     }
 
-    public function modifyCommence($id, $commence = 0): bool
+    public function modifyCommence($id, $commence = 0)
     {
         if ($commence == 0) {
             $commence = time();
         }
-        // Usando o método update() da classe Database para executar uma consulta UPDATE de forma segura
-        return $this->update('training', ['commence' => $commence], 'id = ?', [$id]);
+        return $this->conn->update('training', ['commence' => $commence], 'id = ?', [$id]);
     }
 
     public function getTrainingList()
     {
-        // Usando o método select() da classe Database para realizar uma consulta SELECT de forma segura
-        $result = $this->select('training', '`id`,`vref`,`unit`,`eachtime`,`endat`,`commence`,`amt`', 'amt != ?', [0]);
-
-        // Verificando se há resultados retornados
-        if (!empty($result)) {
-            return $result;
-        } else {
-            return []; // Retorna um array vazio se não houver resultados
-        }
+        $result = $this->conn->select('training', 'id, vref, unit, eachtime, endat, commence, amt', 'amt != ?', [0]);
+        return !empty($result) ? $result : [];
     }
 
-    public function getNeedDelete(): array
+    public function getNeedDelete()
     {
-        $time = time();
-        // Usando o método select() da classe Database para realizar uma consulta SELECT de forma segura
-        $result = $this->select('deleting', 'uid', 'timestamp <= ?', [$time]);
-
-        // Verificando se há resultados retornados
-        if (!empty($result)) {
-            return $result;
-        } else {
-            return []; // Retorna um array vazio se não houver resultados
-        }
+        $result = $this->conn->select('deleting', 'uid', 'timestamp <= ?', [time()]);
+        return !empty($result) ? $result : [];
     }
 
-    public function countUser(): int
+    public function countUser()
     {
-        // Usando o método selectFirst() da classe Database para obter a primeira linha que corresponde à condição
-        $result = $this->selectFirst('users', 'COUNT(id) as total', 'id != ?', [0]);
-
-        // Verificando se há um resultado retornado
+        $result = $this->conn->select('users', 'COUNT(id) as total', 'id != ?', [0]);
         if ($result !== false && isset($result['total'])) {
-            return (int)$result['total']; // Retorna o total como um inteiro
+            return (int)$result['total'];
         }
-
-        return 0; // Retorna 0 se não houver resultados ou se 'total' não estiver definido
+        return 0;
     }
 
-    public function countAlli(): int
+    public function countAlli()
     {
-        // Usando o método selectFirst() da classe Database para obter a primeira linha que corresponde à condição
-        $result = $this->selectFirst('alidata', 'COUNT(id) as total', 'id != ?', [0]);
+        $result = $this->conn->select('alidata', 'COUNT(id) as total', 'id != ?', [0]);
 
-        // Verificando se há um resultado retornado
         if ($result !== false && isset($result['total'])) {
-            return (int)$result['total']; // Retorna o total como um inteiro
+            return (int)$result['total'];
         }
-
-        return 0; // Retorna 0 se não houver resultados ou se 'total' não estiver definido
+        return 0;
     }
 
-    function getWoodAvailable($wref)
+    public function getWoodAvailable($wref)
     {
-        // Usando o método selectFirst() da classe Database para obter o valor da madeira
-        $result = $this->selectFirst('vdata', 'wood', 'wref = ?', [$wref]);
+        $result = $this->conn->select('vdata', 'wood', 'wref = ?', [$wref]);
 
-        // Verificando se há um resultado retornado
         if ($result !== false && isset($result['wood'])) {
-            return (int)$result['wood']; // Retorna o valor da madeira como um inteiro
+            return (int)$result['wood'];
         }
 
-        return 0; // Retorna 0 se não houver resultados ou se 'wood' não estiver definido
+        return 0;
     }
 
-    function getClayAvailable($wref)
+    public function getClayAvailable($wref)
     {
-        // Usando o método selectFirst() da classe Database para obter o valor do barro
-        $result = $this->selectFirst('vdata', 'clay', 'wref = ?', [$wref]);
+        $result = $this->conn->select('vdata', 'clay', 'wref = ?', [$wref]);
 
-        // Verificando se há um resultado retornado
         if ($result !== false && isset($result['clay'])) {
-            return (int)$result['clay']; // Retorna o valor do barro como um inteiro
+            return (int)$result['clay'];
         }
 
-        return 0; // Retorna 0 se não houver resultados ou se 'clay' não estiver definido
+        return 0;
     }
 
-    function getIronAvailable($wref)
+    public function getIronAvailable($wref)
     {
-        // Usando o método selectFirst() da classe Database para obter o valor do ferro
-        $result = $this->selectFirst('vdata', 'iron', 'wref = ?', [$wref]);
+        $result = $this->conn->select('vdata', 'iron', 'wref = ?', [$wref]);
 
-        // Verificando se há um resultado retornado
         if ($result !== false && isset($result['iron'])) {
-            return (int)$result['iron']; // Retorna o valor do ferro como um inteiro
+            return (int)$result['iron'];
         }
 
-        return 0; // Retorna 0 se não houver resultados ou se 'iron' não estiver definido
+        return 0;
     }
 
-    function getCropAvailable($wref)
+    public function getCropAvailable($wref)
     {
-        // Usando o método selectFirst() da classe Database para obter o valor da safra
-        $result = $this->selectFirst('vdata', 'crop', 'wref = ?', [$wref]);
+        $result = $this->conn->select('vdata', 'crop', 'wref = ?', [$wref]);
 
-        // Verificando se há um resultado retornado
         if ($result !== false && isset($result['crop'])) {
-            return (int)$result['crop']; // Retorna o valor da safra como um inteiro
+            return (int)$result['crop'];
         }
 
-        return 0; // Retorna 0 se não houver resultados ou se 'crop' não estiver definido
+        return 0;
     }
 
-    function populateOasisData()
+    public function populateOasisData()
     {
-        $rows = $this->select('wdata', 'id', 'oasistype != 0');
-
+        $rows = $this->conn->select('wdata', 'id', 'oasistype != 0');
         foreach ($rows as $row) {
             $wid = $row['id'];
             $time = time();
-            $t1 = 750 * SPEED / 10;
-            $t2 = 750 * SPEED / 10;
-            $t3 = 750 * SPEED / 10;
-            $t4 = 800 * SPEED / 10;
-            $t5 = 750 * SPEED / 10;
-            $t6 = 800 * SPEED / 10;
+            $t1 = 750 * $this->speed / 10;
+            $t2 = 750 * $this->speed / 10;
+            $t3 = 750 * $this->speed / 10;
+            $t4 = 800 * $this->speed / 10;
+            $t5 = 750 * $this->speed / 10;
+            $t6 = 800 * $this->speed / 10;
             $tt = "$t1,$t2,$t3,0,0,0,$t4,$t5,0,$t6,$time,$time,$time";
 
             $data = [
@@ -3108,14 +2748,15 @@ class Database extends PDO
                 "loyalty" => 3,
                 "name" => 'Unoccupied oasis'
             ];
-            $this->insert('odata', $data);
+            $this->conn->insert('odata', $data);
         }
     }
 
     public function getAvailableExpansionTraining()
     {
-        $q = "SELECT (IF(exp1=0,1,0)+IF(exp2=0,1,0)+IF(exp3=0,1,0)) FROM vdata WHERE wref = ?";
-        $result = $this->selectFirst('vdata', '(IF(exp1=0,1,0)+IF(exp2=0,1,0)+IF(exp3=0,1,0))', 'wref = ?', [$village->wid]);
+        $building = new Building();
+
+        $result = $this->conn->select('vdata', '(IF(exp1=0,1,0)+IF(exp2=0,1,0)+IF(exp3=0,1,0))', 'wref = ?', [$village->wid]);
         $maxslots = $result !== false ? (int)$result : 0;
 
         $residence = $building->getTypeLevel(25);
@@ -3127,10 +2768,10 @@ class Database extends PDO
             $maxslots -= (3 - floor(($palace - 5) / 5));
         }
 
-        $result = $this->selectFirst('units', '(u10+u20+u30)', 'vref = ?', [$village->wid]);
+        $result = $this->conn->select('units', '(u10+u20+u30)', 'vref = ?', [$village->wid]);
         $settlers = $result !== false ? (int)$result : 0;
 
-        $result = $this->selectFirst('units', '(u9+u19+u29)', 'vref = ?', [$village->wid]);
+        $result = $this->conn->select('units', '(u9+u19+u29)', 'vref = ?', [$village->wid]);
         $chiefs = $result !== false ? (int)$result : 0;
 
         $current_movement = $this->getMovement(5, $village->wid, 0);
@@ -3153,26 +2794,22 @@ class Database extends PDO
             }
         }
 
-        $q = "SELECT (u10+u20+u30) FROM enforcement WHERE `from` = ?";
-        $result = $this->selectFirst('enforcement', '(u10+u20+u30)', '`from` = ?', [$village->wid]);
+        $result = $this->conn->select('enforcement', '(u10+u20+u30)', 'from = ?', [$village->wid]);
         if (!empty($result)) {
             $settlers += (int)$result;
         }
 
-        $q = "SELECT (u10+u20+u30) FROM trapped WHERE `from` = ?";
-        $result = $this->selectFirst('trapped', '(u10+u20+u30)', '`from` = ?', [$village->wid]);
+        $result = $this->conn->select('trapped', '(u10+u20+u30)', 'from = ?', [$village->wid]);
         if (!empty($result)) {
             $settlers += (int)$result;
         }
 
-        $q = "SELECT (u9+u19+u29) FROM enforcement WHERE `from` = ?";
-        $result = $this->selectFirst('enforcement', '(u9+u19+u29)', '`from` = ?', [$village->wid]);
+        $result = $this->conn->select('enforcement', '(u9+u19+u29)', 'from = ?', [$village->wid]);
         if (!empty($result)) {
             $chiefs += (int)$result;
         }
 
-        $q = "SELECT (u9+u19+u29) FROM trapped WHERE `from` = ?";
-        $result = $this->selectFirst('trapped', '(u9+u19+u29)', '`from` = ?', [$village->wid]);
+        $result = $this->conn->select('trapped', '(u9+u19+u29)', 'from = ?', [$village->wid]);
         if (!empty($result)) {
             $chiefs += (int)$result;
         }
@@ -3192,7 +2829,7 @@ class Database extends PDO
         $settlerslots = $maxslots * 3 - $settlers - $chiefs * 3;
         $chiefslots = $maxslots - $chiefs - floor(($settlers + 2) / 3);
 
-        if (!$technology->getTech(($session->tribe - 1) * 10 + 9)) {
+        if (!$technology->getTech((Session::get('tribe') - 1) * 10 + 9)) {
             $chiefslots = 0;
         }
         $slots = ["chiefs" => $chiefslots, "settlers" => $settlerslots];
@@ -3215,13 +2852,13 @@ class Database extends PDO
             "img" => $img
         ];
 
-        return $this->insert("artefacts", $data);
+        return $this->conn->insert("artefacts", $data);
     }
 
 
     public function getOwnArtefactInfo($vref)
     {
-        return $this->select('artefacts', '*', 'vref = ?', [$vref]);
+        return $this->conn->select('artefacts', '*', 'vref = ?', [$vref]);
     }
 
     public function getArtefactInfo($sizes)
@@ -3231,11 +2868,11 @@ class Database extends PDO
 
         if (!empty($sizes)) {
             $placeholders = implode(",", array_fill(0, count($sizes), "?"));
-            $conditions = " AND `size` IN ($placeholders)";
+            $conditions = " AND size IN ($placeholders)";
             $params = $sizes;
         }
 
-        return $this->select("artefacts", "*", "1 $conditions ORDER BY type", $params);
+        return $this->conn->select("artefacts", "*", "1 $conditions ORDER BY type", $params);
     }
 
     public function getArtefactInfoByDistance($coor, $distance, $sizes)
@@ -3257,53 +2894,44 @@ class Database extends PDO
             . $sizestr
             . ' ORDER BY distance';
         $params = array_merge([$coor['x'], $coor['x'], $coor['max'], $coor['y'], $coor['y'], $coor['max'], $coor['x'], $coor['x'], $coor['max'], $coor['y'], $coor['y'], $coor['max'], $distance], $params);
-        return $this->executeQuery($q, $params);
+        return $this->conn->executeQuery($q, $params);
     }
 
     public function arteIsMine($id, $newvref, $newowner)
     {
-        $this->update('artefacts', ['owner' => $newowner], 'id = ?', [$id]);
+        $this->conn->update('artefacts', ['owner' => $newowner], 'id = ?', [$id]);
         $this->captureArtefact($id, $newvref, $newowner);
     }
 
     public function captureArtefact($id, $newvref, $newowner)
     {
-        // get the artefact
         $currentArte = $this->getArtefactDetails($id);
 
-        // set new active artes for new owner
-
-        #---------first inactive large and uinque artes if this currentArte is large/unique
         if ($currentArte['size'] == 2 || $currentArte['size'] == 3) {
-            $ulArts = $this->select('artefacts', '*', '`owner` = ? AND `status` = 1 AND `size` <> 1', [$newowner]);
+            $ulArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 1 AND size <> 1', [$newowner]);
             if (!empty($ulArts) && count($ulArts) > 0) {
                 foreach ($ulArts as $art) {
-                    $this->update('artefacts', ['status' => 2], 'id = ?', [$art['id']]);
+                    $this->conn->update('artefacts', ['status' => 2], 'id = ?', [$art['id']]);
                 }
             }
         }
-        #---------then check extra artes
-        $vArts = $this->select('artefacts', '*', '`vref` = ? AND `status` = 1', [$newvref]);
+        $vArts = $this->conn->select('artefacts', '*', 'vref = ? AND status = 1', [$newvref]);
         if (!empty($vArts) && count($vArts) > 0) {
             foreach ($vArts as $art) {
-                $this->update('artefacts', ['status' => 2], 'id = ?', [$art['id']]);
+                $this->conn->update('artefacts', ['status' => 2], 'id = ?', [$art['id']]);
             }
         } else {
-            $uArts = $this->select('artefacts', '*', '`owner` = ? AND `status` = 1 ORDER BY conquered DESC', [$newowner]);
+            $uArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 1 ORDER BY conquered DESC', [$newowner]);
             if (!empty($uArts) && count($uArts) > 2) {
                 for ($i = 2; $i < count($uArts); $i++) {
-                    $this->update('artefacts', ['status' => 2], 'id = ?', [$uArts[$i]['id']]);
+                    $this->conn->update('artefacts', ['status' => 2], 'id = ?', [$uArts[$i]['id']]);
                 }
             }
         }
-        // set currentArte -> owner,vref,conquered,status
-        $time = time();
-        $this->update('artefacts', ['vref' => $newvref, 'owner' => $newowner, 'conquered' => $time, 'status' => 1], 'id = ?', [$id]);
-        // set new active artes for old user
+        $this->conn->update('artefacts', ['vref' => $newvref, 'owner' => $newowner, 'conquered' => time(), 'status' => 1], 'id = ?', [$id]);
         if ($currentArte['status'] == 1) {
-            #--- get olduser's active artes
-            $ouaArts = $this->select('artefacts', '*', '`owner` = ? AND `status` = 1', [$currentArte['owner']]);
-            $ouiArts = $this->select('artefacts', '*', '`owner` = ? AND `status` = 2 ORDER BY conquered DESC', [$currentArte['owner']]);
+            $ouaArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 1', [$currentArte['owner']]);
+            $ouiArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 2 ORDER BY conquered DESC', [$currentArte['owner']]);
             if (!empty($ouaArts) && count($ouaArts) < 3 && !empty($ouiArts) && count($ouiArts) > 0) {
                 $ouiaCount = count($ouiArts);
                 for ($i = 0; $i < $ouiaCount; $i++) {
@@ -3313,19 +2941,15 @@ class Database extends PDO
                         foreach ($ouaArts as $aa) {
                             if ($ia['vref'] == $aa['vref']) {
                                 $accepted = false;
-                                break;
                             }
                             if (($ia['size'] == 2 || $ia['size'] == 3) && ($aa['size'] == 2 || $aa['size'] == 3)) {
                                 $accepted = false;
-                                break;
                             }
                         }
                         if ($accepted) {
                             $ouaArts[] = $ia;
-                            $this->update('artefacts', ['status' => 1], 'id = ?', [$ia['id']]);
+                            $this->conn->update('artefacts', ['status' => 1], 'id = ?', [$ia['id']]);
                         }
-                    } else {
-                        break;
                     }
                 }
             }
@@ -3334,144 +2958,123 @@ class Database extends PDO
 
     public function getArtefactDetails($id)
     {
-        return $this->selectFirst('artefacts', '*', 'id = ?', [$id]);
+        return $this->conn->select('artefacts', 'id = ?', [$id]);
     }
 
     public function getHeroFace($uid)
     {
-        return $this->selectFirst('heroface', '*', 'uid = ?', [$uid]);
+        return $this->conn->select('heroface', '*', 'uid = ?', [$uid]);
     }
 
     public function addHeroFace($uid, $bread, $ear, $eye, $eyebrow, $face, $hair, $mouth, $nose, $color)
     {
-        return $this->insert('heroface', ['uid' => $uid, 'beard' => $bread, 'ear' => $ear, 'eye' => $eye, 'eyebrow' => $eyebrow, 'face' => $face, 'hair' => $hair, 'mouth' => $mouth, 'nose' => $nose, 'color' => $color]);
+        return $this->conn->insert('heroface', ['uid' => $uid, 'beard' => $bread, 'ear' => $ear, 'eye' => $eye, 'eyebrow' => $eyebrow, 'face' => $face, 'hair' => $hair, 'mouth' => $mouth, 'nose' => $nose, 'color' => $color]);
     }
 
     public function modifyHeroFace($uid, $column, $value)
     {
         $hash = md5("$uid" . time());
-        return $this->update('heroface', [$column => $value, 'hash' => $hash], 'uid = ?', [$uid]);
+        return $this->conn->update('heroface', [$column => $value, 'hash' => $hash], 'uid = ?', [$uid]);
     }
 
     public function modifyWholeHeroFace($uid, $face, $color, $hair, $ear, $eyebrow, $eye, $nose, $mouth, $beard)
     {
         $hash = md5("$uid" . time());
-        return $this->update('heroface', ['face' => $face, 'color' => $color, 'hair' => $hair, 'ear' => $ear, 'eyebrow' => $eyebrow, 'eye' => $eye, 'nose' => $nose, 'mouth' => $mouth, 'beard' => $beard, 'hash' => $hash], 'uid = ?', [$uid]);
+        return $this->conn->update('heroface', ['face' => $face, 'color' => $color, 'hair' => $hair, 'ear' => $ear, 'eyebrow' => $eyebrow, 'eye' => $eye, 'nose' => $nose, 'mouth' => $mouth, 'beard' => $beard, 'hash' => $hash], 'uid = ?', [$uid]);
     }
 
     public function populateOasisUnitsLow()
     {
-        $q2 = "SELECT * FROM wdata where oasistype != 0";
-        $result2 = $this->query($q2);
-        while ($row = $this->fetchArray($result2)) {
+        $oasisData = $this->conn->select('wdata', '*', 'oasistype != ?', [0]);
+
+        foreach ($oasisData as $row) {
             $wid = $row['id'];
             $basearray = $this->getMInfo($wid);
-            //each Troop is a Set for oasis type like mountains have rats spiders and snakes fields tigers elphants clay wolves so on stonger one more not so less
+
             switch ($basearray['oasistype']) {
                 case 1:
                 case 2:
-                    // Oasis Random populate
-                    $UP35 = rand(5, 30) * (SPEED / 10);
-                    $UP36 = rand(5, 30) * (SPEED / 10);
-                    $UP37 = rand(0, 30) * (SPEED / 10);
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u35 = u35 +  ?, u36 = u36 + ?, u37 = u37 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP35, $UP36, $UP37, $wid]);
+                    $UP35 = rand(5, 30) * ($this->speed / 10);
+                    $UP36 = rand(5, 30) * ($this->speed / 10);
+                    $UP37 = rand(0, 30) * ($this->speed / 10);
                     break;
                 case 3:
-                    // Oasis Random populate
-                    $UP35 = rand(5, 30) * (SPEED / 10);
-                    $UP36 = rand(5, 30) * (SPEED / 10);
-                    $UP37 = rand(1, 30) * (SPEED / 10);
-                    $UP39 = rand(0, 10) * (SPEED / 10);
-                    $fil = rand(0, 20);
-                    if ($fil == 1) {
-                        $UP40 = rand(0, 31) * (SPEED / 10);
-                    } else {
-                        $UP40 = 0;
-                    }
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u35 = u35 + ?, u36 = u36 + ?, u37 = u37 + ?, u39 = u39 + ?, u40 = u40 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP35, $UP36, $UP37, $UP39, $UP40, $wid]);
+                    $UP35 = rand(5, 30) * ($this->speed / 10);
+                    $UP36 = rand(5, 30) * ($this->speed / 10);
+                    $UP37 = rand(1, 30) * ($this->speed / 10);
+                    $UP39 = rand(0, 10) * ($this->speed / 10);
+                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
                     break;
                 case 4:
                 case 5:
-                    // Oasis Random populate
-                    $UP31 = rand(5, 40) * (SPEED / 10);
-                    $UP32 = rand(5, 30) * (SPEED / 10);
-                    $UP35 = rand(0, 25) * (SPEED / 10);
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u31 = u31 + ?, u32 = u32 + ?, u35 = u35 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP31, $UP32, $UP35, $wid]);
+                    $UP31 = rand(5, 40) * ($this->speed / 10);
+                    $UP32 = rand(5, 30) * ($this->speed / 10);
+                    $UP35 = rand(0, 25) * ($this->speed / 10);
                     break;
                 case 6:
-                    // Oasis Random populate
-                    $UP31 = rand(5, 40) * (SPEED / 10);
-                    $UP32 = rand(5, 30) * (SPEED / 10);
-                    $UP35 = rand(1, 25) * (SPEED / 10);
-                    $UP38 = rand(0, 15) * (SPEED / 10);
-                    $fil = rand(0, 20);
-                    if ($fil == 1) {
-                        $UP40 = rand(0, 31) * (SPEED / 10);
-                    } else {
-                        $UP40 = 0;
-                    }
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u31 = u31 + ?, u32 = u32 + ?, u35 = u35 + ?, u38 = u38 + ?, u40 = u40 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP31, $UP32, $UP35, $UP38, $UP40, $wid]);
+                    $UP31 = rand(5, 40) * ($this->speed / 10);
+                    $UP32 = rand(5, 30) * ($this->speed / 10);
+                    $UP35 = rand(1, 25) * ($this->speed / 10);
+                    $UP38 = rand(0, 15) * ($this->speed / 10);
+                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
                     break;
                 case 7:
                 case 8:
-                    // Oasis Random populate
-                    $UP31 = rand(5, 40) * (SPEED / 10);
-                    $UP32 = rand(5, 30) * (SPEED / 10);
-                    $UP34 = rand(0, 25) * (SPEED / 10);
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u31 = u31 + ?, u32 = u32 + ?, u34 = u34 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP31, $UP32, $UP34, $wid]);
+                    $UP31 = rand(5, 40) * ($this->speed / 10);
+                    $UP32 = rand(5, 30) * ($this->speed / 10);
+                    $UP34 = rand(0, 25) * ($this->speed / 10);
                     break;
                 case 9:
-                    // Oasis Random populate
-                    $UP31 = rand(5, 40) * (SPEED / 10);
-                    $UP32 = rand(5, 30) * (SPEED / 10);
-                    $UP34 = rand(1, 25) * (SPEED / 10);
-                    $UP37 = rand(0, 15) * (SPEED / 10);
-                    $fil = rand(0, 20);
-                    if ($fil == 1) {
-                        $UP40 = rand(0, 31) * (SPEED / 10);
-                    } else {
-                        $UP40 = 0;
-                    }
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u31 = u31 + ?, u32 = u32 + ?, u34 = u34 + ?, u37 = u37 + ?, u40 = u40 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP31, $UP32, $UP34, $UP37, $UP40, $wid]);
+                    $UP31 = rand(5, 40) * ($this->speed / 10);
+                    $UP32 = rand(5, 30) * ($this->speed / 10);
+                    $UP34 = rand(1, 25) * ($this->speed / 10);
+                    $UP37 = rand(0, 15) * ($this->speed / 10);
+                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
                     break;
                 case 10:
                 case 11:
-                    // Oasis Random populate
-                    $UP31 = rand(5, 40) * (SPEED / 10);
-                    $UP33 = rand(5, 30) * (SPEED / 10);
-                    $UP37 = rand(1, 25) * (SPEED / 10);
-                    $UP39 = rand(0, 25) * (SPEED / 10);
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u31 = u31 + ?, u33 = u33 + ?, u37 = u37 + ?, u39 = u39 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP31, $UP33, $UP37, $UP39, $wid]);
+                    $UP31 = rand(5, 40) * ($this->speed / 10);
+                    $UP33 = rand(5, 30) * ($this->speed / 10);
+                    $UP37 = rand(1, 25) * ($this->speed / 10);
+                    $UP39 = rand(0, 25) * ($this->speed / 10);
                     break;
                 case 12:
-                    // Oasis Random populate
-                    $UP31 = rand(5, 40) * (SPEED / 10);
-                    $UP33 = rand(5, 30) * (SPEED / 10);
-                    $UP38 = rand(1, 25) * (SPEED / 10);
-                    $UP39 = rand(0, 25) * (SPEED / 10);
-                    $fil = rand(0, 20);
-                    if ($fil == 1) {
-                        $UP40 = rand(0, 31) * (SPEED / 10);
-                    } else {
-                        $UP40 = 0;
-                    }
-                    //+25% lumber per hour
-                    $q = "UPDATE units SET u31 = u31 + ?, u33 = u33 + ?, u38 = u38 + ?, u39 = u39 + ?, u40 = u40 + ? WHERE vref = ?";
-                    $result = $this->query($q, [$UP31, $UP33, $UP38, $UP39, $UP40, $wid]);
+                    $UP31 = rand(5, 40) * ($this->speed / 10);
+                    $UP33 = rand(5, 30) * ($this->speed / 10);
+                    $UP38 = rand(1, 25) * ($this->speed / 10);
+                    $UP39 = rand(0, 25) * ($this->speed / 10);
+                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
+                    break;
+            }
+
+            switch ($basearray['oasistype']) {
+                case 1:
+                case 2:
+                    $this->conn->update('units', ['u35' => $UP35, 'u36' => $UP36, 'u37' => $UP37], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 3:
+                    $this->conn->update('units', ['u35' => $UP35, 'u36' => $UP36, 'u37' => $UP37, 'u39' => $UP39, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 4:
+                case 5:
+                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u35' => $UP35], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 6:
+                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u35' => $UP35, 'u38' => $UP38, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 7:
+                case 8:
+                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u34' => $UP34], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 9:
+                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u34' => $UP34, 'u37' => $UP37, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 10:
+                case 11:
+                    $this->conn->update('units', ['u31' => $UP31, 'u33' => $UP33, 'u37' => $UP37, 'u39' => $UP39], 'vref = :wid', [':wid' => $wid]);
+                    break;
+                case 12:
+                    $this->conn->update('units', ['u31' => $UP31, 'u33' => $UP33, 'u38' => $UP38, 'u39' => $UP39, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
                     break;
             }
         }
@@ -3479,15 +3082,10 @@ class Database extends PDO
 
     public function hasBeginnerProtection($vid)
     {
-        $q = "SELECT u.protect FROM users u INNER JOIN vdata v ON u.id=v.owner WHERE v.wref=?";
-        $result = $this->query($q, [$vid]);
-        $dbarray = $this->fetchArray($result);
-        if (!empty($dbarray)) {
-            if (time() < $dbarray[0]) {
-                return true;
-            } else {
-                return false;
-            }
+        $result = $this->conn->select('users u', 'u.protect', 'INNER JOIN vdata v ON u.id=v.owner', 'v.wref = ?', [$vid]);
+
+        if ($result && time() < $result['protect']) {
+            return true;
         } else {
             return false;
         }
@@ -3495,9 +3093,8 @@ class Database extends PDO
 
     public function addCLP($uid, $clp)
     {
-        $data = ['clp' => 'clp + ?'];
         $condition = ['id' => $uid];
-        return $this->update('users', $data, $condition, [$clp]);
+        return $this->conn->update('users', ['clp' => 'clp + ?'], $condition, [$clp]);
     }
 
     public function sendWlcMessage($client, $owner, $topic, $message, $send)
@@ -3512,59 +3109,50 @@ class Database extends PDO
             'send' => $send,
             'time' => time()
         ];
-        return $this->insert('mdata', $data);
+        return $this->conn->insert('mdata', $data);
     }
 
     public function getLinks($id)
     {
-        $fields = ['url', 'name'];
-        $condition = ['userid' => $id];
-        $orderBy = 'pos ASC';
-        return $this->select($fields, 'links', $condition, null, $orderBy);
+        return $this->conn->select('links', 'url, name', ['userid' => $id], ['pos ASC']);
     }
 
     public function removeLinks($id, $uid)
     {
         $condition = ['id' => $id, 'userid' => $uid];
-        return $this->delete('links', $condition);
+        return $this->conn->delete('links', $condition);
     }
 
     public function hasFarmlist($uid)
     {
-        $condition = ['owner' => $uid];
-        $result = $this->selectFirst('id', 'farmlist', $condition, 'name ASC');
+        $result = $this->conn->select('id', 'farmlist', ['owner' => $uid], ['name ASC']);
         return !empty($result);
     }
 
     public function getRaidList($id)
     {
-        $condition = ['id' => $id];
-        return $this->selectFirst('*', 'raidlist', $condition);
+        return $this->conn->select('raidlist', ['id' => $id]);
     }
 
     public function getAllAuction()
     {
-        $condition = ['finish' => 0];
-        return $this->selectFirst('*', 'auction', $condition);
+        return $this->conn->select('auction', ['finish' => 0]);
     }
 
     public function hasVillageFarmlist($wref)
     {
-        $condition = ['wref' => $wref];
-        $result = $this->selectFirst('id', 'farmlist', $condition, 'wref ASC');
+        $result = $this->conn->select('farmlist', 'id', ['wref' => $wref], ['wref ASC']);
         return !empty($result);
     }
 
     public function deleteFarmList($id, $owner)
     {
-        $condition = ['id' => $id, 'owner' => $owner];
-        return $this->delete('farmlist', $condition);
+        return $this->conn->delete('farmlist', ['id' => $id, 'owner' => $owner]);
     }
 
     public function deleteSlotFarm($id)
     {
-        $condition = ['id' => $id];
-        return $this->delete('raidlist', $condition);
+        return $this->conn->delete('raidlist', ['id' => $id]);
     }
 
     public function createFarmList($wref, $owner, $name)
@@ -3574,7 +3162,7 @@ class Database extends PDO
             'owner' => $owner,
             'name' => $name
         ];
-        return $this->insert('farmlist', $data);
+        return $this->conn->insert('farmlist', $data);
     }
 
     public function addSlotFarm($lid, $towref, $x, $y, $distance, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10)
@@ -3596,7 +3184,7 @@ class Database extends PDO
             't9' => $t9,
             't10' => $t10
         ];
-        return $this->insert('raidlist', $data);
+        return $this->conn->insert('raidlist', $data);
     }
 
     public function editSlotFarm($eid, $lid, $wref, $x, $y, $dist, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10)
@@ -3617,8 +3205,7 @@ class Database extends PDO
             't9' => $t9,
             't10' => $t10
         ];
-        $condition = ['id' => $eid];
-        return $this->update('raidlist', $data, $condition);
+        return $this->conn->update('raidlist', $data, ['id' => $eid]);
     }
 
     public function removeOases($wref)
@@ -3628,12 +3215,8 @@ class Database extends PDO
             'owner' => 3,
             'name' => UNOCCUPIEDOASES
         ];
-        $condition1 = ['wref' => $wref];
-        $r1 = $this->update('odata', $data1, $condition1);
-
-        $data2 = ['occupied' => 0];
-        $condition2 = ['id' => $wref];
-        $r2 = $this->update('wdata', $data2, $condition2);
+        $r1 = $this->conn->update('odata', $data1, ['wref' => $wref]);
+        $r2 = $this->conn->update('wdata', ['occupied' => 0], ['id' => $wref]);
 
         return ($r1 && $r2);
     }
@@ -3645,14 +3228,12 @@ class Database extends PDO
         $joinConditions = ['b.id' => 'a.wref'];
         $condition = ['owner' => $uid];
         $orderBy = 'capital DESC, pop DESC';
-        return $this->join($fields, $joinTables, $joinConditions, $condition, null, $orderBy);
+        return $this->conn->join($fields, $joinTables, $joinConditions, $condition, null, $orderBy);
     }
 
     public function getNoticeData($nid)
     {
-        $fields = ['data'];
-        $condition = ['id' => $nid];
-        $result = $this->selectFirst($fields, 'ndata', $condition);
+        $result = $this->conn->select('ndata', 'data', ['id' => $nid]);
         return $result['data'];
     }
 
@@ -3665,34 +3246,23 @@ class Database extends PDO
         if ($viewed >= 0) {
             $condition['viewed'] = $viewed;
         }
-        return $this->select('*', 'ndata', $condition);
+        return $this->conn->select('ndata', '*', $condition);
     }
 
     public function setSilver($uid, $silver, $mode)
     {
         if (!$mode) {
-            $data = ['silver' => "silver - $silver"];
-            $condition = ['id' => $uid];
-            $this->update('users', $data, $condition);
-
-            // Update used silver
-            $data2 = ['usedsilver' => "usedsilver + $silver"];
-            $this->update('users', $data2, $condition);
+            $this->conn->update('users', ['silver' => "silver - $silver"], ['id' => $uid]);
+            $this->conn->update('users', ['usedsilver' => "usedsilver + $silver"], ['id' => $uid]);
         } else {
-            $data = ['silver' => "silver + $silver"];
-            $condition = ['id' => $uid];
-            $this->update('users', $data, $condition);
-
-            // Update Add silver
-            $data2 = ['Addsilver' => "Addsilver + $silver"];
-            $this->update('users', $data2, $condition);
+            $this->conn->update('users', ['silver' => "silver + $silver"], ['id' => $uid]);
+            $this->conn->update('users', ['Addsilver' => "Addsilver + $silver"], ['id' => $uid]);
         }
     }
 
     public function getAuctionSilver($uid)
     {
-        $condition = ['uid' => $uid, 'finish' => 0];
-        return $this->select('*', 'auction', $condition);
+        return $this->conn->select('auction', '*', ['uid' => $uid, 'finish' => 0]);
     }
 
     public function delAuction($id)
@@ -3702,8 +3272,7 @@ class Database extends PDO
         if (($usedtime < (AUCTIONTIME / 10)) && !$aucData['bids']) {
             $this->modifyHeroItem($aucData['itemid'], 'num', $aucData['num'], 1);
             $this->modifyHeroItem($aucData['itemid'], 'proc', 0, 0);
-            $condition = ['id' => $id, 'finish' => 0];
-            return $this->delete('auction', $condition);
+            return $this->conn->delete('auction', ['id' => $id, 'finish' => 0]);
         } else {
             return false;
         }
@@ -3711,13 +3280,11 @@ class Database extends PDO
 
     public function getAuctionData($id)
     {
-        $condition = ['id' => $id];
-        return $this->selectFirst('*', 'auction', $condition);
+        return $this->conn->select('auction', '*', ['id' => $id]);
     }
 
     public function modifyHeroItem($id, $column, $value, $mode)
     {
-        // mode=0 set; 1 add; 2 sub; 3 mul; 4 div
         switch ($mode) {
             case 0:
                 $data = [$column => $value];
@@ -3735,14 +3302,12 @@ class Database extends PDO
                 $data = [$column => "$column / $value"];
                 break;
         }
-        $condition = ['id' => $id];
-        return $this->update('heroitems', $data, $condition);
+        return $this->conn->update('heroitems', $data, ['id' => $id]);
     }
 
     public function getAuctionUser($uid)
     {
-        $condition = ['owner' => $uid];
-        return $this->selectFirst('auction', '*', $condition);
+        return $this->conn->select('auction', '*', ['owner' => $uid]);
     }
 
     public function addAuction($owner, $itemid, $btype, $type, $amount)
@@ -3783,32 +3348,32 @@ class Database extends PDO
             'time' => $time,
             'finish' => 0
         ];
-        return $this->insert('auction', $data);
+        return $this->conn->insert('auction', $data);
     }
 
     public function getHeroItem($id = 0, $uid = 0, $btype = 0, $type = 0, $proc = 2)
     {
         $conditions = [];
         if ($id) {
-            $conditions[] = "id = $id";
+            $conditions['id'] = $id;
         }
         if ($uid) {
-            $conditions[] = "uid = $uid";
+            $conditions['uid'] = $uid;
         }
         if ($btype) {
-            $conditions[] = "btype = $btype";
+            $conditions['btype'] = $btype;
         }
         if ($type) {
-            $conditions[] = "type = $type";
+            $conditions['type'] = $type;
         }
         if ($proc != 2) {
-            $conditions[] = "proc = $proc";
+            $conditions['proc'] = $proc;
         }
-        $conditionStr = implode(' AND ', $conditions);
-        $q = "SELECT * FROM heroitems WHERE $conditionStr";
-        $result = $this->query_return($q);
+
+        $result = $this->conn->select('heroitems', $conditions);
+
         if ($id) {
-            return isset($result[0]) ? $result[0] : [];
+            return isset($result) ? $result : [];
         }
         return $result;
     }
@@ -3822,14 +3387,12 @@ class Database extends PDO
             'bids' => 'bids + 1',
             'time' => $time
         ];
-        $condition = ['id' => $id];
-        return $this->update('auction', $data, $condition);
+        return $this->conn->update('auction', $data, ['id' => $id]);
     }
 
     public function removeBidNotice($id)
     {
-        $condition = ['id' => $id];
-        return $this->delete('auction', $condition);
+        return $this->conn->delete('auction', ['id' => $id]);
     }
 
     public function addHeroItem($uid, $btype, $type, $num)
@@ -3841,28 +3404,27 @@ class Database extends PDO
             'num' => $num,
             'proc' => 0
         ];
-        return $this->insert('heroitems', $data);
+        return $this->conn->insert('heroitems', $data);
     }
 
     public function checkHeroItem($uid, $btype, $type = 0, $proc = 2)
     {
         $conditions = [];
         if ($uid) {
-            $conditions[] = "uid = '$uid'";
+            $conditions['uid'] = $uid;
         }
         if ($btype) {
-            $conditions[] = "btype = '$btype'";
+            $conditions['btype'] = $btype;
         }
         if ($type) {
-            $conditions[] = "type = '$type'";
+            $conditions['type'] = $type;
         }
         if ($proc != 2) {
-            $conditions[] = "proc = '$proc'";
+            $conditions['proc'] = $proc;
         }
-        $conditionStr = implode(' AND ', $conditions);
-        $q = "SELECT id, btype FROM heroitems WHERE $conditionStr";
-        $result = $this->query_return($q);
-        return isset($result['btype']) ? $result['id'] : false;
+
+        $result = $this->conn->select('heroitems', 'id, btype', $conditions);
+        return $result ? $result['id'] : false;
     }
 
     public function editBid($id, $maxsilver, $minsilver)
@@ -3871,26 +3433,22 @@ class Database extends PDO
             'maxsilver' => $maxsilver,
             'silver' => $minsilver
         ];
-        $condition = ['id' => $id];
-        return $this->update('auction', $data, $condition);
+        return $this->conn->update('auction', $data, ['id' => $id]);
     }
 
     public function getBidData($id)
     {
-        $condition = ['id' => $id];
-        return $this->selectFirst('auction', '*', $condition);
+        return $this->conn->select('auction', '*', ['id' => $id]);
     }
 
     public function getFLData($id)
     {
-        $condition = ['id' => $id];
-        return $this->selectFirst('farmlist', '*', $condition);
+        return $this->conn->select('farmlist', '*', ['id' => $id]);
     }
 
     public function getHeroField($uid, $field)
     {
-        $condition = ['uid' => $uid];
-        $result = $this->selectFirst('hero', $field, $condition);
+        $result = $this->conn->select('hero', $field, ['uid' => $uid]);
         return $result[$field] ?? null;
     }
 
@@ -3898,8 +3456,7 @@ class Database extends PDO
     {
         $capWref = $this->getVFH($uid);
         if ($capWref) {
-            $condition = ['vref' => $capWref];
-            $dbarray = $this->selectFirst('fdata', '*', $condition);
+            $dbarray = $this->conn->select('fdata', '*', ['vref' => $capWref]);
             if (!empty($dbarray)) {
                 for ($i = 19; $i <= 40; $i++) {
                     if ($dbarray['f' . $i . 't'] == 35) {
@@ -3913,15 +3470,13 @@ class Database extends PDO
 
     public function getVFH($uid)
     {
-        $condition = ['owner' => $uid, 'capital' => 1];
-        $result = $this->selectFirst('vdata', 'wref', $condition);
+        $result = $this->conn->select('vdata', 'wref', ['owner' => $uid, 'capital' => 1]);
         return $result['wref'] ?? null;
     }
 
     public function getNotice2($id, $field)
     {
-        $condition = ['id' => $id];
-        $result = $this->selectFirst('ndata', $field, $condition);
+        $result = $this->conn->select('ndata', $field, ['id' => $id]);
         return $result[$field] ?? null;
     }
 
@@ -3931,11 +3486,8 @@ class Database extends PDO
             $time = time();
         }
 
-        // Get the last world ID
-        $sql = "SELECT id FROM wdata ORDER BY id DESC LIMIT 1";
-        $lastWorld = $this->selectFirst($sql)['id'];
+        $lastWorld = $this->conn->select('wdata', 'id', ['ORDER BY id DESC LIMIT 1']);
 
-        // Determine the adventure target world reference
         if (($wref - 10000) <= 10) {
             $w1 = rand(10, ($wref + 10000));
         } elseif (($wref + 10000) >= $lastWorld) {
@@ -3944,7 +3496,6 @@ class Database extends PDO
             $w1 = rand(($wref - 10000), ($wref + 10000));
         }
 
-        // Insert the adventure record
         $data = [
             'wref' => $w1,
             'uid' => $uid,
@@ -3953,21 +3504,17 @@ class Database extends PDO
             'end' => 0
         ];
 
-        return $this->insert('adventure', $data);
+        return $this->conn->insert('adventure', $data);
     }
 
     public function addHero($uid)
     {
-        // Obtenção do timestamp atual
         $time = time();
 
-        // Geração de um hash a partir do timestamp
         $hash = md5($time);
 
-        // Determinação da tribo do usuário
         $tribe = $this->getUserField($uid, 'tribe', 0);
 
-        // Definição dos valores padrão dos atributos do herói com base na tribo
         switch ($tribe) {
             case 0:
                 $cpproduction = 0;
@@ -4069,7 +3616,6 @@ class Database extends PDO
                 break;
         }
 
-        // Montagem dos dados para inserção
         $heroData = [
             'uid' => $uid,
             'wref' => 0,
@@ -4100,7 +3646,7 @@ class Database extends PDO
             'hash' => $hash
         ];
 
-        return $this->insert('hero', $heroData);
+        return $this->conn->insert('hero', $heroData);
     }
 
     public function addNewProc($uid, $npw, $nemail, $act, $mode)
@@ -4119,29 +3665,22 @@ class Database extends PDO
             $data['nemail'] = $nemail;
         }
 
-        return $this->insert('newproc', $data);
+        return $this->conn->insert('newproc', $data);
     }
 
     public function checkProcExist($uid)
     {
-        $conditions = [
-            'uid' => $uid,
-            'proc' => 0
-        ];
-
-        return !$this->selectFirst('newproc', $conditions);
+        return !$this->conn->select('newproc', ['uid' => $uid, 'proc' => 0]);
     }
 
     public function removeProc($uid)
     {
-        $conditions = ['uid' => $uid];
-        return $this->delete('newproc', $conditions);
+        return $this->conn->delete('newproc', ['uid' => $uid]);
     }
 
     public function checkBan($uid)
     {
-        $conditions = ['id' => $uid];
-        $user = $this->selectFirst('users', $conditions);
+        $user = $this->conn->select('users', ['id' => $uid]);
 
         if (!empty($user) && ($user['access'] <= 1 /*|| $user['access']>=7*/)) {
             return true;
@@ -4152,18 +3691,12 @@ class Database extends PDO
 
     public function getNewProc($uid)
     {
-        $conditions = ['uid' => $uid];
-        return $this->selectFirst('newproc', $conditions, ['npw', 'act']);
+        return $this->conn->select('newproc', 'npw, act', ['uid' => $uid]);
     }
 
     public function checkAdventure($uid, $wref, $end)
     {
-        $conditions = [
-            'uid' => $uid,
-            'wref' => $wref,
-            'end' => $end
-        ];
-        return $this->selectFirst('adventure', $conditions, 'id');
+        return $this->conn->select('adventure', 'id', ['uid' => $uid, 'wref' => $wref, 'end' => $end]);
     }
 
     public function getAdventure($uid, $wref = 0, $end = 2)
@@ -4175,19 +3708,17 @@ class Database extends PDO
         if ($end != 2) {
             $conditions['end'] = $end;
         }
-        return $this->selectFirst('adventure', $conditions, ['id', 'dif']);
+        return $this->conn->select('adventure', $conditions, ['id', 'dif']);
     }
 
     public function editTableField($table, $field, $value, $refField, $ref)
     {
-        $conditions = [$refField => $ref];
-        $data = [$field => $value];
-        return $this->update($table, $data, $conditions);
+        return $this->conn->update($table, [$field => $value], [$refField => $ref]);
     }
 
     public function config()
     {
-        return $this->selectFirst('config');
+        return $this->conn->select('config');
     }
 
     public function getAllianceDipProfile($aid, $type)
@@ -4196,8 +3727,8 @@ class Database extends PDO
         $conditions2 = ['alli2' => $aid, 'type' => $type, 'accepted' => 1];
         $allianceLinks = '';
 
-        $alliances1 = $this->select('diplomacy', $conditions1, 'alli2');
-        $alliances2 = $this->select('diplomacy', $conditions2, 'alli1');
+        $alliances1 = $this->conn->select('diplomacy', $conditions1, 'alli2');
+        $alliances2 = $this->conn->select('diplomacy', $conditions2, 'alli1');
 
         if (!empty($alliances1)) {
             foreach ($alliances1 as $row) {
@@ -4222,7 +3753,9 @@ class Database extends PDO
 
     public function getAlliance($id, $mod = 0)
     {
-        if (!$id) return 0;
+        if (!$id) {
+            return 0;
+        }
 
         switch ($mod) {
             case 0:
@@ -4238,7 +3771,7 @@ class Database extends PDO
                 return null;
         }
 
-        return $this->selectFirst('alidata', $where, ['id', 'tag', 'desc', 'max', 'name', 'notice']);
+        return $this->conn->select('alidata', 'id, tag, desc, max, name, notice', $where);
     }
 
     public function canClaimArtifact($vref, $type)
@@ -4281,34 +3814,32 @@ class Database extends PDO
 
     public function getCropProdstarv($wref)
     {
-        global $bid4, $bid8, $bid9;
-
-        $basecrop = $grainmill = $bakery = 0;
         $owner = $this->getVillageField($wref, 'owner');
         $bonus = $this->getUserField($owner, 'b4', 0);
-
         $buildarray = $this->getResourceLevel($wref);
-        $cropholder = [];
-        $crop = 0;
 
-        // Percorre os edifícios do campo para calcular o total de produção de trigo
+        $basecrop = $grainmill = $bakery = 0;
+
         foreach ($buildarray as $field => $value) {
-            if (strpos($field, 'f') === 0 && is_numeric(substr($field, 1))) {
-                $fieldType = $value['t'];
-                if ($fieldType == 4) {
-                    $cropholder[] = $field;
-                    $basecrop += $bid4[$value]['prod'];
-                } elseif ($fieldType == 8) {
+            $fieldType = $value['t'];
+            switch ($fieldType) {
+                case 4:
+                    $basecrop += $this->bid4[$value]['prod'];
+                    break;
+                case 8:
                     $grainmill = $value;
-                } elseif ($fieldType == 9) {
+                    break;
+                case 9:
                     $bakery = $value;
-                }
+                    break;
             }
         }
 
-        // Calcula o bônus de produção de trigo dos oásis
         $cropo = 0;
-        $oases = $this->query_return("SELECT type FROM `odata` WHERE conqured = $wref");
+        $crop = 0;
+        $oasisTypes = [3, 6, 9, 10, 11, 12];
+        $oasisTypesStr = implode(', ', $oasisTypes);
+        $oases = $this->conn->select('odata', 'type', 'conqured = :wref AND type IN (' . $oasisTypesStr . ')', [':wref' => $wref]);
         foreach ($oases as $oasis) {
             switch ($oasis['type']) {
                 case 3:
@@ -4324,45 +3855,42 @@ class Database extends PDO
             }
         }
 
-        // Aplica o bônus de produção dos moinhos de grãos e padarias
         if ($grainmill || $bakery) {
-            $crop += ($basecrop / 100) * ($bid8[$grainmill]['attri'] + $bid9[$bakery]['attri']);
+            $crop += ($basecrop / 100) * ($this->bid8[$grainmill]['attri'] + $this->bid9[$bakery]['attri']);
         }
 
-        // Aplica o bônus de produção se o jogador tiver um bônus ativo
         if ($bonus > time()) {
             $crop *= 1.25;
         }
 
-        // Aplica a velocidade do jogo à produção de trigo
-        $crop *= SPEED;
+        $crop *= $this->speed;
 
         return $crop;
     }
 
     public function getNatarsProgress()
     {
-        return $this->selectFirst("natarsprogress");
+        return $this->conn->selectFirst("natarsprogress");
     }
 
     public function setNatarsProgress($field, $value)
     {
-        return $this->update("natarsprogress", [$field => $value], "");
+        return $this->conn->update("natarsprogress", [$field => $value], "");
     }
 
     public function getNatarsCapital()
     {
-        return $this->selectFirst("vdata", "`wref`", "owner = 2 AND capital = 1", [], "created ASC");
+        return $this->conn->select("vdata", "wref", "owner = 2 AND capital = 1", ["created ASC"]);
     }
 
     public function getNatarsWWVillages()
     {
-        return $this->select("vdata", "`owner`", "owner = 2 AND name = 'WW Village'", [], "created ASC");
+        return $this->conn->select("vdata", "owner", "owner = 2 AND name = 'WW Village'", ["created ASC"]);
     }
 
     public function addNatarsVillage($wid, $uid, $username, $capital)
     {
-        $total = $this->count("vdata", "*", "owner = '$uid'");
+        $total = $this->conn->count("vdata", "*", "owner = '$uid'");
         $vname = sprintf("[%05d] Natars", $total + 1);
         $time = time();
         $data = [
@@ -4383,40 +3911,40 @@ class Database extends PDO
             'created' => $time,
             'natar' => 1
         ];
-        return $this->insert("vdata", $data);
+        return $this->conn->insert("vdata", $data);
     }
 
     public function instantTrain($vref)
     {
-        $count = $this->count("training", "*", "vref = '$vref'");
-        $this->update("training", ['commence' => 0, 'eachtime' => 1, 'endat' => 0, 'timestamp' => 0], "vref = '$vref'");
+        $count = $this->conn->count("training", "*", "vref = '$vref'");
+        $this->conn->update("training", ['commence' => 0, 'eachtime' => 1, 'endat' => 0, 'timestamp' => 0], "vref = '$vref'");
         return $count;
     }
 
     public function hasWinner()
     {
-        return $this->count("fdata", "*", "f99 = '100' AND f99t = '40'") > 0;
+        return $this->conn->count("fdata", "*", "f99 = '100' AND f99t = '40'") > 0;
     }
 
     public function getVillageActiveArte($vref)
     {
-        $currentTime = time();
-        $conqueredThreshold = $currentTime - max(86400 / SPEED, 600);
-        return $this->select("artefacts", "*", "`vref` = :vref AND `status` = 1 AND `conquered` <= :conquered", [":vref" => $vref, ":conquered" => $conqueredThreshold]);
+        $conqueredThreshold = time() - max(86400 / $this->speed, 600);
+        return $this->conn->select("artefacts", "*", "vref = :vref AND status = 1 AND conquered <= :conquered", [":vref" => $vref, ":conquered" => $conqueredThreshold]);
     }
 
     public function getAccountActiveArte($owner)
     {
-        $currentTime = time();
-        $conqueredThreshold = $currentTime - max(86400 / SPEED, 600);
-        return $this->select("artefacts", "*", "`owner` = :owner AND `status` = 1 AND `conquered` <= :conquered", [":owner" => $owner, ":conquered" => $conqueredThreshold]);
+        $conqueredThreshold = time() - max(86400 / $this->speed, 600);
+        return $this->conn->select("artefacts", "*", "owner = :owner AND status = 1 AND conquered <= :conquered", [":owner" => $owner, ":conquered" => $conqueredThreshold]);
     }
 
     public function getArtEffMSpeed($wref)
     {
         $artEff = 1;
         $res = $this->getArteEffectByType($wref, 4);
-        if ($res != 0) $artEff = $res;
+        if ($res != 0) {
+            $artEff = $res;
+        }
         return $artEff;
     }
 
@@ -4428,8 +3956,8 @@ class Database extends PDO
         if (!empty($vinfo) && isset($vinfo['owner'])) {
             $owner = $vinfo['owner'];
             $currentTime = time();
-            $conqueredThreshold = $currentTime - max(86400 / SPEED, 600);
-            $result = $this->select("artefacts", "`vref`, `effect`, `aoe`", "`owner` = :owner AND `effecttype` = :type AND `status` = 1 AND `conquered` <= :conquered", [":owner" => $owner, ":type" => $type, ":conquered" => $conqueredThreshold], "conquered DESC");
+            $conqueredThreshold = $currentTime - max(86400 / $this->speed, 600);
+            $result = $this->conn->select("artefacts", "vref, effect, aoe", "owner = :owner AND effecttype = :type AND status = 1 AND conquered <= :conquered", [":owner" => $owner, ":type" => $type, ":conquered" => $conqueredThreshold], "conquered DESC");
             if (!empty($result) && count($result) > 0) {
                 $i = 0;
                 foreach ($result as $r) {
@@ -4447,15 +3975,16 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function updateFoolArtes()
+    public
+    function updateFoolArtes()
     {
         $currentTime = time();
-        $conqueredThreshold = $currentTime - max(86400 / SPEED, 600);
+        $conqueredThreshold = $currentTime - max(86400 / $this->speed, 600);
 
-        $sql = "SELECT `id`,`size` FROM artefacts WHERE `type` = 3 AND `status` = 1 AND `conquered` <= :conqueredThreshold AND `lastupdate` <= :currentTime";
+        $sql = "SELECT id,size FROM artefacts WHERE type = 3 AND status = 1 AND conquered <= :conqueredThreshold AND lastupdate <= :currentTime";
         $params = [":conqueredThreshold" => $conqueredThreshold, ":currentTime" => $currentTime];
 
-        $result = $this->executeQuery($sql, $params);
+        $result = $this->conn->executeQuery($sql, $params);
 
         if (!empty($result)) {
             foreach ($result as $r) {
@@ -4498,15 +4027,16 @@ class Database extends PDO
                     $effect = 1 / $effect;
                 }
 
-                $updateSql = "UPDATE artefacts SET `effecttype` = :effecttype, `effect` = :effect, `aoe` = :aoe WHERE `id` = :id";
+                $updateSql = "UPDATE artefacts SET effecttype = :effecttype, effect = :effect, aoe = :aoe WHERE id = :id";
                 $updateParams = [":effecttype" => $effecttype, ":effect" => $effect, ":aoe" => $aoe, ":id" => $r['id']];
 
-                $this->executeQuery($updateSql, $updateParams);
+                $this->conn->executeQuery($updateSql, $updateParams);
             }
         }
     }
 
-    public function getArtEffDiet($wref)
+    public
+    function getArtEffDiet($wref)
     {
         $artEff = 1;
         $res = $this->getArteEffectByType($wref, 6);
@@ -4514,7 +4044,8 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffGrt($wref)
+    public
+    function getArtEffGrt($wref)
     {
         $artEff = 0;
         $res = $this->getArteEffectByType($wref, 9);
@@ -4522,7 +4053,8 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffArch($wref)
+    public
+    function getArtEffArch($wref)
     {
         $artEff = 1;
         $res = $this->getArteEffectByType($wref, 2);
@@ -4530,7 +4062,8 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffSpy($wref)
+    public
+    function getArtEffSpy($wref)
     {
         $artEff = 0;
         $res = $this->getArteEffectByType($wref, 5);
@@ -4538,7 +4071,8 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffTrain($wref)
+    public
+    function getArtEffTrain($wref)
     {
         $artEff = 1;
         $res = $this->getArteEffectByType($wref, 8);
@@ -4546,7 +4080,8 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffConf($wref)
+    public
+    function getArtEffConf($wref)
     {
         $artEff = 1;
         $res = $this->getArteEffectByType($wref, 7);
@@ -4554,14 +4089,15 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffBP($wref)
+    public
+    function getArtEffBP($wref)
     {
         $artEff = 0;
         $village = $this->getVillage($wref);
         $owner = $village['owner'];
 
-        $conditions = ["owner" => $owner, "effecttype" => 11, "status" => 1, "conquered[<=]" => time() - max(86400 / SPEED, 600)];
-        $result = $this->select("artefacts", "COUNT(*) as count", $conditions);
+        $conditions = ["owner" => $owner, "effecttype" => 11, "status" => 1, "conquered[<=]" => time() - max(86400 / $this->speed, 600)];
+        $result = $this->conn->select("artefacts", "COUNT(*) as count", $conditions);
 
         if ($result['count'] > 0) {
             $artEff = 1;
@@ -4570,13 +4106,14 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function getArtEffAllyBP($uid)
+    public
+    function getArtEffAllyBP($uid)
     {
         $artEff = 0;
         $userAlli = $this->getUserField($uid, 'alliance', 0);
-        $q = 'SELECT `alli1`,`alli2` FROM diplomacy WHERE alli1 = :userAlli OR alli2 = :userAlli AND accepted <> 0';
+        $q = 'SELECT alli1,alli2 FROM diplomacy WHERE alli1 = :userAlli OR alli2 = :userAlli AND accepted <> 0';
         $params = [":userAlli" => $userAlli];
-        $diplos = $this->executeQuery($q, $params);
+        $diplos = $this->conn->executeQuery($q, $params);
 
         if (!empty($diplos) && count($diplos) > 0) {
             $alliances = [];
@@ -4586,9 +4123,9 @@ class Database extends PDO
             }
             $alliances = array_unique($alliances);
             $allianceStr = implode(',', $alliances);
-            $q = 'SELECT `id` FROM users WHERE alliance IN (' . $allianceStr . ') AND id <> :uid';
+            $q = 'SELECT id FROM users WHERE alliance IN (' . $allianceStr . ') AND id <> :uid';
             $params = [":uid" => $uid];
-            $mate = $this->executeQuery($q, $params);
+            $mate = $this->conn->executeQuery($q, $params);
 
             if (!empty($mate) && count($mate) > 0) {
                 $mateIds = [];
@@ -4596,8 +4133,8 @@ class Database extends PDO
                     $mateIds[] = $ms['id'];
                 }
                 $mateStr = implode(',', $mateIds);
-                $q = 'SELECT `id` FROM artefacts WHERE `owner` IN (' . $mateStr . ') AND `effecttype` = 11 AND `status` = 1 AND `conquered` <= :conqueredThreshold ORDER BY `conquered` DESC';
-                $result = $this->executeQuery($q, $params);
+                $q = 'SELECT id FROM artefacts WHERE owner IN (' . $mateStr . ') AND effecttype = 11 AND status = 1 AND conquered <= :conqueredThreshold ORDER BY conquered DESC';
+                $result = $this->conn->executeQuery($q, $params);
 
                 if (!empty($result) && count($result) > 0) {
                     return 1;
@@ -4607,39 +4144,45 @@ class Database extends PDO
         return $artEff;
     }
 
-    public function modifyExtraVillage($wid, $column, $value)
+    public
+    function modifyExtraVillage($wid, $column, $value)
     {
-        return $this->update('vdata', [$column => "$column + :value"], ['wref' => $wid], [':value' => $value]);
+        return $this->conn->update('vdata', [$column => "$column + :value"], ['wref' => $wid], [':value' => $value]);
     }
 
-    public function modifyFieldLevel($wid, $field, $level, $mode)
+    public
+    function modifyFieldLevel($wid, $field, $level, $mode)
     {
         $columnName = 'f' . $field;
         $operation = $mode ? '+' : '-';
         $values = [$columnName => "$columnName $operation :level"];
 
-        return $this->update('fdata', $values, ['vref' => $wid], [':level' => $level]);
+        return $this->conn->update('fdata', $values, ['vref' => $wid], [':level' => $level]);
     }
 
-    public function modifyFieldType($wid, $field, $type)
+    public
+    function modifyFieldType($wid, $field, $type)
     {
-        return $this->update('fdata', ['f' . $field . 't' => $type], ['vref' => $wid]);
+        return $this->conn->update('fdata', ['f' . $field . 't' => $type], ['vref' => $wid]);
     }
 
-    public function resendAct($mail)
+    public
+    function resendAct($mail)
     {
-        return $this->select('users', '*', ['email' => $mail]);
+        return $this->conn->select('users', '*', ['email' => $mail]);
     }
 
-    public function changemail($mail, $id)
+    public
+    function changemail($mail, $id)
     {
-        return $this->update('users', ['email' => $mail], ['id' => $id]);
+        return $this->conn->update('users', ['email' => $mail], ['id' => $id]);
     }
 
-    public function register2($username, $password, $email, $act, $activateat)
+    public
+    function register2($username, $password, $email, $act, $activateat)
     {
-        $time = $_SERVER['REQUEST_TIME'];
-        if (strtotime(START_TIME) > $_SERVER['REQUEST_TIME']) {
+        $time = time();
+        if (strtotime(START_TIME) > $time) {
             $time = strtotime(START_TIME);
         }
         $timep = ($time + PROTECTION);
@@ -4660,53 +4203,52 @@ class Database extends PDO
             'activateat' => $activateat
         ];
 
-        return $this->insert('users', $data) ? $this->getLastInsertId() : null;
+        return $this->conn->insert('users', $data) ? $this->conn->getLastInsertId() : null;
     }
 
     public function checkname($id)
     {
-        return $this->selectFirst('users', ['username', 'email'], ['id' => $id]);
+        return $this->conn->select('users', ['username', 'email'], ['id' => $id]);
     }
 
     public function settribe($tribe, $id)
     {
-        return $this->update('users', ['tribe' => $tribe], ['id' => $id, 'reg2' => 1]);
+        return $this->conn->update('users', ['tribe' => $tribe], ['id' => $id, 'reg2' => 1]);
     }
 
     public function checkreg($uid)
     {
-        return $this->selectFirst('users', 'reg2', ['id' => $uid]);
+        return $this->conn->select('users', 'reg2', ['id' => $uid]);
     }
 
     public function checkReg2($name)
     {
-        return $this->selectFirst('users', 'reg2', ['username' => $name]);
+        return $this->conn->select('users', 'reg2', ['username' => $name]);
     }
 
     public function checkID($name)
     {
-        return $this->selectFirst('users', 'id', ['username' => $name]);
+        return $this->conn->select('users', 'id', ['username' => $name]);
     }
 
     public function setReg2($id)
     {
-        return $this->update('users', ['reg2' => 0], ['id' => $id, 'reg2' => 1]);
+        return $this->conn->update('users', ['reg2' => 0], ['id' => $id, 'reg2' => 1]);
     }
 
     public function getNotice5($uid)
     {
-        return $this->select('ndata', 'id', ['uid' => $uid, 'viewed' => 0], 'time DESC');
+        return $this->conn->select('ndata', 'id', ['uid' => $uid, 'viewed' => 0], ['time DESC']);
     }
 
     public function setRef($id, $name)
     {
-        $this->insert('reference', ['id' => $id, 'name' => $name]);
-        return $this->getLastInsertId();
+        return $this->conn->insert('reference', ['id' => $id, 'name' => $name]) ? $this->conn->getLastInsertId() : null;
     }
 
     public function getAttackCasualties($time)
     {
-        $result = $this->select('general', 'time, casualties', ['shown' => 1]);
+        $result = $this->conn->select('general', 'time, casualties', ['shown' => 1]);
         $casualties = 0;
 
         foreach ($result as $general) {
@@ -4714,14 +4256,12 @@ class Database extends PDO
                 $casualties += $general['casualties'];
             }
         }
-
         return $casualties;
     }
 
-
     public function getAttackByDate($time)
     {
-        $result = $this->select('general', ['time'], ['shown' => 1]);
+        $result = $this->conn->select('general', ['time'], ['shown' => 1]);
         $attack = 0;
 
         foreach ($result as $general) {
@@ -4733,10 +4273,9 @@ class Database extends PDO
         return $attack * 100;
     }
 
-
     public function getStatsinfo($uid, $time, $inf)
     {
-        $result = $this->select('stats', [$inf, 'time'], ['owner' => $uid]);
+        $result = $this->conn->select('stats', [$inf, 'time'], ['owner' => $uid]);
         $t = 0;
 
         if ($inf == 'rank') {
@@ -4769,12 +4308,12 @@ class Database extends PDO
             default:
                 $data = [$column => ":value"];
         }
-        return $this->update('hero', $data, ['uid' => $uid], [":value" => $value]);
+        return $this->conn->update('hero', $data, ['uid' => $uid], [":value" => $value]);
     }
 
     public function createTradeRoute($uid, $wid, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
     {
-        $this->update('users', ['gold' => 'gold - 2'], ['id' => $uid]);
+        $this->conn->update('users', ['gold' => 'gold - 2'], ['id' => $uid]);
 
         $data = [
             'uid' => $uid,
@@ -4790,63 +4329,60 @@ class Database extends PDO
             'time' => $time
         ];
 
-        return $this->insert('route', $data);
+        return $this->conn->insert('route', $data);
     }
 
     public function getTradeRoute($uid)
     {
-        return $this->select('route', ['uid' => $uid], 'timestamp ASC');
+        return $this->conn->select('route', ['uid' => $uid], 'timestamp ASC');
     }
 
     public function getTradeRoute2($id)
     {
-        return $this->selectFirst('route', '*', ['id' => $id]);
+        return $this->conn->select('route', '*', ['id' => $id]);
     }
 
     public function getTradeRouteUid($id)
     {
-        $routeData = $this->selectFirst('route', 'uid', ['id' => $id]);
+        $routeData = $this->conn->select('route', 'uid', ['id' => $id]);
         return $routeData['uid'];
     }
 
     public function editTradeRoute($id, $column, $value, $mode)
     {
         if (!$mode) {
-            return $this->update('route', [$column => $value], "id = :id", [":id" => $id]);
+            return $this->conn->update('route', [$column => $value], "id = :id", [":id" => $id]);
         } else {
-            return $this->update('route', [$column => "$column + :value"], "id = :id", [":id" => $id, ":value" => $value]);
+            return $this->conn->update('route', [$column => "$column + :value"], "id = :id", [":id" => $id, ":value" => $value]);
         }
     }
 
     public function deleteTradeRoute($id)
     {
-        return $this->delete('route', ['id' => $id]);
+        return $this->conn->delete('route', ['id' => $id]);
     }
 
     public function getHeroData($uid)
     {
-        return $this->selectFirst("hero", "*", "uid = :uid", [":uid" => $uid]);
+        return $this->conn->select("hero", "*", "uid = :uid", [":uid" => $uid]);
     }
 
     public function getHeroData2($uid)
     {
-        return $this->selectFirst("hero", "heroid", "dead = 0 AND uid = :uid", [":uid" => $uid]);
+        return $this->conn->select("hero", "heroid", "dead = 0 AND uid = :uid", [":uid" => $uid]);
     }
 
     public function getHeroInVillid($uid, $mode)
     {
-        $villageData = $this->select("vdata", "wref, name", "owner = :uid", [":uid" => $uid]);
+        $villageData = $this->conn->select("vdata", "wref, name", "owner = :uid", [":uid" => $uid]);
         $name = null;
 
         foreach ($villageData as $row) {
-            $unitHero = $this->selectFirst("units", "hero", "vref = :wref", [":wref" => $row['wref']]);
+            $unitHero = $this->conn->select("units", "hero", "vref = :wref", [":wref" => $row['wref']]);
             if ($unitHero['hero'] == 1) {
                 $name = $mode ? $row['name'] : $row['wref'];
-                break;
             }
         }
-
         return $name;
     }
-
 }
