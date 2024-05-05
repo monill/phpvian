@@ -2,13 +2,13 @@
 
 namespace PHPvian\Automation;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 
 class BuildComplete
 {
     public function buildComplete()
     {
-        $db = new Database();
+        $db = new Connection();
         $time = time();
         $array = [];
         $q = "SELECT `id`,`wid`,`field`,`level`,`type` FROM bdata where timestamp <= :time";
@@ -65,7 +65,7 @@ class BuildComplete
 
     public function resourceRequiredbcom($wid, $id, $tid)
     {
-        $db = new Database();
+        $db = new Connection();
         $name = "bid" . $tid;
         global $$name;
         $dataarray = $$name;

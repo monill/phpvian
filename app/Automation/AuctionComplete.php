@@ -2,14 +2,14 @@
 
 namespace PHPvian\Automation;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 
 class AuctionComplete
 {
     public function auctionComplete()
     {
         try {
-            $db = new Database();
+            $db = new Connection();
             $time = time();
             $q = "SELECT `owner`,`uid`,`silver`,`btype`,`type`,`maxsilver`,`silver`,`num`,`id` FROM auction where finish = 0 and time <= $time LIMIT 100";
             $dataarray = $db->executeQuery($q)->fetchAll(\PDO::FETCH_ASSOC);

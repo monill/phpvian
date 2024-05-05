@@ -2,13 +2,13 @@
 
 namespace PHPvian\Automation;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 
 class AutoAuction
 {
     public function autoAuction()
     {
-        $db = new Database();
+        $db = new Connection();
         $currentTime = $_SERVER['REQUEST_TIME'];
 
         try {
@@ -81,7 +81,7 @@ class AutoAuction
 
     public function addAuctionNew($owner, $btype, $type, $amount, $mtime)
     {
-        $db = new Database();
+        $db = new Connection();
         $time = time() + $mtime;
         $data = [
             'uid' => $owner,
