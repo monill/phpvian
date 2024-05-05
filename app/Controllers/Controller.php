@@ -2,17 +2,17 @@
 
 namespace PHPvian\Controllers;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 use PHPvian\Libs\Session;
 
 class Controller
 {
     protected $loginFingerPrint;
-    protected Database $db;
+    protected Connection $db;
 
     public function __construct()
     {
-        $this->db = new Database();
+        $this->db = new Connection();
         $this->loginFingerPrint = config('login', 'login_fingerprint');
         Session::startSession();
     }
