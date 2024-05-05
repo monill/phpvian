@@ -2,7 +2,7 @@
 
 namespace PHPvian\Models;
 
-use PHPvian\Libs\Database;
+use PHPvian\Libs\Connection;
 
 class User
 {
@@ -13,7 +13,7 @@ class User
 
     public function __construct()
     {
-        $this->db = new Database();
+        $this->db = new Connection();
     }
 
     public function findByEmail($email)
