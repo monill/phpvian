@@ -2,7 +2,7 @@
 
 namespace PHPvian\Controllers;
 
-class IndexController extends Controller
+class IndexController
 {
     public function index()
     {
