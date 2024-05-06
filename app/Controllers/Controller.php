@@ -8,11 +8,11 @@ use PHPvian\Libs\Session;
 class Controller
 {
     protected $loginFingerPrint;
-    protected Connection $db;
+    public Connection $conn;
 
     public function __construct()
     {
-        $this->db = new Connection();
+        $this->conn = new Connection();
         $this->loginFingerPrint = config('login', 'login_fingerprint');
         Session::startSession();
     }
