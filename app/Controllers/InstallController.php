@@ -18,17 +18,11 @@ class InstallController
         $this->htaccessFile = dirname(__DIR__) . '/../public/.htaccess';
     }
 
-    /*
-     * Step 1
-     */
     public function index()
     {
         return view('install/index');
     }
 
-    /*
-     * Step 2
-     */
     public function requirements()
     {
         $extensions = ['BCMath', 'Ctype', 'Fileinfo', 'JSON', 'Mbstring', 'OpenSSL', 'PDO', 'pdo_mysql', 'Tokenizer', 'XML', 'cURL', 'GD'];
@@ -39,9 +33,6 @@ class InstallController
         ]);
     }
 
-    /*
-     * Step 3
-     */
     public function files()
     {
         $folderPermissions = [
@@ -60,9 +51,6 @@ class InstallController
         ]);
     }
 
-    /*
-     * Step 4
-     */
     public function database()
     {
         return view('install/database');
@@ -112,7 +100,7 @@ class InstallController
         } catch (\Exception $e) {
             echo "Erro ao importar o arquivo SQL: " . $e->getMessage();
         }
-        redirect('installer/config');
+        redirect('/installer/config');
     }
 
     public function config()
@@ -126,7 +114,7 @@ class InstallController
             redirect('/installer/config');
         }
 
-        $this->conn->insert('config', [
+        $data = [
             'server_name' => input('servername'),
             'speed' => input('speed'),
             'roundlenght' => input('roundlenght'),
@@ -181,8 +169,8 @@ class InstallController
             'demolish_lvl' => input('demolish'),
             'village_expand' => input('village_expand'),
             'commence' => input('commence') + time()
-        ]);
-
+        ];
+        $this->conn->insert('config', $data);
         redirect('/installer/world');
     }
 
@@ -202,24 +190,24 @@ class InstallController
         for ($y = $world_max; $y >= -$world_max; $y--) {
             for ($x = -$world_max; $x <= $world_max; $x++) {
                 if (abs($x) <= 2 && abs($y) <= 2 && ($x != 0 || $y != 0)) {
-                    $ftype = 3;
+                    $fieldtype = 3;
                 } else {
                     $random = random_int(1, 1000);
                     if ($random <= 900) {
-                        $ftype = ceil($random / 80);
-                        $otype = 0;
+                        $fieldtype = ceil($random / 80);
+                        $oasistype = 0;
                     } else {
                         $distance = sqrt(($x * $x) + ($y * $y));
                         if ($distance <= $natars_max) {
-                            $otype = ceil(($random - 900) / 8);
+                            $oasistype = ceil(($random - 900) / 8);
                         } else {
-                            $otype = ceil(($random - 900) / 12) + 3;
+                            $oasistype = ceil(($random - 900) / 12) + 3;
                         }
-                        $ftype = 0;
+                        $fieldtype = 0;
                     }
                 }
 
-                $image = match ($otype) {
+                $image = match ($oasistype) {
                     1, 2, 3 => 'forest' . random_int(0, 5),
                     4, 5, 6 => 'clay' . random_int(0, 7),
                     7, 8, 9 => 'hill' . random_int(0, 6),
@@ -228,8 +216,8 @@ class InstallController
                 };
 
                 $this->conn->insert('wdata', [
-                    'fieldtype' => $ftype,
-                    'oasistype' => $otype,
+                    'fieldtype' => $fieldtype,
+                    'oasistype' => $oasistype,
                     'x' => $x,
                     'y' => $y,
                     'image' => $image,
@@ -256,34 +244,14 @@ class InstallController
 
         $this->insertUsers($password);
 
-        $status = false;
-
         $admin = new Admin();
 
-        $wid = $admin->getWref(1, 0);
-        $status = $this->db->getVillageState($wid);
-        if ($status == false) {
-            $this->db->setFieldTaken($wid);
-            $this->db->addVillage($wid, 4, 'Multihunter', 1);
-            $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
-            $this->db->addUnits($wid);
-            $this->db->addTech($wid);
-            $this->db->addABTech($wid);
-        }
-
-        $wid = $admin->getWref(0, 0);
-        $status = $this->db->getVillageState($wid);
-        if ($status == false) {
-            $this->db->setFieldTaken($wid);
-            $this->db->addVillage($wid, 2, 'Natars', 1);
-            $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
-            $this->db->addUnits($wid);
-            $this->db->addTech($wid);
-            $this->db->addABTech($wid);
-        }
-        $this->conn->update('vdata', ['pop' => 781], 'owner = :uid', ['uid' => 2]);
-        $speed = setting('speed');
-        $this->conn->update('units', ['u41' => 274700 * $speed, 'u42' => 995231 * $speed, 'u43' => 10000, 'u44' => 3048 * $speed, 'u45' => 964401 * $speed, 'u46' => 617602 * $speed, 'u47' => 6034 * $speed, 'u48' => 3040 * $speed, 'u49' => 1, 'u50' => 9], 'vref = :wid', ['wid' => $wid]);
+        $wid4 = $admin->getWref(1, 0);
+        $this->setupVillages($wid4, 4, 'Multihunter', 1);
+        $wid2 = $admin->getWref(0, 0);
+        $this->setupVillages($wid2, 2, 'Natars', 1);
+        $this->updatePopulation();
+        $this->updateUnits($wid2);
 
         for ($i = 1; $i <= 13; $i++) {
             $nareadis = setting('natars_max');
@@ -303,17 +271,7 @@ class InstallController
             } while (($distance > $nareadis) || $status != 0);
 
             if ($status == false) {
-                $this->db->setFieldTaken($wid);
-                $this->db->addVillage($wid, 2, 'Natars', '1');
-                $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
-                $this->db->addUnits($wid);
-                $this->db->addTech($wid);
-                $this->db->addABTech($wid);
-
-                $this->conn->update('vdata', ['pop' => 238], 'wref = :wid', ['wid' => $wid]);
-                $this->conn->update('vdata', ['name' => 'WW Village', 'capital' => 0, 'natar' => 1], 'wref = :wid', ['wid' => $wid]);
-                $this->conn->update('units', ['u41' => rand(3000, 6000) * $speed, 'u42' => rand(4500, 6000) * $speed, 'u43' => 10000, 'u44' => rand(635, 1575) * $speed, 'u45' => rand(3600, 5700) * $speed, 'u46' => rand(4500, 6000) * $speed, 'u47' => rand(1500, 2700) * $speed, 'u48' => rand(300, 900) * $speed, 'u49' => 0, 'u50' => 9], 'vref = :wid', ['wid' => $wid]);
-                $this->conn->update('fdata', ['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16], 'vref = :wid', ['wid' => $wid]);
+                $this->updateNatars($wid2);
             }
         }
 
@@ -334,6 +292,38 @@ class InstallController
         }
     }
 
+    protected function setupVillages($wid, $uid, $username, $capital)
+    {
+        $status = $this->db->getVillageState($wid);
+        if ($status == false) {
+            $this->db->setFieldTaken($wid);
+            $this->db->addVillage($wid, $uid, $username, $capital);
+            $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
+            $this->db->addUnits($wid);
+            $this->db->addTech($wid);
+            $this->db->addABTech($wid);
+        }
+    }
+
+    protected function updatePopulation()
+    {
+        $this->conn->update('vdata', ['pop' => 781], 'owner = :uid', ['uid' => 2]);
+    }
+
+    protected function updateUnits($wid2)
+    {
+        $speed = setting('speed');
+        $this->conn->update('units', ['u41' => 274700 * $speed, 'u42' => 995231 * $speed, 'u43' => 10000, 'u44' => 3048 * $speed, 'u45' => 964401 * $speed, 'u46' => 617602 * $speed, 'u47' => 6034 * $speed, 'u48' => 3040 * $speed, 'u49' => 1, 'u50' => 9], 'vref = :wid', ['wid' => $wid2]);
+    }
+
+    protected function updateNatars($wid)
+    {
+        $speed = setting('speed');
+        $this->conn->update('vdata', ['pop' => 238], 'wref = :wid', ['wid' => $wid]);
+        $this->conn->update('vdata', ['name' => 'WW Village', 'capital' => 0, 'natar' => 1], 'wref = :wid', ['wid' => $wid]);
+        $this->conn->update('units', ['u41' => random_int(3000, 6000) * $speed, 'u42' => random_int(4500, 6000) * $speed, 'u43' => 10000, 'u44' => random_int(635, 1575) * $speed, 'u45' => random_int(3600, 5700) * $speed, 'u46' => random_int(4500, 6000) * $speed, 'u47' => random_int(1500, 2700) * $speed, 'u48' => random_int(300, 900) * $speed, 'u49' => 0, 'u50' => 9], 'vref = :wid', ['wid' => $wid]);
+        $this->conn->update('fdata', ['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16], 'vref = :wid', ['wid' => $wid]);
+    }
 
     public function oasis()
     {
@@ -342,7 +332,133 @@ class InstallController
 
     public function setOasis()
     {
-        dd($_POST);
+        $this->populateOasisData();
+        $this->populateOasis();
+        $this->populateOasisUnitsLow();
+
+        redirect('/installer/complete');
+    }
+
+    protected function populateOasisData()
+    {
+        $speed = setting('speed');
+
+        $worlds = $this->conn->select('wdata', 'id', 'oasistype != 0');
+
+        foreach ($worlds as $world) {
+            $time = time();
+            $base = $this->db->getOMInfo($world['id']);
+            $data = [
+                "wref" => $base['id'],
+                "type" => $base['oasistype'],
+                "conqured" => 0,
+                'wood' => 750 * $speed / 10,
+                'iron' => 750 * $speed / 10,
+                'clay' => 750 * $speed / 10,
+                'woodp' => 0,
+                'ironp' => 0,
+                'clayp' => 0,
+                'maxstore' => 800 * $speed / 10,
+                'crop' => 750 * $speed / 10,
+                'cropp' => 0,
+                'maxcrop' => 800 * $speed / 10,
+                'lasttrain' => $time,
+                'lastfarmed' => $time,
+                'lastupdated' => $time,
+                "loyalty" => 100,
+                'owner' => 3,
+                "name" => 'Unoccupied oasis'
+            ];
+            $this->conn->insert('odata', $data);
+        }
+    }
+
+    protected function populateOasis()
+    {
+        $worlds = $this->conn->select('wdata', 'id', 'oasistype != 0');
+        foreach ($worlds as $world) {
+            $this->db->addUnits($world['id']);
+        }
+    }
+
+    protected function populateOasisUnitsLow()
+    {
+        $worlds = $this->conn->select('wdata', 'id', 'oasistype != 0');
+
+        foreach ($worlds as $world) {
+            $wid = $world['id'];
+            $base = $this->db->getMInfo($wid);
+
+            $oasisValues = $this->generateOasisValues($base['oasistype']);
+
+            try {
+                $this->conn->update('units', $oasisValues, '`vref` = :vref', ['vref' => $wid]);
+            } catch (\Exception $e) {
+                error_log('Error updating table units: ' . $e->getMessage());
+            }
+        }
+    }
+
+    protected function generateOasisValues($oasistype)
+    {
+        $speed = setting('speed');
+        return match ($oasistype) {
+            1, 2 => [
+                'u35' => intval(random_int(5, 30) * ($speed / 10)),
+                'u36' => intval(random_int(5, 30) * ($speed / 10)),
+                'u37' => intval(random_int(0, 30) * ($speed / 10))
+            ],
+            3 => [
+                'u35' => intval(random_int(5, 30) * ($speed / 10)),
+                'u36' => intval(random_int(5, 30) * ($speed / 10)),
+                'u37' => intval(random_int(1, 30) * ($speed / 10)),
+                'u39' => intval(random_int(0, 10) * ($speed / 10)),
+                'u40' => intval(random_int(0, 20) == 1 ? random_int(0, 31) * ($speed / 10) : 0)
+            ],
+            4, 5 => [
+                'u31' => intval(random_int(5, 40) * ($speed / 10)),
+                'u32' => intval(random_int(5, 30) * ($speed / 10)),
+                'u35' => intval(random_int(0, 25) * ($speed / 10))
+            ],
+            6 => [
+                'u31' => intval(random_int(5, 40) * ($speed / 10)),
+                'u32' => intval(random_int(5, 30) * ($speed / 10)),
+                'u35' => intval(random_int(1, 25) * ($speed / 10)),
+                'u38' => intval(random_int(0, 15) * ($speed / 10)),
+                'u40' => intval(random_int(0, 20) == 1 ? random_int(0, 31) * ($speed / 10) : 0)
+            ],
+            7, 8 => [
+                'u31' => intval(random_int(5, 40) * ($speed / 10)),
+                'u32' => intval(random_int(5, 30) * ($speed / 10)),
+                'u34' => intval(random_int(0, 25) * ($speed / 10))
+            ],
+            9 => [
+                'u31' => intval(random_int(5, 40) * ($speed / 10)),
+                'u32' => intval(random_int(5, 30) * ($speed / 10)),
+                'u34' => intval(random_int(1, 25) * ($speed / 10)),
+                'u37' => intval(random_int(0, 15) * ($speed / 10)),
+                'u40' => intval(random_int(0, 20) == 1 ? random_int(0, 31) * ($speed / 10) : 0)
+            ],
+            10, 11 => [
+                'u31' => intval(random_int(5, 40) * ($speed / 10)),
+                'u33' => intval(random_int(5, 30) * ($speed / 10)),
+                'u37' => intval(random_int(1, 25) * ($speed / 10)),
+                'u39' => intval(random_int(0, 25) * ($speed / 10))
+            ],
+            12 => [
+                'u31' => intval(random_int(5, 40) * ($speed / 10)),
+                'u33' => intval(random_int(5, 30) * ($speed / 10)),
+                'u38' => intval(random_int(1, 25) * ($speed / 10)),
+                'u39' => intval(random_int(0, 25) * ($speed / 10)),
+                'u40' => intval(random_int(0, 20) == 1 ? random_int(0, 31) * ($speed / 10) : 0)
+            ],
+            default => [],
+        };
+    }
+
+    public function complete()
+    {
+        return view('install/complete');
     }
 
 }
