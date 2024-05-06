@@ -34,7 +34,6 @@ class Connection extends PDO
         } catch (PDOException | RuntimeException $exc) {
             throw new RuntimeException("Query execution error: " . $exc->getMessage());
         }
-
     }
 
     private function validateData($data)
@@ -55,12 +54,13 @@ class Connection extends PDO
             }
 
             $stmt = $this->executeQuery($sql, $params);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            return $result !== false ? $result : null;
+            return count($result) === 1 ? $result[0] : $result;
         } catch (PDOException $e) {
             throw $e;
         }
+        $this->closeConnection();
     }
 
     public function insert($table, $data = [])
@@ -79,6 +79,7 @@ class Connection extends PDO
         } catch (PDOException $e) {
             throw $e;
         }
+        $this->closeConnection();
     }
 
     public function update($table, $data, $where, $params = [])
@@ -88,7 +89,7 @@ class Connection extends PDO
 
             $fields = '';
             foreach ($data as $key => $value) {
-                $fields .= "$key = :$key, ";
+                $fields .= "`$key` = :$key, ";
             }
             $fields = rtrim($fields, ', ');
 
@@ -104,7 +105,7 @@ class Connection extends PDO
         } catch (PDOException $e) {
             throw $e;
         }
-
+        $this->closeConnection();
     }
 
     public function delete($table, $where, $bind = [])
@@ -119,36 +120,30 @@ class Connection extends PDO
         } catch (PDOException $e) {
             throw $e;
         }
-
+        $this->closeConnection();
     }
 
-    public function orderBy($table, $columns, $order)
-    {
-        $columnString = is_array($columns) ? implode(', ', $columns) : $columns;
-        $stmt = $this->executeQuery("SELECT * FROM $table ORDER BY $columnString $order");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function orderByDesc($table, $column)
-    {
-        return $this->orderBy($table, $column, "DESC");
-    }
-
-    public function orderByAsc($table, $column)
-    {
-        return $this->orderBy($table, $column, "ASC");
-    }
-
-    public function limit($limit, $offset = 0)
-    {
-        $limitClause = '';
-        if ($limit !== null) {
-            $limitClause .= "LIMIT $limit";
-            if ($offset !== null) {
-                $limitClause .= " OFFSET $offset";
-            }
+    public function orderBy($table, $columns, $orderColumn, $order, $where = '', $params = []) {
+        $sql = "SELECT $columns FROM $table";
+        if (!empty($where)) {
+            $sql .= " WHERE $where";
         }
-        return $limitClause;
+        $sql .= " ORDER BY $orderColumn $order";
+        try {
+            $stmt = $this->executeQuery($sql, $params);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return count($result) === 1 ? $result[0] : $result;
+        } catch (PDOException $e) {
+            throw $e;
+        }
+    }
+
+    public function orderByAsc($table, $columns, $orderColumn, $where = '', $params = []) {
+        return $this->orderBy($table, $columns, $orderColumn, 'ASC', $where, $params);
+    }
+
+    public function orderByDesc($table, $columns, $orderColumn, $where = '', $params = []) {
+        return $this->orderBy($table, $columns, $orderColumn, 'DESC', $where, $params);
     }
 
     public function selectFirst($table, $columns = '*')
@@ -169,25 +164,35 @@ class Connection extends PDO
         return $result['total'];
     }
 
-    public function join($type, $table1, $table2, $onCondition)
+    public function join($type, $table1, $table2, $onCondition, $columns = '*', $where = '', $params = [])
     {
-        $stmt = $this->executeQuery("SELECT * FROM $table1 $type $table2 ON $onCondition");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sql = "SELECT $columns FROM $table1 $type $table2 ON $onCondition";
+        if (!empty($where)) {
+            $sql .= " WHERE $where";
+        }
+
+        try {
+            $stmt = $this->executeQuery($sql, $params);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return count($result) === 1 ? $result[0] : $result;
+        } catch (RuntimeException $e) {
+            throw $e;
+        }
     }
 
-    public function innerJoin($table1, $table2, $onCondition)
+    public function innerJoin($table1, $table2, $onCondition, $columns = '*', $where = '', $params = [])
     {
-        return $this->join("INNER JOIN", $table1, $table2, $onCondition);
+        return $this->join('INNER JOIN', $table1, $table2, $onCondition, $columns, $where, $params);
     }
 
-    public function leftJoin($table1, $table2, $onCondition)
+    public function rightJoin($table1, $table2, $onCondition, $columns = '*', $where = '', $params = [])
     {
-        return $this->join("LEFT JOIN", $table1, $table2, $onCondition);
+        return $this->join('RIGHT JOIN', $table1, $table2, $onCondition, $columns, $where, $params);
     }
 
-    public function rightJoin($table1, $table2, $onCondition)
+    public function leftJoin($table1, $table2, $onCondition, $columns = '*', $where = '', $params = [])
     {
-        return $this->join("RIGHT JOIN", $table1, $table2, $onCondition);
+        return $this->join('LEFT JOIN', $table1, $table2, $onCondition, $columns, $where, $params);
     }
 
     public function exists($table, $column, $value)
@@ -225,9 +230,13 @@ class Connection extends PDO
         return $stmt->fetchColumn();
     }
 
-    public function closeConnection()
+    public function closeConnection(): bool|\PDOStatement
     {
-        parent::__destruct();
+        try {
+            return $this->query('KILL CONNECTION_ID()');
+        } catch (PDOException $exc) {
+            throw new RuntimeException("Error closing connection: " . $exc->getMessage());
+        }
     }
 
 }
