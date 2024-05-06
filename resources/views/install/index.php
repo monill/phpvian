@@ -44,11 +44,9 @@
                             </p>
                             <p class="info"><b>You have no rights to edit copyright notices or/and claim this script as your own.</b></p>
                             <p class="info">Last but not least, <b>enjoy</b>.</p>
+                            <p class="info">Yours sincerely, <br>PHPvian Team</p>
                             <span class="text-warning"><i class="fas fa-exclamation-triangle"></i>  If any issue or error occurred for your modification on our code/database, we will not be responsible for that. </span>
                         </div>
-                        <!--<div class="item">-->
-                        <!--<p class="info">For more information, Please Check <a href="#" target="_blank">The License FAQ</a></p>-->
-                        <!--</div>-->
                         <div class="item text-right">
                             <a href="/installer/requirements" class="theme-button choto">I Agree, Next Step</a>
                         </div>
