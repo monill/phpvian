@@ -4,11 +4,11 @@ namespace PHPvian\Libs;
 
 class Validate
 {
-    private $db;
+    private $conn;
 
     public function __construct()
     {
-        $this->db = new Connection();
+        $this->conn = new Connection();
     }
 
     /**
@@ -58,7 +58,7 @@ class Validate
             return false;
         }
 
-        $result = $this->db->select('users', 'activation_code = :code', [':code' => $key]);
+        $result = $this->conn->select('users', 'activation_code = :code', [':code' => $key]);
 
         return count($result) === 1 && $result->codeactivation !== null;
     }
@@ -68,6 +68,6 @@ class Validate
      */
     private function exist($table, $column, $value)
     {
-        return $this->db->exists($table, $column, $value);
+        return $this->conn->exists($table, $column, $value);
     }
 }
