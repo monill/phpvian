@@ -2,6 +2,7 @@
 
 namespace PHPvian\Controllers;
 
+use Exception;
 use PHPvian\Libs\Connection;
 use PHPvian\Libs\Database;
 use PHPvian\Models\Admin;
@@ -97,8 +98,8 @@ class InstallController
         try {
             $sql = file_get_contents($this->databaseFile);
             $this->conn->exec($sql);
-        } catch (\Exception $e) {
-            echo "Erro ao importar o arquivo SQL: " . $e->getMessage();
+        } catch (Exception $e) {
+            echo "Error importing SQL file: " . $e->getMessage();
         }
         redirect('/installer/config');
     }
@@ -254,11 +255,11 @@ class InstallController
         $this->updateUnits($wid2);
 
         for ($i = 1; $i <= 13; $i++) {
-            $nareadis = setting('natars_max');
+            $natars_max = setting('natars_max');
 
             do {
-                $x = rand(3, intval(floor($nareadis)));
-                $y = rand(3, intval(floor($nareadis)));
+                $x = rand(3, intval(floor($natars_max)));
+                $y = rand(3, intval(floor($natars_max)));
                 if (rand(1, 10) > 5) {
                     $x = $x * -1;
                 }
@@ -268,7 +269,7 @@ class InstallController
                 $distance = sqrt(($x * $x) + ($y * $y));
                 $villageId = $admin->getWref($x, $y);
                 $status = $this->db->getVillageState($villageId);
-            } while (($distance > $nareadis) || $status != 0);
+            } while (($distance > $natars_max) || $status != 0);
 
             if ($status == false) {
                 $this->updateNatars($wid2);
@@ -343,7 +344,7 @@ class InstallController
     {
         $speed = setting('speed');
 
-        $worlds = $this->conn->select('wdata', 'id', 'oasistype != 0');
+        $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
 
         foreach ($worlds as $world) {
             $time = time();
@@ -375,7 +376,7 @@ class InstallController
 
     protected function populateOasis()
     {
-        $worlds = $this->conn->select('wdata', 'id', 'oasistype != 0');
+        $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
         foreach ($worlds as $world) {
             $this->db->addUnits($world['id']);
         }
@@ -383,7 +384,7 @@ class InstallController
 
     protected function populateOasisUnitsLow()
     {
-        $worlds = $this->conn->select('wdata', 'id', 'oasistype != 0');
+        $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
 
         foreach ($worlds as $world) {
             $wid = $world['id'];
@@ -393,7 +394,7 @@ class InstallController
 
             try {
                 $this->conn->update('units', $oasisValues, '`vref` = :vref', ['vref' => $wid]);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 error_log('Error updating table units: ' . $e->getMessage());
             }
         }
