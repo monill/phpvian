@@ -134,7 +134,7 @@ class Admin
 
     public function getWref($x, $y)
     {
-        $result = $this->conn->select('wdata', 'id', 'x = :x AND y = :y', [':x' => $x, ':y' => $y]);
+        $result = $this->conn->select('id')->from('wdata')->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])->get();
         return $result['id'] ?? null;
     }
 
