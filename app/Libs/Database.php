@@ -7,12 +7,10 @@ use PHPvian\Models\Technology;
 
 class Database
 {
-    public $speed;
-    public Connection $conn;
+    private Connection $conn;
 
     public function __construct()
     {
-        $this->speed = setting('speed');
         $this->conn = new Connection();
     }
 
@@ -566,20 +564,20 @@ class Database
 
     public function setFieldTaken($id)
     {
-        return $this->conn->update('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
+        $this->conn->update('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
     }
 
     public function addVillage($wid, $uid, $username, $capital)
     {
-//        $villages = $this->getVillagesID($uid);
-//        $total = is_countable($villages) && count($villages) > 0;
-//        $vname = ($total >= 1) ? $username . '\'s village ' . ($total + 1) : $username . '\'s village';
+        $villages = $this->getVillagesID($uid);
+        $total = is_countable($villages) && count($villages) > 0;
+        $vname = ($total >= 1) ? $username . '\'s village ' . ($total + 1) : $username . '\'s village';
 
         $time = time();
         $data = [
             'wref' => $wid,
             'owner' => $uid,
-            'name' => $username,
+            'name' => $vname,
             'capital' => $capital,
             'pop' => 2,
             'cp' => 1,
@@ -591,14 +589,24 @@ class Database
             'woodp' => 0,
             'clayp' => 0,
             'ironp' => 0,
-//            'maxstore' => config('settings', 'STORAGE_BASE'),
+            'extra_maxcrop' => 0,
+            'extra_maxstore' => 0,
+            'cropp' => 0,
+            'upkeep' => 0,
+            'exp1' => 0,
+            'exp2' => 0,
+            'exp3' => 0,
+            'natar' => 0,
+            'starv' => 0,
+            'expandedfrom' => 0,
+            'maxstore' => config('settings', 'STORAGE_BASE'),
             'crop' => 780,
-//            'maxcrop' => config('settings', 'STORAGE_BASE'),
+            'maxcrop' => config('settings', 'STORAGE_BASE'),
             'lastupdate' => $time,
             'created' => $time
         ];
 
-//        $this->conn->insert('vdata', $data);
+        $this->conn->insert('vdata', $data);
     }
 
     public function getVillagesID($uid)
@@ -638,15 +646,6 @@ class Database
 
         $fields = array_merge($defaultFieldValues, $fieldValues[$type] ?? []);
         return $this->conn->insert('fdata', array_merge(['vref' => $vid], $fields));
-    }
-
-
-    public function populateOasis()
-    {
-        $rows = $this->conn->select('wdata', ['oasistype', '!=', 0]);
-        foreach ($rows as $row) {
-            $this->addUnits($row['id']);
-        }
     }
 
     public function addUnits($vid)
@@ -2422,12 +2421,12 @@ class Database
 
     public function getOMInfo($id)
     {
-        return $this->conn->join('wdata', 'odata', 'odata.wref = wdata.id')->select('wdata.*, odata.*', ['wdata.id' => $id]);
+        return $this->conn->leftJoin('wdata', 'odata', 'odata.wref = wdata.id', '*', 'wdata.id = :id', [':id' => $id]);
     }
 
     public function getMInfo($id)
     {
-        return $this->conn->join('wdata', 'vdata', 'vdata.wref = wdata.id')->select('wdata.*, vdata.*', ['wdata.id' => $id]);
+        return $this->conn->leftJoin('wdata', 'vdata', 'vdata.wref = wdata.id', '*', 'wdata.id = :id', [':id' => $id]);
     }
 
     public function modifyEnforce($id, $unit, $amt, $mode)
@@ -2435,10 +2434,7 @@ class Database
         $columnName = ($unit == 'hero') ? 'hero' : 'u' . $unit;
         $operation = ($mode == 0) ? '-' : '+';
 
-        $data = [$columnName => ["$columnName $operation :amt"]];
-        $conditions = ['id' => $id];
-
-        $this->conn->update('enforcement', $data, $conditions, [':amt' => $amt]);
+        $this->conn->update('enforcement', [$columnName => ["$columnName $operation :amt"]], ['id' => $id], [':amt' => $amt]);
     }
 
     public function addHeroEnforce($data)
@@ -2726,32 +2722,6 @@ class Database
         return 0;
     }
 
-    public function populateOasisData()
-    {
-        $rows = $this->conn->select('wdata', 'id', 'oasistype != 0');
-        foreach ($rows as $row) {
-            $wid = $row['id'];
-            $time = time();
-            $t1 = 750 * $this->speed / 10;
-            $t2 = 750 * $this->speed / 10;
-            $t3 = 750 * $this->speed / 10;
-            $t4 = 800 * $this->speed / 10;
-            $t5 = 750 * $this->speed / 10;
-            $t6 = 800 * $this->speed / 10;
-            $tt = "$t1,$t2,$t3,0,0,0,$t4,$t5,0,$t6,$time,$time,$time";
-
-            $data = [
-                "id" => $wid,
-                "oasistype" => 3,
-                "tt" => $tt,
-                "conqured" => 100,
-                "loyalty" => 3,
-                "name" => 'Unoccupied oasis'
-            ];
-            $this->conn->insert('odata', $data);
-        }
-    }
-
     public function getAvailableExpansionTraining()
     {
         $building = new Building();
@@ -2981,103 +2951,6 @@ class Database
     {
         $hash = md5("$uid" . time());
         return $this->conn->update('heroface', ['face' => $face, 'color' => $color, 'hair' => $hair, 'ear' => $ear, 'eyebrow' => $eyebrow, 'eye' => $eye, 'nose' => $nose, 'mouth' => $mouth, 'beard' => $beard, 'hash' => $hash], 'uid = ?', [$uid]);
-    }
-
-    public function populateOasisUnitsLow()
-    {
-        $oasisData = $this->conn->select('wdata', '*', 'oasistype != ?', [0]);
-
-        foreach ($oasisData as $row) {
-            $wid = $row['id'];
-            $basearray = $this->getMInfo($wid);
-
-            switch ($basearray['oasistype']) {
-                case 1:
-                case 2:
-                    $UP35 = rand(5, 30) * ($this->speed / 10);
-                    $UP36 = rand(5, 30) * ($this->speed / 10);
-                    $UP37 = rand(0, 30) * ($this->speed / 10);
-                    break;
-                case 3:
-                    $UP35 = rand(5, 30) * ($this->speed / 10);
-                    $UP36 = rand(5, 30) * ($this->speed / 10);
-                    $UP37 = rand(1, 30) * ($this->speed / 10);
-                    $UP39 = rand(0, 10) * ($this->speed / 10);
-                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
-                    break;
-                case 4:
-                case 5:
-                    $UP31 = rand(5, 40) * ($this->speed / 10);
-                    $UP32 = rand(5, 30) * ($this->speed / 10);
-                    $UP35 = rand(0, 25) * ($this->speed / 10);
-                    break;
-                case 6:
-                    $UP31 = rand(5, 40) * ($this->speed / 10);
-                    $UP32 = rand(5, 30) * ($this->speed / 10);
-                    $UP35 = rand(1, 25) * ($this->speed / 10);
-                    $UP38 = rand(0, 15) * ($this->speed / 10);
-                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
-                    break;
-                case 7:
-                case 8:
-                    $UP31 = rand(5, 40) * ($this->speed / 10);
-                    $UP32 = rand(5, 30) * ($this->speed / 10);
-                    $UP34 = rand(0, 25) * ($this->speed / 10);
-                    break;
-                case 9:
-                    $UP31 = rand(5, 40) * ($this->speed / 10);
-                    $UP32 = rand(5, 30) * ($this->speed / 10);
-                    $UP34 = rand(1, 25) * ($this->speed / 10);
-                    $UP37 = rand(0, 15) * ($this->speed / 10);
-                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
-                    break;
-                case 10:
-                case 11:
-                    $UP31 = rand(5, 40) * ($this->speed / 10);
-                    $UP33 = rand(5, 30) * ($this->speed / 10);
-                    $UP37 = rand(1, 25) * ($this->speed / 10);
-                    $UP39 = rand(0, 25) * ($this->speed / 10);
-                    break;
-                case 12:
-                    $UP31 = rand(5, 40) * ($this->speed / 10);
-                    $UP33 = rand(5, 30) * ($this->speed / 10);
-                    $UP38 = rand(1, 25) * ($this->speed / 10);
-                    $UP39 = rand(0, 25) * ($this->speed / 10);
-                    $UP40 = rand(0, 20) == 1 ? rand(0, 31) * ($this->speed / 10) : 0;
-                    break;
-            }
-
-            switch ($basearray['oasistype']) {
-                case 1:
-                case 2:
-                    $this->conn->update('units', ['u35' => $UP35, 'u36' => $UP36, 'u37' => $UP37], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 3:
-                    $this->conn->update('units', ['u35' => $UP35, 'u36' => $UP36, 'u37' => $UP37, 'u39' => $UP39, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 4:
-                case 5:
-                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u35' => $UP35], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 6:
-                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u35' => $UP35, 'u38' => $UP38, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 7:
-                case 8:
-                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u34' => $UP34], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 9:
-                    $this->conn->update('units', ['u31' => $UP31, 'u32' => $UP32, 'u34' => $UP34, 'u37' => $UP37, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 10:
-                case 11:
-                    $this->conn->update('units', ['u31' => $UP31, 'u33' => $UP33, 'u37' => $UP37, 'u39' => $UP39], 'vref = :wid', [':wid' => $wid]);
-                    break;
-                case 12:
-                    $this->conn->update('units', ['u31' => $UP31, 'u33' => $UP33, 'u38' => $UP38, 'u39' => $UP39, 'u40' => $UP40], 'vref = :wid', [':wid' => $wid]);
-                    break;
-            }
-        }
     }
 
     public function hasBeginnerProtection($vid)
@@ -3863,7 +3736,7 @@ class Database
             $crop *= 1.25;
         }
 
-        $crop *= $this->speed;
+        $crop *= setting('speed');;
 
         return $crop;
     }
@@ -3928,13 +3801,13 @@ class Database
 
     public function getVillageActiveArte($vref)
     {
-        $conqueredThreshold = time() - max(86400 / $this->speed, 600);
+        $conqueredThreshold = time() - max(86400 / setting('speed'), 600);
         return $this->conn->select("artefacts", "*", "vref = :vref AND status = 1 AND conquered <= :conquered", [":vref" => $vref, ":conquered" => $conqueredThreshold]);
     }
 
     public function getAccountActiveArte($owner)
     {
-        $conqueredThreshold = time() - max(86400 / $this->speed, 600);
+        $conqueredThreshold = time() - max(86400 / setting('speed'), 600);
         return $this->conn->select("artefacts", "*", "owner = :owner AND status = 1 AND conquered <= :conquered", [":owner" => $owner, ":conquered" => $conqueredThreshold]);
     }
 
@@ -3956,7 +3829,7 @@ class Database
         if (!empty($vinfo) && isset($vinfo['owner'])) {
             $owner = $vinfo['owner'];
             $currentTime = time();
-            $conqueredThreshold = $currentTime - max(86400 / $this->speed, 600);
+            $conqueredThreshold = $currentTime - max(86400 / setting('speed'), 600);
             $result = $this->conn->select("artefacts", "vref, effect, aoe", "owner = :owner AND effecttype = :type AND status = 1 AND conquered <= :conquered", [":owner" => $owner, ":type" => $type, ":conquered" => $conqueredThreshold], "conquered DESC");
             if (!empty($result) && count($result) > 0) {
                 $i = 0;
@@ -3979,7 +3852,7 @@ class Database
     function updateFoolArtes()
     {
         $currentTime = time();
-        $conqueredThreshold = $currentTime - max(86400 / $this->speed, 600);
+        $conqueredThreshold = $currentTime - max(86400 / setting('speed'), 600);
 
         $sql = "SELECT id,size FROM artefacts WHERE type = 3 AND status = 1 AND conquered <= :conqueredThreshold AND lastupdate <= :currentTime";
         $params = [":conqueredThreshold" => $conqueredThreshold, ":currentTime" => $currentTime];
@@ -4096,7 +3969,7 @@ class Database
         $village = $this->getVillage($wref);
         $owner = $village['owner'];
 
-        $conditions = ["owner" => $owner, "effecttype" => 11, "status" => 1, "conquered[<=]" => time() - max(86400 / $this->speed, 600)];
+        $conditions = ["owner" => $owner, "effecttype" => 11, "status" => 1, "conquered[<=]" => time() - max(86400 / setting('speed'), 600)];
         $result = $this->conn->select("artefacts", "COUNT(*) as count", $conditions);
 
         if ($result['count'] > 0) {
