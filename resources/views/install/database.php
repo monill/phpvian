@@ -58,10 +58,10 @@
                                         <h5 class="font-weight-normal mb-2">Database Details</h5>
                                         <div class="row">
                                             <div class="information-form-group col-sm-6">
-                                                <input type="text" name="db_name" placeholder="Database Name" required>
+                                                <input type="text" name="db_name" placeholder="Database Name" value="phpvian" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
-                                                <input type="text" name="db_host" placeholder="Database Host" required>
+                                                <input type="text" name="db_host" placeholder="Database Host" value="localhost" required>
                                             </div>
                                             <div class="information-form-group col-sm-6">
                                                 <input type="text" name="db_user" placeholder="Database User" required>
