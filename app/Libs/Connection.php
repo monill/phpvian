@@ -9,6 +9,14 @@ use RuntimeException;
 
 class Connection extends PDO
 {
+    protected string $table;
+    protected string $columns = '*';
+    protected string $where = '';
+    protected array $params = [];
+    protected string $orderBy = '';
+    protected string $limit = '';
+    protected string $sumColumn = '';
+
     public function __construct()
     {
         if (file_exists(dirname(__DIR__) . "/../config/database.php")) {
@@ -45,123 +53,183 @@ class Connection extends PDO
         }
     }
 
-    public function select($table, $columns = '*', $where = '', array $params = [])
+    public function select($columns = '*')
     {
-        try {
-            $sql = "SELECT $columns FROM $table";
-            if (!empty($where)) {
-                $sql .= " WHERE $where";
-            }
+        $this->columns = $columns;
+        return $this;
+    }
 
-            $stmt = $this->executeQuery($sql, $params);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function from($table)
+    {
+        $this->table = $table;
+        return $this;
+    }
 
-            return count($result) === 1 ? $result[0] : $result;
-        } catch (PDOException $e) {
-            throw $e;
+    public function where($condition, $params = [])
+    {
+        $this->where = $condition;
+        $this->params = $params;
+        return $this;
+    }
+
+    public function andWhere($condition, $params = [])
+    {
+        if (!empty($this->where)) {
+            $this->where .= " AND $condition";
+        } else {
+            $this->where = $condition;
         }
-        $this->closeConnection();
+        $this->params = array_merge($this->params, $params);
+        return $this;
+    }
+
+    public function orderBy($column, $order)
+    {
+        $this->orderBy = " ORDER BY $column $order";
+        return $this;
+    }
+
+    public function orderByAsc($column)
+    {
+        return $this->orderBy($column, 'ASC');
+    }
+
+    public function orderByDesc($column)
+    {
+        return $this->orderBy($column, 'DESC');
+    }
+
+    public function limit($limit, $offset = 0)
+    {
+        $this->limit = " LIMIT $limit";
+        if ($offset > 0) {
+            $this->limit .= " OFFSET $offset";
+        }
+        return $this;
+    }
+
+    public function like($column, $value, $wildcard = 'both')
+    {
+        if ($wildcard === 'both') {
+            $value = "%$value%";
+        } elseif ($wildcard === 'before') {
+            $value = "%$value";
+        } elseif ($wildcard === 'after') {
+            $value = "$value%";
+        } else {
+            throw new InvalidArgumentException("The wildcard option must be 'both', 'before' or 'after'.");
+        }
+
+        $this->where("$column LIKE :$column");
+        $this->params[":$column"] = $value;
+
+        return $this;
+    }
+
+    public function sum($column)
+    {
+        $this->sumColumn = $column;
+        return $this;
+    }
+
+    public function between($column, $start, $end)
+    {
+        $this->where("$column BETWEEN :start AND :end");
+        $this->params[':start'] = $start;
+        $this->params[':end'] = $end;
+        return $this;
+    }
+
+    public function first()
+    {
+        $result = $this->get();
+        return count($result) > 0 ? $result[0] : null;
+    }
+
+    public function get()
+    {
+        $sql = "SELECT {$this->columns} FROM {$this->table}";
+        if (!empty($this->where)) {
+            $sql .= " WHERE {$this->where}";
+        }
+        if (!empty($this->orderBy)) {
+            $sql .= $this->orderBy;
+        }
+        if (!empty($this->limit)) {
+            $sql .= $this->limit;
+        }
+        if ($this->sumColumn !== null) {
+            $sql .= ", SUM({$this->sumColumn}) as total";
+        }
+
+        try {
+            $stmt = $this->prepare($sql);
+            $stmt->execute($this->params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Get error: " . $e->getMessage());
+        }
     }
 
     public function insert($table, $data = [])
     {
+        $this->validateData($data);
+
+        $columns = implode(', ', array_keys($data));
+        $values = ':' . implode(', :', array_keys($data));
+
         try {
-            $this->validateData($data);
-
-            $columns = implode(', ', array_keys($data));
-            $values = ':' . implode(', :', array_keys($data));
-
             $stmt = $this->prepare("INSERT INTO $table ($columns) VALUES ($values)");
             foreach ($data as $key => $value) {
                 $stmt->bindValue(":$key", $value);
             }
             return $stmt->execute();
-        } catch (PDOException $e) {
-            throw $e;
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Insert error: " . $e->getMessage());
         }
-        $this->closeConnection();
     }
 
     public function update($table, $data, $where, $params = [])
     {
-        try {
-            $this->validateData($data);
+        $this->validateData($data);
 
-            $fields = '';
-            foreach ($data as $key => $value) {
-                $fields .= "`$key` = :$key, ";
-            }
-            $fields = rtrim($fields, ', ');
-
-            $sql = "UPDATE $table SET $fields WHERE $where";
-
-            $mergedParams = array_merge($data, $params);
-
-            $stmt = $this->prepare($sql);
-            foreach ($mergedParams as $key => $value) {
-                $stmt->bindValue(":$key", $value);
-            }
-            return $stmt->execute();
-        } catch (PDOException $e) {
-            throw $e;
+        $fields = '';
+        foreach ($data as $key => $value) {
+            $fields .= "`$key` = :$key, ";
         }
-        $this->closeConnection();
+        $fields = rtrim($fields, ', ');
+
+        try {
+            $sql = "UPDATE $table SET $fields WHERE $where";
+            $mergedParams = array_merge($data, $params);
+            return $this->executeQuery($sql, $mergedParams);
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Update error: " . $e->getMessage());
+        }
     }
 
     public function delete($table, $where, $bind = [])
     {
         try {
-            $stmt = $this->prepare("DELETE FROM $table WHERE $where");
-
-            foreach ($bind as $key => $value) {
-                $stmt->bindValue(":$key", $value);
-            }
-            return $stmt->execute();
-        } catch (PDOException $e) {
-            throw $e;
-        }
-        $this->closeConnection();
-    }
-
-    public function orderBy($table, $columns, $orderColumn, $order, $where = '', $params = []) {
-        $sql = "SELECT $columns FROM $table";
-        if (!empty($where)) {
-            $sql .= " WHERE $where";
-        }
-        $sql .= " ORDER BY $orderColumn $order";
-        try {
-            $stmt = $this->executeQuery($sql, $params);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            return count($result) === 1 ? $result[0] : $result;
-        } catch (PDOException $e) {
-            throw $e;
+            $sql = "DELETE FROM $table WHERE $where";
+            return $this->executeQuery($sql, $bind);
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Delete error: " . $e->getMessage());
         }
     }
 
-    public function orderByAsc($table, $columns, $orderColumn, $where = '', $params = []) {
-        return $this->orderBy($table, $columns, $orderColumn, 'ASC', $where, $params);
-    }
-
-    public function orderByDesc($table, $columns, $orderColumn, $where = '', $params = []) {
-        return $this->orderBy($table, $columns, $orderColumn, 'DESC', $where, $params);
-    }
-
-    public function selectFirst($table, $columns = '*')
-    {
-        $stmt = $this->executeQuery("SELECT $columns FROM $table LIMIT 1");
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public function count($table, $condition = '', $params = [])
+    public function count($table, $params = [])
     {
         $sql = "SELECT COUNT(*) as total FROM $table";
-        if (!empty($condition)) {
-            $sql .= " WHERE $condition";
+        if (!empty($this->where)) {
+            $sql .= " WHERE {$this->where}";
         }
 
-        $stmt = $this->executeQuery($sql, $params);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'];
+        try {
+            return $this->executeQuery($sql, $params)->fetch(PDO::FETCH_ASSOC)['total'];
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Count error: " . $e->getMessage());
+        }
     }
 
     public function join($type, $table1, $table2, $onCondition, $columns = '*', $where = '', $params = [])
@@ -172,11 +240,10 @@ class Connection extends PDO
         }
 
         try {
-            $stmt = $this->executeQuery($sql, $params);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $this->executeQuery($sql, $params)->fetchAll(PDO::FETCH_ASSOC);
             return count($result) === 1 ? $result[0] : $result;
-        } catch (RuntimeException $e) {
-            throw $e;
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Join error: " . $e->getMessage());
         }
     }
 
@@ -197,29 +264,43 @@ class Connection extends PDO
 
     public function exists($table, $column, $value)
     {
-        $stmt = $this->prepare("SELECT COUNT(*) as total FROM $table WHERE $column = :value");
-        $stmt->bindParam(':value', $value);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] > 0;
+        try {
+            $stmt = $this->prepare("SELECT COUNT(*) as total FROM $table WHERE $column = :value");
+            $stmt->bindParam(':value', $value);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['total'] > 0;
+        } catch (PDOException $e) {
+            throw new RuntimeException("Error checking existence: " . $e->getMessage());
+        }
     }
 
-    public function replace($table, $data)
+    public function replace($table, $data = [])
     {
+        $this->validateData($data);
+
         $columns = implode(', ', array_keys($data));
         $values = ':' . implode(', :', array_keys($data));
-        $sql = "REPLACE INTO $table ($columns) VALUES ($values)";
-        $statement = $this->prepare($sql);
-        $statement->execute($data);
-        return $statement->rowCount();
+
+        try {
+            $stmt = $this->prepare("REPLACE INTO $table ($columns) VALUES ($values)");
+
+            foreach ($data as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+
+            return $stmt->execute();
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Replace error: " . $e->getMessage());
+        }
     }
 
-    public function testConnection()
+    public function testConnection(): string
     {
         try {
             $this->query('SELECT 1');
             return "Connection successful!";
-        } catch (PDOException $exc) {
+        } catch (PDOException | RuntimeException $exc) {
             exit("Error testing connection: " . $exc->getMessage());
         }
     }
@@ -230,13 +311,18 @@ class Connection extends PDO
         return $stmt->fetchColumn();
     }
 
-    public function closeConnection(): bool|\PDOStatement
+    public function closeConnection()
     {
         try {
             return $this->query('KILL CONNECTION_ID()');
-        } catch (PDOException $exc) {
+        } catch (PDOException | RuntimeException $exc) {
             throw new RuntimeException("Error closing connection: " . $exc->getMessage());
         }
+    }
+
+    public function __destruct()
+    {
+        $this->closeConnection();
     }
 
 }
