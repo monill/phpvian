@@ -2,7 +2,7 @@
 
 use PHPvian\Libs\Lang;
 use PHPvian\Models\Config;
-use PHPvian\Views\View;
+use PHPvian\Libs\View;
 
 if (!function_exists('md5_gen')) {
     /**
@@ -89,14 +89,14 @@ if (!function_exists('valid_ip')) {
 
         // List of invalid IP ranges
         $invalid_ranges = [
-            '0.0.0.0/8',        // Intervalo privado
-            '10.0.0.0/8',       // Intervalo privado
-            '127.0.0.0/8',      // Intervalo privado
-            '169.254.0.0/16',   // Intervalo privado
-            '172.16.0.0/12',    // Intervalo privado
-            '192.0.0.0/24',     // Intervalo privado
-            '192.168.0.0/16',   // Intervalo privado
-            '224.0.0.0/4'       // Multicast
+            '0.0.0.0/8',
+            '10.0.0.0/8',
+            '127.0.0.0/8',
+            '169.254.0.0/16',
+            '172.16.0.0/12',
+            '192.0.0.0/24',
+            '192.168.0.0/16',
+            '224.0.0.0/4'
         ];
 
         // Checks if the IP is in one of the invalid ranges
@@ -163,9 +163,9 @@ if (!function_exists('input_exists')) {
     {
         switch ($type) {
             case "POST":
-                return (!empty($_POST)) ? true : false;
+                return !empty($_POST);
             case "GET":
-                return (!empty($_GET)) ? true : false;
+                return !empty($_GET);
             default:
                 return false;
         }
