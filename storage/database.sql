@@ -1362,7 +1362,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `sit2` int unsigned NOT NULL DEFAULT '0',
   `alliance` int unsigned NOT NULL DEFAULT '0',
   `sessid` char(166) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `act` char(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `act` CHAR(10) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
   `timestamp` int unsigned NOT NULL DEFAULT '0',
   `ap` int unsigned NOT NULL DEFAULT '0',
   `apall` int unsigned NOT NULL DEFAULT '0',
