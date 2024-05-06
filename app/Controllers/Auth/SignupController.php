@@ -3,7 +3,7 @@
 namespace PHPvian\Controllers\Auth;
 
 use PHPvian\Controllers\Controller;
-use PHPvian\Libs\Email;
+use PHPvian\Libs\Mail;
 use PHPvian\Libs\Session;
 use PHPvian\Libs\Validate;
 
@@ -15,7 +15,7 @@ class SignupController extends Controller
     public function __construct()
     {
         parent::__construct();
-        $this->mailer = new Email();
+        $this->mailer = new Mail();
         $this->valid = new Validate();
     }
 
