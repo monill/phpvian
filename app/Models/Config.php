@@ -13,7 +13,7 @@ class Config extends Model
 
     public function getSettings()
     {
-        $settings = $this->conn->select('config');
+        $settings = $this->conn->select()->from('config')->get();
         if (empty($settings)) {
             return [];
         }
@@ -25,7 +25,7 @@ class Config extends Model
         $currentSettings = $this->getSettings();
         $updatedSettings = array_merge($currentSettings, $newSettings);
 
-        $this->conn->update('config', ['config' => json_encode($updatedSettings)], '1');
+        $this->conn->update('config', ['config' => json_encode($updatedSettings)]);
     }
 
     public function getSettingValue($key)
