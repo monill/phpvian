@@ -17,7 +17,7 @@ class Config extends Model
         if (empty($settings)) {
             return [];
         }
-        return $settings;
+        return $settings ?? null;
     }
 
     public function updateSettings(array $newSettings)
