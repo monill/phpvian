@@ -27,9 +27,9 @@ $route->get('/installer/multihunter', InstallController::class, 'multihunter');
 $route->post('/installer/multihunter', InstallController::class, 'setMultihunter');
 $route->get('/installer/oasis', InstallController::class, 'oasis');
 $route->post('/installer/oasis', InstallController::class, 'setOasis');
-
-
+$route->get('/installer/complete', InstallController::class, 'complete');
 //End installer
+
 $route->get('/404', ErrorsController::class, 'deny');
 $route->get('/500', ErrorsController::class, 'server');
 //Auth
