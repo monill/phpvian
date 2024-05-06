@@ -1,0 +1,5 @@
+<?php
+
+return [
+    'cacheEnabled' => false,
+];
