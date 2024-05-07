@@ -134,7 +134,7 @@ class Admin
 
     public function getWref($x, $y)
     {
-        $result = $this->conn->select('id')->from('wdata')->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])->get();
+        $result = $this->conn->select('id')->from('wdata')->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])->first();
         return $result['id'] ?? null;
     }
 
@@ -150,7 +150,7 @@ class Admin
         $this->insertAdminLog("Added new village <b><a href='index.php?p=village&did=$wid'>$wid</a></b> to user <b><a href='index.php?p=player&uid=$uid'>$uid</a></b>");
 
         $this->db->setFieldTaken($wid);
-        $this->db->addVillage($wid, $uid, 'New Village', '0');
+        $this->db->addVillage($wid, $uid, 'New Village', 0);
         $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
         $this->db->addUnits($wid);
         $this->db->addTech($wid);
