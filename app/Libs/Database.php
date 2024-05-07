@@ -656,8 +656,7 @@ class Database
 
     public function addVillage($wid, $uid, $username, $capital)
     {
-        $villages = $this->getVillagesID($uid);
-        $total = is_countable($villages) && count($villages) > 0;
+        $total = count($this->getVillagesID($uid));
         $vname = ($total >= 1) ? $username . '\'s village ' . ($total + 1) : $username . '\'s village';
 
         $time = time();
@@ -702,7 +701,6 @@ class Database
             ->select('wref')
             ->from('vdata')
             ->where('owner = :uid', [':uid' => $uid])
-            ->orderByDesc('capital')
             ->get();
 
         return array_column($results, 'wref');
@@ -739,6 +737,16 @@ class Database
     public function addUnits($vid)
     {
         return $this->conn->insert('units', ['vref' => $vid]);
+    }
+
+    public function addTech($vid)
+    {
+        return $this->conn->insert('tdata', ['vref' => $vid]);
+    }
+
+    public function addABTech($vid)
+    {
+        return $this->conn->insert('abdata', ['vref' => $vid]);
     }
 
     public function getVillageOasis($list, $limit, $order)
@@ -792,7 +800,7 @@ class Database
             ->from('wdata')
             ->where('id = :id', [':id' => $wref])
             ->limit(1)
-            ->get();
+            ->first();
         return $result ? $result['fieldtype'] : false;
     }
 
@@ -809,11 +817,7 @@ class Database
 
     public function getVillageState($wref)
     {
-        $result = $this->conn
-            ->select('oasistype, occupied')
-            ->from('wdata')
-            ->where('id = ?', [$wref])
-            ->get();
+        $result = $this->conn->select('oasistype, occupied')->from('wdata')->where('id = ?', [$wref])->first();
         return $result['occupied'] != 0 || $result['oasistype'] != 0;
     }
 
@@ -826,8 +830,7 @@ class Database
             ->limit(1)
             ->get();
         if (!empty($result)) {
-            $dbarray = $result;
-            return ($dbarray['occupied'] == 0 && $dbarray['oasistype'] == 0 && $dbarray['fieldtype'] == 0);
+            return ($result['occupied'] == 0 && $result['oasistype'] == 0 && $result['fieldtype'] == 0);
         }
         return false;
     }
@@ -838,7 +841,7 @@ class Database
             ->select('wref, maxstore, maxcrop, pop, name, capital')
             ->from('vdata')
             ->where('owner = :uid', [':uid' => $uid])
-            ->orderBy('pop', 'DESC')
+            ->orderByDesc('pop')
             ->get();
     }
 
@@ -848,7 +851,7 @@ class Database
             ->select('id, categorie, plaats, week, img, points')
             ->from('medal')
             ->where('userid = :uid', [':uid' => $uid])
-            ->orderBy('id', 'DESC')
+            ->orderByDesc('id')
             ->get();
     }
 
@@ -2504,20 +2507,10 @@ class Database
         return $this->addTech($vref);
     }
 
-    public function addTech($vid)
-    {
-        return $this->conn->insert('tdata', ['vref' => $vid]);
-    }
-
     public function clearABTech($vref)
     {
         $this->conn->delete('abdata', 'vref = :vref', [':vref' => $vref]);
         return $this->addABTech($vref);
-    }
-
-    public function addABTech($vid)
-    {
-        return $this->conn->insert('abdata', ['vref' => $vid]);
     }
 
     public function getABTech($vid)
