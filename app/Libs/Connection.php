@@ -13,13 +13,13 @@ class Connection extends PDO
     protected string $columns = '*';
     protected string $where = '';
     protected array $params = [];
-    protected string $orderBy = '';
-    protected string $limit = '';
-    protected string $sumColumn = '';
+    protected string $orderBy;
+    protected string $limit;
+    protected string $sumColumn;
 
     public function __construct()
     {
-        if (file_exists(dirname(__DIR__) . "/../config/database.php")) {
+        if (connection_file()) {
             $config = config('database');
             $dsn = "{$config['DB_TYPE']}:host={$config['DB_HOST']};port={$config['DB_PORT']};dbname={$config['DB_NAME']};charset=UTF8";
 
@@ -158,7 +158,7 @@ class Connection extends PDO
         if (!empty($this->limit)) {
             $sql .= $this->limit;
         }
-        if ($this->sumColumn !== null) {
+        if (!empty($this->sumColumn)) {
             $sql .= ", SUM({$this->sumColumn}) as total";
         }
 
@@ -318,11 +318,6 @@ class Connection extends PDO
         } catch (PDOException | RuntimeException $exc) {
             throw new RuntimeException("Error closing connection: " . $exc->getMessage());
         }
-    }
-
-    public function __destruct()
-    {
-        $this->closeConnection();
     }
 
 }
