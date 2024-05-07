@@ -303,3 +303,8 @@ if (!function_exists('http_host')) {
         return $protocol . '://' . $_SERVER['HTTP_HOST'];
     }
 }
+if (!function_exists('connection_file')) {
+    function connection_file() {
+        return file_exists(dirname(__DIR__) . '/config/database.php') ? true : false;
+    }
+}
