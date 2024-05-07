@@ -649,6 +649,12 @@ class Database
         return $result ? $result['id'] : false;
     }
 
+    public function getWref($x, $y)
+    {
+        $result = $this->conn->select('id')->from('wdata')->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])->first();
+        return $result['id'] ?? null;
+    }
+
     public function setFieldTaken($id)
     {
         $this->conn->update('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
