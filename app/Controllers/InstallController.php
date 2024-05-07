@@ -5,7 +5,6 @@ namespace PHPvian\Controllers;
 use Exception;
 use PHPvian\Libs\Connection;
 use PHPvian\Libs\Database;
-use PHPvian\Models\Admin;
 
 class InstallController
 {
@@ -245,11 +244,9 @@ class InstallController
 
         $this->insertUsers($password);
 
-        $admin = new Admin();
-
-        $worldid2 = $admin->getWref(0, 0);
+        $worldid2 = $this->db->getWref(0, 0);
         $this->setupVillages($worldid2, 2, 'WW Village', 0);
-        $worldid4 = $admin->getWref(1, 0);
+        $worldid4 = $this->db->getWref(1, 0);
         $this->setupVillages($worldid4, 4, 'Multihunter', 1);
 
         $this->updateUnits($worldid2);
@@ -267,7 +264,7 @@ class InstallController
                     $y = $y * -1;
                 }
                 $distance = sqrt(($x * $x) + ($y * $y));
-                $villageId = $admin->getWref($x, $y);
+                $villageId = $this->db->getWref($x, $y);
                 $status = $this->db->getVillageState($villageId);
             } while (($distance > $natars_max) || $status != 0);
 
