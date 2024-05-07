@@ -51,7 +51,7 @@
                 <div class="installation-wrapper">
                     <div class="install-content-area">
                         <div class="install-item">
-                            <h3 class="bg-warning title text-center"><?= $connection; ?></h3>
+                            <h3 class="bg-warning title text-center"><?= isset($connection) ? $connection : ''; ?></h3>
                             <div class="box-item">
                                 <form action="/installer/import" method="post" class="information-form-area mb--20">
                                     <div class="info-item">
