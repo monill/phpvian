@@ -200,9 +200,9 @@ class InstallController
                     } else {
                         $distance = sqrt(($x * $x) + ($y * $y));
                         if ($distance <= $natars_max) {
-                            $oasistype = ceil(($random - 900) / 8);
+                            $oasistype = min(12, ceil(($random - 900) / 8));
                         } else {
-                            $oasistype = ceil(($random - 900) / 12) + 3;
+                            $oasistype = min(12, ceil(($random - 900) / 12) + 3);
                         }
                         $fieldtype = 0;
                     }
@@ -247,12 +247,12 @@ class InstallController
 
         $admin = new Admin();
 
-        $wid4 = $admin->getWref(1, 0);
-        $this->setupVillages($wid4, 4, 'Multihunter', 1);
-        $wid2 = $admin->getWref(0, 0);
-        $this->setupVillages($wid2, 2, 'Natars', 1);
-        $this->updatePopulation();
-        $this->updateUnits($wid2);
+        $worldid2 = $admin->getWref(0, 0);
+        $this->setupVillages($worldid2, 2, 'WW Village', 0);
+        $worldid4 = $admin->getWref(1, 0);
+        $this->setupVillages($worldid4, 4, 'Multihunter', 1);
+
+        $this->updateUnits($worldid2);
 
         for ($i = 1; $i <= 13; $i++) {
             $natars_max = setting('natars_max');
@@ -272,7 +272,7 @@ class InstallController
             } while (($distance > $natars_max) || $status != 0);
 
             if ($status == false) {
-                $this->updateNatars($wid2);
+                $this->updateNatars($worldid2);
             }
         }
 
@@ -293,37 +293,31 @@ class InstallController
         }
     }
 
-    protected function setupVillages($wid, $uid, $username, $capital)
+    protected function setupVillages($worldid, $userid, $username, $capital)
     {
-        $status = $this->db->getVillageState($wid);
+        $status = $this->db->getVillageState($worldid);
         if ($status == false) {
-            $this->db->setFieldTaken($wid);
-            $this->db->addVillage($wid, $uid, $username, $capital);
-            $this->db->addResourceFields($wid, $this->db->getVillageType($wid));
-            $this->db->addUnits($wid);
-            $this->db->addTech($wid);
-            $this->db->addABTech($wid);
+            $this->db->setFieldTaken($worldid);
+            $this->db->addVillage($worldid, $userid, $username, $capital);
+            $this->db->addResourceFields($worldid, $this->db->getVillageType($worldid));
+            $this->db->addUnits($worldid);
+            $this->db->addTech($worldid);
+            $this->db->addABTech($worldid);
         }
     }
 
-    protected function updatePopulation()
-    {
-        $this->conn->update('vdata', ['pop' => 781], 'owner = :uid', ['uid' => 2]);
-    }
-
-    protected function updateUnits($wid2)
+    protected function updateUnits($worldid2)
     {
         $speed = setting('speed');
-        $this->conn->update('units', ['u41' => 274700 * $speed, 'u42' => 995231 * $speed, 'u43' => 10000, 'u44' => 3048 * $speed, 'u45' => 964401 * $speed, 'u46' => 617602 * $speed, 'u47' => 6034 * $speed, 'u48' => 3040 * $speed, 'u49' => 1, 'u50' => 9], 'vref = :wid', ['wid' => $wid2]);
+        $this->conn->update('units', ['u41' => 274700 * $speed, 'u42' => 995231 * $speed, 'u43' => 10000, 'u44' => 3048 * $speed, 'u45' => 964401 * $speed, 'u46' => 617602 * $speed, 'u47' => 6034 * $speed, 'u48' => 3040 * $speed, 'u49' => 1, 'u50' => 9], 'vref = :wid', ['wid' => $worldid2]);
     }
 
-    protected function updateNatars($wid)
+    protected function updateNatars($worldid)
     {
         $speed = setting('speed');
-        $this->conn->update('vdata', ['pop' => 238], 'wref = :wid', ['wid' => $wid]);
-        $this->conn->update('vdata', ['name' => 'WW Village', 'capital' => 0, 'natar' => 1], 'wref = :wid', ['wid' => $wid]);
-        $this->conn->update('units', ['u41' => random_int(3000, 6000) * $speed, 'u42' => random_int(4500, 6000) * $speed, 'u43' => 10000, 'u44' => random_int(635, 1575) * $speed, 'u45' => random_int(3600, 5700) * $speed, 'u46' => random_int(4500, 6000) * $speed, 'u47' => random_int(1500, 2700) * $speed, 'u48' => random_int(300, 900) * $speed, 'u49' => 0, 'u50' => 9], 'vref = :wid', ['wid' => $wid]);
-        $this->conn->update('fdata', ['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16], 'vref = :wid', ['wid' => $wid]);
+        $this->conn->update('vdata', ['pop' => 238, 'natar' => 1], 'wref = :wid', ['wid' => $worldid]);
+        $this->conn->update('units', ['u41' => random_int(3000, 6000) * $speed, 'u42' => random_int(4500, 6000) * $speed, 'u43' => 10000, 'u44' => random_int(635, 1575) * $speed, 'u45' => random_int(3600, 5700) * $speed, 'u46' => random_int(4500, 6000) * $speed, 'u47' => random_int(1500, 2700) * $speed, 'u48' => random_int(300, 900) * $speed, 'u49' => 0, 'u50' => 9], 'vref = :wid', ['wid' => $worldid]);
+        $this->conn->update('fdata', ['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16], 'vref = :wid', ['wid' => $worldid]);
     }
 
     public function oasis()
@@ -387,16 +381,10 @@ class InstallController
         $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
 
         foreach ($worlds as $world) {
-            $wid = $world['id'];
-            $base = $this->db->getMInfo($wid);
-
+            $worldid = $world['id'];
+            $base = $this->db->getMInfo($worldid);
             $oasisValues = $this->generateOasisValues($base['oasistype']);
-
-            try {
-                $this->conn->update('units', $oasisValues, '`vref` = :vref', ['vref' => $wid]);
-            } catch (Exception $e) {
-                error_log('Error updating table units: ' . $e->getMessage());
-            }
+            $this->conn->update('units', $oasisValues, '`vref` = :vref', ['vref' => $worldid]);
         }
     }
 
@@ -452,8 +440,7 @@ class InstallController
                 'u38' => intval(random_int(1, 25) * ($speed / 10)),
                 'u39' => intval(random_int(0, 25) * ($speed / 10)),
                 'u40' => intval(random_int(0, 20) == 1 ? random_int(0, 31) * ($speed / 10) : 0)
-            ],
-            default => [],
+            ]
         };
     }
 
