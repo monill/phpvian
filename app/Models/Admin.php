@@ -132,12 +132,6 @@ class Admin
         return $popT;
     }
 
-    public function getWref($x, $y)
-    {
-        $result = $this->conn->select('id')->from('wdata')->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])->first();
-        return $result['id'] ?? null;
-    }
-
     public function addVillage($post)
     {
         $wid = $this->getWref($post['x'], $post['y']);
