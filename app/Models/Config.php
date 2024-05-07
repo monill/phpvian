@@ -13,7 +13,7 @@ class Config extends Model
 
     public function getSettings()
     {
-        $settings = $this->conn->select()->from('config')->get();
+        $settings = $this->conn->select()->from('config')->first();
         if (empty($settings)) {
             return [];
         }
