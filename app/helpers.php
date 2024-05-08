@@ -19,6 +19,8 @@ if (!function_exists('sha1_gen')) {
     /**
      * Generates random characters using SHA1 values
      * 40 Characters
+     * @param null $data
+     * @return string
      */
     function sha1_gen($data = null)
     {
