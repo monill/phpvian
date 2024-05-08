@@ -13,6 +13,7 @@ class Connection extends PDO
     protected string $columns = '*';
     protected string $where = '';
     protected array $params = [];
+    protected array $setValues = [];
     protected string $orderBy;
     protected string $limit;
     protected string $sumColumn;
@@ -80,6 +81,12 @@ class Connection extends PDO
             $this->where = $condition;
         }
         $this->params = array_merge($this->params, $params);
+        return $this;
+    }
+
+    public function order($column)
+    {
+        $this->orderBy = " $column";
         return $this;
     }
 
@@ -189,20 +196,48 @@ class Connection extends PDO
         }
     }
 
-    public function update($table, $data, $where, $params = [])
+    public function set($column, $value)
     {
-        $this->validateData($data);
+        $this->setValues[$column] = $value;
+        return $this;
+    }
 
-        $fields = '';
-        foreach ($data as $key => $value) {
-            $fields .= "`$key` = :$key, ";
+    public function input(array $data)
+    {
+        foreach ($data as $column => $value) {
+            $this->setValues[$column] = $value;
         }
-        $fields = rtrim($fields, ', ');
+        return $this;
+    }
+
+    public function decrement($column, $value)
+    {
+        $this->setValues[$column] = "`$column` - $value";
+        return $this;
+    }
+
+    public function increment($column, $value)
+    {
+        $this->setValues[$column] = "`$column` + $value";
+        return $this;
+    }
+
+    public function update()
+    {
+        $setFields = '';
+        foreach ($this->setValues as $column => $value) {
+            $setFields .= "`$column` = $value, ";
+        }
+        $setFields = rtrim($setFields, ', ');
+
+        $sql = "UPDATE `$this->table` SET $setFields";
+
+        if (!empty($this->where)) {
+            $sql .= " WHERE $this->where";
+        }
 
         try {
-            $sql = "UPDATE $table SET $fields WHERE $where";
-            $mergedParams = array_merge($data, $params);
-            return $this->executeQuery($sql, $mergedParams);
+            return $this->executeQuery($sql, $this->params);
         } catch (PDOException | RuntimeException $e) {
             throw new RuntimeException("Update error: " . $e->getMessage());
         }
