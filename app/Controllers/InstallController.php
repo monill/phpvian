@@ -306,15 +306,27 @@ class InstallController
     protected function updateUnits($worldid2)
     {
         $speed = setting('speed');
-        $this->conn->update('units', ['u41' => 274700 * $speed, 'u42' => 995231 * $speed, 'u43' => 10000, 'u44' => 3048 * $speed, 'u45' => 964401 * $speed, 'u46' => 617602 * $speed, 'u47' => 6034 * $speed, 'u48' => 3040 * $speed, 'u49' => 1, 'u50' => 9], 'vref = :wid', ['wid' => $worldid2]);
+        $data = [
+            'u41' => 274700 * $speed,
+            'u42' => 995231 * $speed,
+            'u43' => 10000,
+            'u44' => 3048 * $speed,
+            'u45' => 964401 * $speed,
+            'u46' => 617602 * $speed,
+            'u47' => 6034 * $speed,
+            'u48' => 3040 * $speed,
+            'u49' => 1,
+            'u50' => 9
+        ];
+        $this->conn->from('units')->input($data)->where('vref = :wid', [':wid' => $worldid2])->update();
     }
 
     protected function updateNatars($worldid)
     {
         $speed = setting('speed');
-        $this->conn->update('vdata', ['pop' => 238, 'natar' => 1], 'wref = :wid', ['wid' => $worldid]);
-        $this->conn->update('units', ['u41' => random_int(3000, 6000) * $speed, 'u42' => random_int(4500, 6000) * $speed, 'u43' => 10000, 'u44' => random_int(635, 1575) * $speed, 'u45' => random_int(3600, 5700) * $speed, 'u46' => random_int(4500, 6000) * $speed, 'u47' => random_int(1500, 2700) * $speed, 'u48' => random_int(300, 900) * $speed, 'u49' => 0, 'u50' => 9], 'vref = :wid', ['wid' => $worldid]);
-        $this->conn->update('fdata', ['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16], 'vref = :wid', ['wid' => $worldid]);
+        $this->conn->from('vdata')->input(['pop' => 238, 'natar' => 1])->where('wref = :wid', [':wid' => $worldid])->update();
+        $this->conn->from('units')->input(['u41' => random_int(3000, 6000) * $speed, 'u42' => random_int(4500, 6000) * $speed, 'u43' => 10000, 'u44' => random_int(635, 1575) * $speed, 'u45' => random_int(3600, 5700) * $speed,'u46' => random_int(4500, 6000) * $speed, 'u47' => random_int(1500, 2700) * $speed, 'u48' => random_int(300, 900) * $speed, 'u49' => 0, 'u50' => 9])->where('vref = :wid', [':wid' => $worldid])->update();
+        $this->conn->from('fdata')->input(['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16])->where(':vref = :wid', ['wid' => $worldid])->update();
     }
 
     public function oasis()
@@ -381,7 +393,7 @@ class InstallController
             $worldid = $world['id'];
             $base = $this->db->getMInfo($worldid);
             $oasisValues = $this->generateOasisValues($base['oasistype']);
-            $this->conn->update('units', $oasisValues, '`vref` = :vref', ['vref' => $worldid]);
+            $this->conn->from('units')->input($oasisValues)->where('`vref` = :vref', [':vref' => $worldid])->update();
         }
     }
 
