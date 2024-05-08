@@ -14,356 +14,251 @@ class Database
         $this->conn = new Connection();
     }
 
-    public function myRegister($username, $password, $email, $act, $tribe)
+    public function register($username, $password, $email, $tribe, $locate, $act)
     {
         $time = time();
-        $calcdPTime = sqrt($time - COMMENCE);
-        $calcdPTime = min(max($calcdPTime, setting('minprotecttime')), setting('maxprotecttime'));
+        $stime = strtotime(START_DATE) - strtotime(date('m/d/Y')) + strtotime(START_TIME);
+        if ($stime > time()) {
+            $time = $stime;
+        }
+        $timep = $time + PROTECTION;
+
+        $data = [
+            'username' => $username,
+            'password' => $password,
+            'access' => USER,
+            'email' => $email,
+            'timestamp' => $time,
+            'tribe' => $tribe,
+            'location' => $locate,
+            'act' => $act,
+            'protect' => $timep,
+            'fquest' => '0,0,0,0,0,0,0,0,0,0,0',
+            'cp' => 1
+        ];
+
+        if ($this->conn->insert('users', $data)) {
+            return $this->conn->getLastInsertId();
+        } else {
+            return false;
+        }
+    }
+
+    public function activate($username, $password, $email, $tribe, $locate, $act, $act2)
+    {
         $data = [
             'username' => $username,
             'password' => $password,
             'access' => USER,
             'email' => $email,
             'tribe' => $tribe,
-            'act' => $act,
-            'protect' => ($time + $calcdPTime),
-            'clp' => rand(8900, 9000),
-            'cp' => 1,
-            'gold' => 0,
-            'reg2' => 1
-        ];
-        return $this->conn->insert('users', $data) ? $this->conn->getLastInsertId() : false;
-    }
-
-    public function modifyPoints($aid, $points, $amt)
-    {
-        if (!$aid) {
-            return false;
-        }
-        return $this->conn->update('users', [$points => "$points + :amt"], 'id = :aid', [':aid' => $aid, ':amt' => $amt]);
-    }
-
-    public function modifyPointsAlly($aid, $points, $amt)
-    {
-        if (!$aid) {
-            return false;
-        }
-        return $this->conn->update('alidata', [$points => "$points + :amt"], 'id = :aid', [':aid' => $aid, ':amt' => $amt]);
-    }
-
-    public function myActivate($username, $password, $email, $act, $act2)
-    {
-        $data = [
-            'username' => $username,
-            'password' => $password,
-            'access' => USER,
-            'email' => $email,
             'timestamp' => time(),
+            'location' => $locate,
             'act' => $act,
             'act2' => $act2
         ];
-        return $this->conn->insert('activate', $data);
+
+        if ($this->conn->insert('activate', $data)) {
+            return $this->conn->getLastInsertId();
+        } else {
+            return false;
+        }
     }
 
-    public function unReg($username)
+    public function unreg($username)
     {
-        return $this->conn->delete('activate', 'username = ?', [$username]);
+        return $this->conn->delete('activate', 'username = :username', [':username' => $username]);
     }
 
     public function deleteReinf($id)
     {
-        return $this->conn->delete('enforcement', 'id = ?', [$id]);
+        return $this->conn->delete('enforcement', 'id = :id', [':id' => $id]);
     }
 
-    public function deleteReinfFrom($vref)
+    public function updateResource($vid, $what, $number)
     {
-        return $this->conn->delete('enforcement', 'from = ?', [$vref]);
-    }
-
-    public function deleteMovementsFrom($vref)
-    {
-        return $this->conn->delete('movement', 'from = ?', [$vref]);
-    }
-
-    public function deleteAttacksFrom($vref)
-    {
-        return $this->conn->delete('attacks', 'vref = ?', [$vref]);
+        return $this->conn->set($what, $number)->from('vdata')->where('wref = :vid', [':vid' => $vid])->update();
     }
 
     public function checkExist($ref, $mode)
     {
-        $field = $mode ? 'email' : 'username';
-        $result = $this->conn->select($field)->from('users')->where("$field = :ref", [':ref' => $ref])->limit(1)->get();
+        $column = $mode ? 'email' : 'username';
+        $result = $this->conn->select($column)->from('users')->where("$column = :ref", [':ref' => $ref])->limit(1)->get();
         return !empty($result);
     }
 
     public function checkExistActivate($ref, $mode)
     {
-        $field = $mode ? 'email' : 'username';
-        $result = $this->conn->select('activate')->from('activate')->where("$field = :ref", [':ref' => $ref])->limit(1)->get();
+        $column = $mode ? 'email' : 'username';
+        $result = $this->conn->select($column)->from('activate')->where("$column = :ref", [':ref' => $ref])->limit(1)->get();
         return !empty($result);
     }
 
     public function updateUserField($ref, $field, $value, $mode)
     {
-        $condition = ($mode == 1) ? 'id' : 'username';
-        $data = [$field => $value];
-
-        if ($mode == 2) {
-            // Aqui você pode concatenar a string diretamente na query
-            $data[$field] = "$field + $value";
+        $condition = '';
+        switch ($mode) {
+            case 0:
+                $condition = "username = :ref";
+                break;
+            case 1:
+                $condition = "id = :ref";
+                break;
+            case 2:
+                $condition = "id = :ref";
+                $value = "$field + $value";
+                break;
+            case 3:
+                $condition = "id = :ref";
+                $value = "$field - $value";
+                break;
         }
 
-        return $this->conn->update('users', $data, "$condition = :ref", [':ref' => $ref]);
+        return $this->conn->set($field, $value)->from('users')->where($condition, [':value' => $value, ':ref' => $ref])->update();
     }
 
-    public function getSit($uid)
+    public function getSitee($uid)
     {
-        return $this->conn->select()->from('users_setting')->where('id = ?', [$uid])->get();
+        return $this->conn->select('id')->from('users')->where("sit1 = :uid OR sit2 = :uid", [':uid' => $uid])->get();
     }
 
     public function getSitee1($uid)
     {
-        return $this->conn
-            ->select('id, username, sit1')
-            ->from('users')
-            ->where('sit1 = ?', [$uid])
-            ->get();
+        $result = $this->conn->select()->from('users')->where("sit1 = :uid", [':uid' => $uid])->get();
+        return $result[0] ?? null;
     }
 
     public function getSitee2($uid)
     {
-        return $this->conn
-            ->select('id, username, sit2')
-            ->from('users')
-            ->where('sit2 = ?', [$uid])
-            ->get();
+        $result = $this->conn->select()->from('users')->where("sit2 = :uid", [':uid' => $uid])->get();
+        return $result[0] ?? null;
     }
 
     public function removeMeSit($uid, $uid2)
     {
-        $this->conn->update('users', ['sit1' => 0], 'id = :uid AND sit1 = :uid2', [':uid' => $uid, ':uid2' => $uid2]);
-        $this->conn->update('users', ['sit2' => 0], 'id = :uid AND sit2 = :uid2', [':uid' => $uid, ':uid2' => $uid2]);
+        $this->conn->set('sit1', 0)->from('users')->where('id = :uid AND sit1 = :uid2', [':uid' => $uid, ':uid2' => $uid2])->update();
+        $this->conn->set('sit2', 0)->from('users')->where('id = :uid AND sit2 = :uid2', [':uid' => $uid, ':uid2' => $uid2])->update();
     }
 
-    public function getUserSetting($uid)
+    public function getUserField($ref, $field, $mode)
     {
-        $setting = $this->conn
-            ->select()
-            ->from('users_setting')
-            ->where('id = ?', [$uid])
-            ->get();
-        if (!$setting) {
-            $this->conn->insert('users_setting', ['id' => Session::get('uid')]);
-            $setting = $this->conn
-                ->select()
-                ->from('users_setting')
-                ->where('id = ?', [$uid])
-                ->get();
-        }
-        return $setting;
+        $column = !$mode ? 'id' : 'username';
+        $result = $this->conn->select($field)->from('users')->where("$column = :ref", [':ref' => $ref])->get();
+        return $result[$field] ?? null;
     }
 
-    public function setSitter($ref, $field, $value)
+    public function getInvitedUser($uid)
     {
-        $this->conn->update('users', [$field => $value], 'id = ?', [$ref]);
+        return $this->conn->select()->from('users')->where("invited = :uid", [':uid' => $uid])->orderByDesc('regtime')->get();
     }
 
-    public function sitSetting($sitSet, $set, $val, $uid)
+    public function getStarvation()
     {
-        $field = "sitter{$sitSet}_set_{$set}";
-        $this->conn->update('users_setting', [$field => $val], 'id = ?', [$uid]);
-    }
-
-    public function whoIsSitter($uid)
-    {
-        $setting = $results = $this->conn
-            ->select('whositsit')
-            ->from('users_setting')
-            ->where('id = ?', [$uid])
-            ->get();
-
-        return ['whosit_sit' => $setting['whositsit'] ?? null];
+        return $this->conn->select()->from('vdata')->where('starv != 0')->get();
     }
 
     public function getActivateField($ref, $field, $mode)
     {
-        $condition = !$mode ? 'id = ?' : 'username = ?';
-        $result = $results = $this->conn
-            ->select($field)
-            ->from('activate')
-            ->where($condition, [$ref])
-            ->get();
-
-        return $result[$field] ?? null;
+        $condition = $mode ? "username = :ref" : "id = :ref";
+        $result = $this->conn->select($field)->from('activate')->where($condition, [':ref' => $ref])->get();
+        return $result[0][$field] ?? null;
     }
 
     public function login($username, $password)
     {
-        $userData = $results = $this->conn
-            ->select('password, username')
-            ->from('users')
-            ->where('data = ?', [$username])
-            ->get();
+        $result = $this->conn->select('password, sessid')->from('users')->where('username = :username', [':username' => $username])->get();
 
-        if ($userData && $userData['password'] == md5($password)) {
-            return true;
-        } else {
-            $adminData = $results = $this->conn
-                ->select('password, id')
-                ->from('users')
-                ->where('id = ?', [4])
-                ->get();
-
-            return $adminData && $adminData['password'] == md5($password);
-        }
-    }
-
-    public function sitterLogin($username, $password)
-    {
-        $userData = $this->conn
-            ->select('sit1, sit2')
-            ->from('users')
-            ->where('username = ? AND access != ?', [$username, BANNED])
-            ->get();
-        if ($userData['sit1'] != 0) {
-            $pw_sit1 = $this->conn
-                ->select('password')
-                ->from('users')
-                ->where('id = ? AND access != ?', [$userData['sit1'], BANNED])
-                ->get();
-        }
-        if ($userData['sit2'] != 0) {
-            $pw_sit2 = $this->conn
-                ->select('password')
-                ->from('users')
-                ->where('id = ? AND access != ?', [$userData['sit2'], BANNED])
-                ->get();
-        }
-        if ($userData['sit1'] != 0 || $userData['sit2'] != 0) {
-            if ($pw_sit1 && $pw_sit1['password'] == md5($password)) {
-                $_SESSION['whois_sit'] = 1;
-                return true;
-            } elseif ($pw_sit2 && $pw_sit2['password'] == md5($password)) {
-                $_SESSION['whois_sit'] = 2;
+        if ($result && count($result) > 0) {
+            if ($result['password'] === md5($password)) {
                 return true;
             }
         }
         return false;
     }
 
+    public function checkActivate($act)
+    {
+        $result = $this->conn->select()->from('activate')->where('act = :act', [':act' => $act])->get();
+        return $result[0] ?? null;
+    }
+
+    public function sitterLogin($username, $password)
+    {
+        $result = $this->conn->select('sit1, sit2')->from('users')->where('username = :username AND access != :banned', [':username' => $username, ':banned' => BANNED])->get();
+
+        if ($result && count($result) > 0) {
+            $dbarray = $result[0];
+            $sit1 = $dbarray['sit1'];
+            $sit2 = $dbarray['sit2'];
+
+            if ($sit1 != 0) {
+                $result_sit1 = $this->conn->select('password')->from('users')->where('id = :sit1 AND access != :banned', [':sit1' => $sit1, ':banned' => BANNED])->get();
+                $pw_sit1 = $result_sit1[0];
+            }
+
+            if ($sit2 != 0) {
+                $result_sit2 = $this->conn->select('password')->from('users')->where('id = :sit2 AND access != :banned', [':sit2' => $sit2, ':banned' => BANNED])->get();
+                $pw_sit2 = $result_sit2[0];
+            }
+
+            if ($sit1 != 0 || $sit2 != 0) {
+                if ($pw_sit1['password'] == md5($password) || $pw_sit2['password'] == md5($password)) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public function setDeleting($uid, $mode)
     {
-        $time = time() + max(round(259200 / sqrt(setting('speed'))), 3600);
         if (!$mode) {
-            $this->conn->insert('deleting', ['uid' => $uid, 'timestamp' => $time]);
+            $this->conn->insert('deleting', ['uid' => $uid, 'time' => time() + 72 * 3600]);
         } else {
-            $this->conn->delete('deleting', 'uid = ?', [$uid]);
+            $this->conn->delete('deleting', 'uid = :uid', [':uid' => $uid]);
         }
     }
 
     public function isDeleting($uid)
     {
-        return $this->conn
-            ->select('timestamp')
-            ->from('deleting')
-            ->where('uid = ?', [$uid])
-            ->get();
+        $result = $this->conn->select('time')->from('deleting')->where('uid = :uid', [':uid' => $uid])->get();
+        return $result['time'] ?? null;
     }
 
     public function modifyGold($userid, $amt, $mode)
     {
         if (!$mode) {
-            $goldlog = $this->conn->select('id')->from('gold_fin_log')->get();
-            $this->conn->insert('gold_fin_log', ['id' => $goldlog + 1, 'userid' => $userid, 'details' => "$amt GOLD ADDED FROM " . $_SERVER['HTTP_REFERER']]);
-
-            $data = ['gold' => "gold - :amt"];
-            $where = 'id = :userid';
-            $params = [':amt' => $amt, ':userid' => $userid];
-            $data2 = ['usedgold' => "usedgold + :amt"];
-            $this->conn->update('users', $data2, $where, $params);
+            return $this->conn->decrement('gold', $amt)->from('users')->where('id = :userid', [':userid' => $userid])->update();
         } else {
-            $data = ['gold' => "gold + :amt"];
-            $where = 'id = :userid';
-            $params = [':amt' => $amt, ':userid' => $userid];
-            $data2 = ['addgold' => "addgold + :amt"];
-            $this->conn->update('users', $data2, $where, $params);
-            $goldlog = $this->conn->select('id')->from('gold_fin_log')->get();
-            $this->conn->insert('gold_fin_log', ['id' => $goldlog + 1, 'userid' => $userid, 'details' => "$amt GOLD ADDED FROM " . $_SERVER['HTTP_REFERER']]);
+            return $this->conn->increment('gold', $amt)->from('users')->where('id = :userid', [':userid' => $userid])->update();
         }
-        return $this->conn->update('users', $data, $where, $params);
     }
 
-    public function getGoldFinLog()
+    public function getUserArray($ref, $mode)
     {
-        return $this->conn->select('gold_fin_log');
-    }
-
-    public function instantCompleteBdataResearch($wid, $username)
-    {
-        $goldlog = $this->getGoldFinLog();
-
-        $success = false;
-
-        $bdataUpdated = $this->conn->update('bdata', ['timestamp' => 1], 'wid = :wid AND type != 25 AND type != 26', [':wid' => $wid]);
-
-        $researchUpdated = $this->conn->update('research', ['timestamp' => 1], 'vref = ?', [$wid]);
-
-        if ($bdataUpdated || $researchUpdated) {
-            $this->conn->update('users', ['gold' => 'gold - 2', 'usedgold' => 'usedgold + 2'], 'username = :username', [':username' => $username]);
-            $this->conn->insert('gold_fin_log', ['id' => (count($goldlog) + 1), 'wid' => $wid, 'description' => 'Finish construction and research with gold']);
-            $success = true;
+        if (!$mode) {
+            $result = $this->conn->select()->from('users')->where('username = :ref', [':ref' => $ref])->get();
         } else {
-            $this->conn->insert('gold_fin_log', ['id' => (count($goldlog) + 1), 'wid' => $wid, 'description' => 'Failed construction and research with gold']);
+            $result = $this->conn->select()->from('users')->where('id = :ref', [':ref' => $ref])->get();
         }
 
-        return $success;
-    }
-
-    public function getUsersList($list)
-    {
-        $where = 'WHERE 1 ';
-        $params = [];
-
-        foreach ($list as $k => $v) {
-            if ($k !== 'extra') {
-                $where .= "AND $k = :$k ";
-                $params[":$k"] = $v;
-            }
-        }
-
-        if (!empty($list['extra'])) {
-            $where .= 'AND ' . $list['extra'] . ' ';
-        }
-
-        return $results = $this->conn
-            ->select()
-            ->from('users')
-            ->where($where, $params)
-            ->get();
-
-    }
-
-    public function modifyUser($ref, $column, $value, $mod = 0)
-    {
-        $condition = !$mod ? 'id = :ref' : 'username = :ref';
-        return $this->conn->update('users', [$column => $value], $condition, [':ref' => $ref]);
+        return $result[0] ?? null;
     }
 
     public function getUserWithEmail($email)
     {
-        return $this->conn
-            ->select('id, username')
-            ->from('users')
-            ->where('email = :email', [':email' => $email])
-            ->get();
+        $result = $this->conn->select()->from('users')->where('email = :email', [':email' => $email])->get();
+        return $result[0] ?? null;
     }
 
     public function activeModify($username, $mode)
     {
         $time = time();
         if (!$mode) {
-            return $this->conn->insert('active', ['username' => $username, 'timestamp' => $time]);
+            return $this->conn->insert('active', ['username' => $username, 'time' => $time]);
         } else {
             return $this->conn->delete('active', 'username = :username', [':username' => $username]);
         }
@@ -371,129 +266,40 @@ class Database
 
     public function addActiveUser($username, $time)
     {
-        return $this->conn->replace('active', ['username' => $username, 'timestamp' => $time]);
-    }
-
-    public function getActiveUsersList()
-    {
-        return $this->conn->select('active');
+        $this->conn->replace('active', ['username' => $username, 'time' => $time]);
     }
 
     public function updateActiveUser($username, $time)
     {
-        $result1 = $this->conn->replace('active', ['username' => $username, 'timestamp' => $time]);
-        $result2 = $this->conn->update('users', ['timestamp' => $time], 'username = :username', [':username' => $username]);
-        return $result1 && $result2;
+        $this->conn->replace('active', ['username' => $username, 'timestamp' => $time]);
+        $this->conn->set('timestamp', $time)->from('users')->where('username = :username', [':username' => $username])->update();
     }
 
     public function checkSitter($username)
     {
-        $row = $this->conn
-            ->select('sitter')
+        $result = $this->conn->select('sitter')
             ->from('online')
-            ->where('name = ?', [$username])
+            ->where('name = :username', [':username' => $username])
             ->get();
-        return $row['sitter'] ?? null;
-    }
-
-    public function canConquerOasis($vref, $wref)
-    {
-        $heroMansionLevel = $this->getHeroMansionLevel($vref);
-
-        if ($this->canConquerMoreOasis($vref, $heroMansionLevel)) {
-            $oasisInfo = $this->getOasisInfo($wref);
-            $troopCount = $this->countOasisTroops($wref);
-
-            if ($oasisInfo['conqured'] == 0 || ($oasisInfo['conqured'] != 0 && $this->isOasisReadyForConquest($oasisInfo, $troopCount))) {
-                if ($this->isVillageCloseToOasis($vref, $wref)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public function canConquerMoreOasis($vref, $heroMansionLevel)
-    {
-        return $this->VillageOasisCount($vref) < floor(($heroMansionLevel - 5) / 5);
-    }
-
-    public function isOasisReadyForConquest($oasisInfo, $troopCount)
-    {
-        return $oasisInfo['loyalty'] < 99 / min(3, (4 - $this->VillageOasisCount($oasisInfo['conqured']))) && $troopCount == 0;
-    }
-
-    public function isVillageCloseToOasis($vref, $wref)
-    {
-        $coordsVillage = $this->getCoor($vref);
-        $coordsOasis = $this->getCoor($wref);
-        return abs($coordsOasis['x'] - $coordsVillage['x']) <= 3 && abs($coordsOasis['y'] - $coordsVillage['y']) <= 3;
-    }
-
-    public function getHeroMansionLevel($vref)
-    {
-        $attackerFields = $this->getResourceLevel($vref);
-        foreach (range(19, 38) as $i) {
-            if ($attackerFields['f' . $i . 't'] == 37) {
-                return $attackerFields['f' . $i];
-            }
-        }
-        return 0;
-    }
-
-    public function getResourceLevel($vid)
-    {
-        return $this->conn
-            ->select()
-            ->from('fdata')
-            ->where('vref = :vid', [':vid' => $vid])
-            ->get();
-    }
-
-    public function VillageOasisCount($vref)
-    {
-        return $this->conn
-            ->select('COUNT(*)')
-            ->from('odata')
-            ->where('conquered = :vref', [':vref' => $vref])
-            ->get();
-    }
-
-    public function getOasisInfo($wid)
-    {
-        return $this->conn
-            ->select('conquered, loyalty')
-            ->from('odata')
-            ->where('wref = :wid', [':wid' => $wid])
-            ->get();
-    }
-
-    public function getCoor($wref)
-    {
-        return $this->conn
-            ->select('x, y')
-            ->from('wdata')
-            ->where('id = :wref', [':wref' => $wref])
-            ->get();
+        return $result ? $result[0]['sitter'] : null;
     }
 
     public function conquerOasis($vref, $wref)
     {
-        $vinfo = $this->getVillage($vref);
-        $where = 'wref = :wref';
-        $params = [':wref' => $wref];
-        $this->conn->update('odata', ['conqured' => $vref, 'loyalty' => 100, 'lastupdated' => time(), 'owner' => $vinfo['owner'], 'name' => 'Occupied Oasis'], $where, $params);
-        $this->conn->update('wdata', ['occupied' => 1], $where, $params);
-    }
+        $villageInfo = $this->getVillage($vref);
+        $uid = $villageInfo['owner'];
+        $currentTime = time();
 
-    public function getVillage($vid)
-    {
-        $result =  $this->conn
-            ->select('wref, capital, name, celebration, owner, wood, woodp, clay, clayp, iron, ironp, crop, cropp, pop, upkeep, maxstore, maxcrop, loyalty, natar')
-            ->from('vdata')
-            ->where('wref = :vid', [':vid' => $vid])
-            ->get();
-        return $result ? $result : [];
+        $data = [
+            'conqured' => $vref,
+            'loyalty' => 100,
+            'lastupdated' => $currentTime,
+            'lastupdated2' => $currentTime,
+            'owner' => $uid,
+            'name' => 'Occupied Oasis'
+        ];
+
+        return $this->conn->from('odata')->where('wref = :wref', [':wref' => $wref])->update();
     }
 
     public function modifyOasisLoyalty($wref)
@@ -501,171 +307,122 @@ class Database
         if ($this->isVillageOases($wref) != 0) {
             $OasisInfo = $this->getOasisInfo($wref);
             if ($OasisInfo['conqured'] != 0) {
-                $LoyaltyAmendment = floor(100 / min(3, (4 - $this->VillageOasisCount($OasisInfo['conqured']))));
-            } else {
-                $LoyaltyAmendment = 100;
+                $loyaltyAmendment = floor(100 / min(3, (4 - $this->villageOasisCount($OasisInfo['conqured']))));
+
+                $this->conn->from('odata')
+                    ->decrement('loyalty', $loyaltyAmendment)
+                    ->where('wref = :wref', [':wref' => $wref])
+                    ->update();
+
             }
-            return $this->conn->update('odata', ['loyalty' => "GREATEST(loyalty - $LoyaltyAmendment, 0)"], 'wref = :wref', [':wref' => $wref]);
         }
-        return false;
-    }
-
-    public function isVillageOases($wref)
-    {
-        $result = $this->conn
-            ->select('oasistype')
-            ->from('wdata')
-            ->where('id = :wref', [':wref' => $wref])
-            ->get();
-        return $result['oasistype'];
-    }
-
-    public function oasesUpdateLastFarm($wref)
-    {
-        $this->conn->update('odata', ['lastfarmed' => time()], 'wref = :wref', [':wref' => $wref]);
-    }
-
-    public function oasesUpdateLastTrain($wref)
-    {
-        $this->conn->update('odata', ['lasttrain' => time()], 'wref = :wref', [':wref' => $wref]);
     }
 
     public function checkActiveSession($username, $sessid)
     {
-        $user = $this->getUser($username, 0);
+        $user = $this->getUserArray($username, 0);
         $sessidarray = explode("+", $user['sessid']);
         return in_array($sessid, $sessidarray);
     }
 
-    public function getUser($ref, $mode = 0)
-    {
-        $where = !$mode ? 'username = :ref' : 'id = :ref';
-        return $this->conn
-            ->select()
-            ->from('users')
-            ->where($where, [':ref' => $ref])
-            ->get();
-    }
-
     public function submitProfile($uid, $gender, $location, $birthday, $des1, $des2)
     {
-        $data = [
-            'gender' => $gender,
-            'location' => $location,
-            'birthday' => $birthday,
-            'desc1' => $des1,
-            'desc2' => $des2
-        ];
-        return $this->conn->update('users', $data, 'id = :uid', [':uid' => $uid]);
+        return $this->conn->from('users')
+            ->set('gender', $gender)
+            ->set('location', $location)
+            ->set('birthday', $birthday)
+            ->set('desc1', $des1)
+            ->set('desc2', $des2)
+            ->where('id = :uid', [':uid' => $uid])
+            ->update();
     }
 
-    public function UpdateOnline($mode, $name = "", $sit = 0)
+    public function gpack($uid, $gpack)
+    {
+        return $this->conn->from('users')
+            ->set('gpack', $gpack)
+            ->where('id = :uid', [':uid' => $uid])
+            ->update();
+    }
+
+    public function updateOnline($mode, $name = "", $sit = 0)
     {
         if ($mode == "login") {
-            return $this->conn->insert('online', ['name' => $name, 'time' => time(), 'sitter' => $sit]);
+            return $this->conn->insert('online', ['IGNORE'], ['name' => $name, 'time' => time(), 'sitter' => $sit]);
         } else {
-            return $this->conn->delete('online', 'name = :name', [':name' => Session::get('username')]);
+            return $this->conn->delete('online', 'name = :username', [':username' => $name]);
         }
     }
 
     public function generateBase($sector)
     {
         $sector = ($sector == 0) ? rand(1, 4) : $sector;
-        //(-/-) SW
-        //(+/-) SE
-        //(+/+) NE
-        //(-/+) NW
-        $nareadis = setting('natars_max') + 2;
+        $world_max = setting('world_max');
 
-        switch ($sector) {
-            case 1:
-                $x_a = (setting('world_max') - (setting('world_max') * 2));
-                $x_b = 0;
-                $y_a = (setting('world_max') - (setting('world_max') * 2));
-                $y_b = 0;
-                $order = "ORDER BY y DESC,x DESC";
-                $mmm = rand(-1, -20);
-                $x_y = "AND x < -4 AND y < $mmm";
-                break;
-            case 2:
-                $x_a = (setting('world_max') - (setting('world_max') * 2));
-                $x_b = 0;
-                $y_a = 0;
-                $y_b = setting('world_max');
-                $order = "ORDER BY y ASC,x DESC";
-                $mmm = rand(1, 20);
-                $x_y = "AND x < -4 AND y > $mmm";
-                break;
-            case 3:
-                $x_a = 0;
-                $x_b = setting('world_max');
-                $y_a = 0;
-                $y_b = setting('world_max');
-                $order = "ORDER BY y,x ASC";
-                $mmm = rand(1, 20);
-                $x_y = "AND x > 4 AND y > $mmm";
-                break;
-            case 4:
-                $x_a = 0;
-                $x_b = setting('world_max');
-                $y_a = (setting('world_max') - (setting('world_max') * 2));
-                $y_b = 0;
-                $order = "ORDER BY y DESC, x ASC";
-                $mmm = rand(-1, -20);
-                $x_y = "AND x > 4 AND y < $mmm";
-                break;
+        // (-/-) SW
+        if ($sector == 1) {
+            $x_a = ($world_max - ($world_max * 2));
+            $x_b = 0;
+            $y_a = ($world_max - ($world_max * 2));
+            $y_b = 0;
+            $order = "ORDER BY y DESC, x DESC";
+            $mmm = rand(-1, -20);
+            $x_y = "AND x < -4 AND y < $mmm";
         }
-
-        $where = 'fieldtype = 3 AND occupied = 0 ' . $x_y . ' AND (x BETWEEN :x_a AND :x_b) AND (y BETWEEN :y_a AND :y_b) AND (SQRT(POW(x,2)+POW(y,2)) > :nareadis)';
-        $params = [
-            ':x_a' => $x_a,
-            ':x_b' => $x_b,
-            ':y_a' => $y_a,
-            ':y_b' => $y_b,
-            ':nareadis' => $nareadis
-        ];
-        $where .= ' y DESC, x DESC';
-        switch ($sector) {
-            case 1:
-                $where .= 'y DESC, x DESC';
-                break;
-            case 2:
-                $where .= 'y ASC, x DESC';
-                break;
-            case 3:
-                $where .= 'y ASC, x ASC';
-                break;
-            case 4:
-                $where .= 'y DESC, x ASC';
-                break;
+        // (+/-) SE
+        elseif ($sector == 2) {
+            $x_a = ($world_max - ($world_max * 2));
+            $x_b = 0;
+            $y_a = 0;
+            $y_b = $world_max;
+            $order = "ORDER BY y ASC, x DESC";
+            $mmm = rand(1, 20);
+            $x_y = "AND x < -4 AND y > $mmm";
+        }
+        // (+/+) NE
+        elseif ($sector == 3) {
+            $x_a = 0;
+            $x_b = $world_max;
+            $y_a = 0;
+            $y_b = $world_max;
+            $order = "ORDER BY y, x ASC";
+            $mmm = rand(1, 20);
+            $x_y = "AND x > 4 AND y > $mmm";
+        }
+        // (-/+) NW
+        elseif ($sector == 4) {
+            $x_a = 0;
+            $x_b = $world_max;
+            $y_a = ($world_max - ($world_max * 2));
+            $y_b = 0;
+            $order = "ORDER BY y DESC, x ASC";
+            $mmm = rand(-1, -20);
+            $x_y = "AND x > 4 AND y < $mmm";
         }
 
         $result = $this->conn
             ->select('id')
             ->from('wdata')
-            ->where($where, $params)
+            ->where("fieldtype = 3 AND occupied = 0 $x_y AND (x BETWEEN $x_a AND $x_b) AND (y BETWEEN $y_a AND $y_b)")
+            ->order($order)
             ->limit(20)
             ->get();
-        return $result ? $result['id'] : false;
-    }
 
-    public function getWref($x, $y)
-    {
-        $result = $this->conn->select('id')->from('wdata')->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])->first();
-        return $result['id'] ?? null;
+        return $result['id'];
     }
 
     public function setFieldTaken($id)
     {
-        $this->conn->update('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
+        $this->conn->from('wdata')->set('occupied', 1)->where('id = :id', [':id' => $id])->update();
     }
 
     public function addVillage($wid, $uid, $username, $capital)
     {
         $total = count($this->getVillagesID($uid));
-        $vname = ($total >= 1) ? $username . '\'s village ' . ($total + 1) : $username . '\'s village';
+        $vname = $total >= 1 ? $username . "\'s village " . ($total + 1) : $username . "\'s village";
 
         $time = time();
+
         $data = [
             'wref' => $wid,
             'owner' => $uid,
@@ -701,17 +458,6 @@ class Database
         $this->conn->insert('vdata', $data);
     }
 
-    public function getVillagesID($uid)
-    {
-        $results = $this->conn
-            ->select('wref')
-            ->from('vdata')
-            ->where('owner = :uid', [':uid' => $uid])
-            ->get();
-
-        return array_column($results, 'wref');
-    }
-
     public function addResourceFields($vid, $type)
     {
         $fieldValues = [
@@ -740,63 +486,41 @@ class Database
         return $this->conn->insert('fdata', array_merge(['vref' => $vid], $fields));
     }
 
-    public function addUnits($vid)
-    {
-        return $this->conn->insert('units', ['vref' => $vid]);
-    }
-
-    public function addTech($vid)
-    {
-        return $this->conn->insert('tdata', ['vref' => $vid]);
-    }
-
-    public function addABTech($vid)
-    {
-        return $this->conn->insert('abdata', ['vref' => $vid]);
-    }
-
-    public function getVillageOasis($list, $limit, $order)
-    {
-        $wref = $this->getVilWref($order['x'], $order['y']);
-        $where = ' WHERE TRUE AND conqured = :wref ';
-        $params = [':wref' => $wref];
-
-        foreach ($list as $k => $v) {
-            if ($k !== 'extra') {
-                $where .= " AND $k = :$k ";
-                $params[":$k"] = $v;
-            }
-        }
-
-        if (isset($list['extra'])) {
-            $where .= ' AND ' . $list['extra'] . ' ';
-        }
-
-        $limitClause = isset($limit) ? ' LIMIT :limit ' : '';
-        $params[':limit'] = $limit ?: PHP_INT_MAX;
-
-        $orderby = isset($order['by']) && $order['by'] !== '' ? " ORDER BY {$order['by']} " : '';
-
-        $q = 'SELECT *';
-        if ($order['by'] === 'distance') {
-            $q .= ", (ROUND(SQRT(POW(LEAST(ABS(:x - wdata.x), ABS(:max - ABS(:x - wdata.x))), 2) + POW(LEAST(ABS(:y - wdata.y), ABS(:max - ABS(:y - wdata.y))), 2)),3)) AS distance";
-            $params[':x'] = $order['x'];
-            $params[':y'] = $order['y'];
-            $params[':max'] = $order['max'];
-        }
-        $q .= " FROM odata LEFT JOIN wdata ON wdata.id = odata.wref {$where}{$orderby}{$limitClause}";
-
-        return $this->conn->executeQuery($q, $params);
-    }
-
-    public function getVilWref($x, $y)
+    public function isVillageOases($wref)
     {
         $result = $this->conn
-            ->select('id')
+            ->select('oasistype')
             ->from('wdata')
-            ->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])
+            ->where('id = :wref', [':wref' => $wref])
             ->get();
-        return $result ? $result['id'] : null;
+        return $result['oasistype'];
+    }
+
+    public function villageOasisCount($vref)
+    {
+        $result = $this->conn
+            ->select('COUNT(*)')
+            ->from('odata')
+            ->where('conquered = :vref', [':vref' => $vref])
+            ->get();
+
+        if ($result && isset($result[0])) {
+            return $result[0]['count(*)'];
+        }
+        return 0;
+    }
+
+    public function populateOasis()
+    {
+        $rows = $this->conn
+            ->select()
+            ->from('wdata')
+            ->where('oasistype != 0')
+            ->get();
+
+        foreach ($rows as $row) {
+            $this->addUnits($row['id']);
+        }
     }
 
     public function getVillageType($wref)
@@ -804,10 +528,51 @@ class Database
         $result = $this->conn
             ->select('fieldtype')
             ->from('wdata')
-            ->where('id = :id', [':id' => $wref])
-            ->limit(1)
+            ->where('id = :wref', [':wref' => $wref])
+            ->get();
+
+        return $result['fieldtype'];
+    }
+
+    public function getVillageData($wref)
+    {
+        return $this->conn
+            ->select('*')
+            ->from('wdata')
+            ->where('id = :wref', [':wref' => $wref])
+            ->get();
+    }
+
+    public function getVillageType2($wref)
+    {
+        $result = $this->conn
+            ->select('oasistype')
+            ->from('wdata')
+            ->where('id = :wref', [':wref' => $wref])
+            ->get();
+
+        return $result['oasistype'];
+    }
+
+    public function getWref($x, $y)
+    {
+        $result = $this->conn
+            ->select('id')
+            ->from('wdata')
+            ->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])
             ->first();
-        return $result ? $result['fieldtype'] : false;
+        return $result['id'] ?? null;
+    }
+    
+    public function getVilWref($x, $y)
+    {
+        $result = $this->conn
+            ->select('id')
+            ->from('wdata')
+            ->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])
+            ->get();
+
+        return $result ? $result['id'] : null;
     }
 
     public function checkVilExist($wref)
@@ -816,39 +581,41 @@ class Database
             ->select('wref')
             ->from('vdata')
             ->where('wref = :wref', [':wref' => $wref])
-            ->limit(1)
             ->get();
+
         return !empty($result);
+    }
+
+    public function oasischecker($x, $y)
+    {
+        return $this->conn
+            ->select('*')
+            ->from('wdata')
+            ->where('x = :x AND y = :y', [':x' => $x, ':y' => $y])
+            ->get();
     }
 
     public function getVillageState($wref)
     {
-        $result = $this->conn->select('oasistype, occupied')->from('wdata')->where('id = ?', [$wref])->first();
-        return $result['occupied'] != 0 || $result['oasistype'] != 0;
-    }
-
-    public function getVillageStateForSettle($wref)
-    {
         $result = $this->conn
-            ->select('oasistype, occupied, fieldtype')
+            ->select('oasistype, occupied')
             ->from('wdata')
-            ->where('id = :id', [':id' => $wref])
-            ->limit(1)
+            ->where('id = :wref', [':wref' => $wref])
             ->get();
-        if (!empty($result)) {
-            return ($result['occupied'] == 0 && $result['oasistype'] == 0 && $result['fieldtype'] == 0);
-        }
-        return false;
+
+        return $result['occupied'] != 0 || $result['oasistype'] != 0;
     }
 
     public function getProfileVillages($uid)
     {
-        return $this->conn
+        $result = $this->conn
             ->select('wref, maxstore, maxcrop, pop, name, capital')
             ->from('vdata')
             ->where('owner = :uid', [':uid' => $uid])
-            ->orderByDesc('pop')
+            ->orderByDesc('pop, desc')
             ->get();
+
+        return $result;
     }
 
     public function getProfileMedal($uid)
@@ -881,36 +648,42 @@ class Database
         return $result ? $result['wref'] : false;
     }
 
-    public function getVillagesList($list, $limit, $order)
+    public function getVillagesID($uid)
     {
-        $where = ' WHERE TRUE ';
-        foreach ($list as $k => $v) {
-            if ($k != 'extra') $where .= " AND $k = $v ";
-        }
-        if (isset($list['extra'])) $where .= ' AND ' . $list['extra'] . ' ';
-        if (isset($limit)) $limit = " LIMIT $limit ";
-        if (isset($order) && $order['by'] != '') $orderby = " ORDER BY " . $order['by'] . ' ';
-        $columns = '*';
-        if ($order['by'] == 'distance') {
-            $columns .= ",(ROUND(SQRT(POW(LEAST(ABS(" . $order['x'] . " - x), ABS(" . $order['max'] . " - ABS(" . $order['x'] . " - x))), 2) + POW(LEAST(ABS(" . $order['y'] . " - y), ABS(" . $order['max'] . " - ABS(" . $order['y'] . " - y))), 2)),3)) AS distance";
-        }
-        return $this->conn
-            ->select($columns)
-            ->from('wdata')
-            ->where($list)
-            ->orderBy($orderby)
-            ->limit($limit)
+        $results = $this->conn
+            ->select('wref')
+            ->from('vdata')
+            ->where('owner = :uid', [':uid' => $uid])
             ->get();
+
+        return array_column($results, 'wref');
     }
 
-    public function getVillagesListCount($list)
+    public function getVillagesID2($uid)
     {
-        $where = ' WHERE TRUE ';
-        foreach ($list as $k => $v) {
-            if ($k != 'extra') $where .= " AND $k = $v ";
+        $result = $this->conn
+            ->select('wref')
+            ->from('vdata')
+            ->where('owner = :uid', [':uid' => $uid])
+            ->orderByDesc('capital')
+            ->orderByDesc('pop')
+            ->get();
+
+        $array = [];
+        foreach ($result as $row) {
+            $array[] = $row['wref'];
         }
-        if (isset($list['extra'])) $where .= ' AND ' . $list['extra'] . ' ';
-        return $this->conn->count('wdata', $where);
+
+        return $array;
+    }
+
+    public function getVillage($vid)
+    {
+        return $this->conn
+            ->select()
+            ->from('vdata')
+            ->where('wref = :vid', [':vid' => $vid])
+            ->get();
     }
 
     public function getOasisV($vid)
@@ -931,146 +704,160 @@ class Database
             ->get();
     }
 
-    public function getOasisField($ref, $field)
+    public function getMInfo($id)
+    {
+        return $this->conn->leftJoin('wdata', 'vdata', 'vdata.wref = wdata.id', '*', 'wdata.id = :id', [':id' => $id]);
+    }
+
+    public function getOMInfo($id)
+    {
+        return $this->conn->leftJoin('wdata', 'odata', 'odata.wref = wdata.id', '*', 'wdata.id = :id', [':id' => $id]);
+    }
+
+    public function getOasis($vid)
     {
         return $this->conn
+            ->select()
+            ->from('odata')
+            ->where('conqured = :vid', [':vid' => $vid])
+            ->get();
+    }
+
+    public function getOasisInfo($wid)
+    {
+        return $this->conn
+            ->select('conquered, loyalty')
+            ->from('odata')
+            ->where('wref = :wid', [':wid' => $wid])
+            ->get();
+    }
+
+    public function getVillageField($ref, $field)
+    {
+        $result = $this->conn
+            ->select($field)
+            ->from('vdata')
+            ->where('wref = :ref', [':ref' => $ref])
+            ->get();
+        return $result[$field];
+    }
+
+    public function getOasisField($ref, $field)
+    {
+        $result = $this->conn
             ->select($field)
             ->from('odata')
             ->where('wref = :ref', [':ref' => $ref])
             ->get();
+        return $result[$field];
     }
 
+    //parei aqui
     public function setVillageField($ref, $field, $value)
     {
-        if ((stripos($field, 'name') !== false) && ($value == '')) {
-            return false;
-        }
-        return $this->conn->update('vdata', [$field => $value], ['wref' => $ref]);
+        return $this->conn
+            ->from('vdata')
+            ->set($field, $value)
+            ->where('wref = :ref', [':ref' => $ref])
+            ->update();
     }
 
     public function setVillageLevel($ref, $field, $value)
     {
-        return $this->conn->update('fdata', [$field => $value], ['vref' => $ref]);
+        return $this->conn
+            ->from('fdata')
+            ->set($field, $value)
+            ->where('vref = :ref', [':ref' => $ref])
+            ->update();
     }
 
-    public function removeTribeSpecificFields($vref)
-    {
-        $fields = $this->getResourceLevel($vref);
-        $tribeSpecificArray = [31, 32, 33, 35, 36, 41];
-        for ($i = 19; $i <= 40; $i++) {
-            if (in_array($fields['f' . $i . 't'], $tribeSpecificArray)) {
-                $this->conn->update('fdata', ['f' . $i => '0', 'f' . $i . 't' => '0'], ['vref' => $vref]);
-            }
-        }
-        $this->conn->update('units', ['u199' => 0], ['vref' => $vref]);
-        $this->conn->delete('trapped', ['vref' => $vref]);
-        $this->conn->delete('training', ['vref' => $vref]);
-    }
-
-    public function getAdminLog($limit = 5)
+    public function getResourceLevel($vid)
     {
         return $this->conn
-            ->select('*')
+            ->select()
+            ->from('fdata')
+            ->where('vref = :vid', [':vid' => $vid])
+            ->get();
+    }
+
+    public function getAdminLog()
+    {
+        return $this->conn
+            ->select('id, user, log, time')
             ->from('admin_log')
+            ->where('id != :id', [':id' => 0])
             ->orderBy('id', 'DESC')
-            ->limit($limit)
             ->get();
     }
 
     public function delAdminLog($id)
     {
-        return $this->conn->delete('admin_log', ['id' => $id]);
+        return $this->conn->delete('admin_log', 'id = :id', [':id' => $id]);
+    }
+
+    public function getCoor($wref)
+    {
+        return $this->conn
+            ->select('x, y')
+            ->from('wdata')
+            ->where('id = :wref', [':wref' => $wref])
+            ->get();
     }
 
     public function checkForum($id)
     {
-        return $this->conn
-            ->select('*')
+        $result = $this->conn
+            ->select()
             ->from('forum_cat')
             ->where('alliance = :id', [':id' => $id])
             ->get();
+        return !empty($result);
     }
 
     public function countCat($id)
     {
         $result = $this->conn
-            ->select('count(id)')
+            ->select('COUNT(id)')
             ->from('forum_topic')
             ->where('cat = :id', [':id' => $id])
             ->get();
-        return $result['count(id)'];
+        return $result['COUNT(id)'];
     }
 
     public function lastTopic($id)
     {
         return $this->conn
-            ->select('id')
+            ->select()
             ->from('forum_topic')
             ->where('cat = :id', [':id' => $id])
-            ->orderBy('post_date')
+            ->orderByDesc('post_date')
             ->get();
-    }
-
-    public function checkForumRules($id)
-    {
-
-        $row = $this->conn
-            ->select('*')
-            ->from('fpost_rules')
-            ->where('forum_id = :id', [':id' => $id])
-            ->get();
-
-        $ids = explode(',', $row['players_id']);
-        if (in_array(Session::get('uid'), $ids)) {
-            return false;
-        }
-
-        $idn = explode(',', $row['players_name']);
-        if (in_array(Session::get('username'), $idn)) {
-            return false;
-        }
-
-        $aid = Session::get('alliance');
-        $ids = explode(',', $row['ally_id']);
-        if (in_array($aid, $ids)) {
-            return false;
-        }
-
-        $rows = $this->conn
-            ->select('tag')
-            ->from('alidata')
-            ->where('id = :aid', [':aid' => $aid])
-            ->get();
-        $idn = explode(',', $row['ally_tag']);
-        if (in_array($rows['tag'], $idn)) {
-            return false;
-        }
-
-        return true;
     }
 
     public function checkLastTopic($id)
     {
-        return $this->conn
-            ->select('*')
+        $result = $this->conn
+            ->select()
             ->from('forum_topic')
             ->where('cat = :id', [':id' => $id])
             ->get();
+        return !empty($result);
     }
 
     public function checkLastPost($id)
     {
-        return $this->conn
-            ->select('*')
+        $result = $this->conn
+            ->select()
             ->from('forum_post')
             ->where('topic = :id', [':id' => $id])
             ->get();
+        return !empty($result);
     }
 
     public function lastPost($id)
     {
         return $this->conn
-            ->select('date, owner')
+            ->select()
             ->from('forum_post')
             ->where('topic = :id', [':id' => $id])
             ->get();
@@ -1078,21 +865,22 @@ class Database
 
     public function countTopic($id)
     {
-        $result = $this->conn
+        $result1 = $this->conn
             ->select('count(id)')
             ->from('forum_post')
             ->where('owner = :id', [':id' => $id])
             ->get();
-        $postsCount = $result['count(id)'];
 
-        $result = $this->conn
+        $result2 = $this->conn
             ->select('count(id)')
             ->from('forum_topic')
             ->where('owner = :id', [':id' => $id])
             ->get();
-        $topicsCount = $result['count(id)'];
 
-        return $postsCount + $topicsCount;
+        $total1 = $result1['count(id)'] ?? 0;
+        $total2 = $result2['count(id)'] ?? 0;
+
+        return $total1 + $total2;
     }
 
     public function countPost($id)
@@ -1102,26 +890,38 @@ class Database
             ->from('forum_post')
             ->where('topic = :id', [':id' => $id])
             ->get();
-        return $result['count(id)'];
+
+        return $result['count(id)'] ?? 0;
     }
 
     public function forumCat($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_cat')
             ->where('alliance = :id', [':id' => $id])
-            ->orderBy('id')
+            ->orderByDesc('id')
             ->get();
     }
 
     public function forumCatEdit($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_cat')
             ->where('id = :id', [':id' => $id])
             ->get();
+    }
+
+    public function forumCatAlliance($id)
+    {
+        $result = $this->conn
+            ->select('alliance')
+            ->from('forum_cat')
+            ->where('id = :id', [':id' => $id])
+            ->get();
+
+        return $result['alliance'] ?? null;
     }
 
     public function forumCatName($id)
@@ -1131,25 +931,30 @@ class Database
             ->from('forum_cat')
             ->where('id = :id', [':id' => $id])
             ->get();
-        return $result['forum_name'];
+
+        return $result['forum_name'] ?? null;
     }
 
     public function checkCatTopic($id)
     {
-        return $this->conn
-            ->select('*')
+        $result = $this->conn
+            ->select()
             ->from('forum_topic')
             ->where('cat = :id', [':id' => $id])
             ->get();
+
+        return $result ? true : false;
     }
 
     public function checkResultEdit($alli)
     {
-        return $this->conn
-            ->select('id')
+        $result = $this->conn
+            ->select()
             ->from('forum_edit')
             ->where('alliance = :alli', [':alli' => $alli])
             ->get();
+
+        return $result ? true : false;
     }
 
     public function checkCloseTopic($id)
@@ -1159,7 +964,8 @@ class Database
             ->from('forum_topic')
             ->where('id = :id', [':id' => $id])
             ->get();
-        return $result['close'];
+
+        return $result['close'] ?? null;
     }
 
     public function checkEditRes($alli)
@@ -1169,285 +975,324 @@ class Database
             ->from('forum_edit')
             ->where('alliance = :alli', [':alli' => $alli])
             ->get();
-        return $result['result'];
+
+        return $result['result'] ?? null;
     }
 
-    public function creatResultEdit($alli, $result)
+    public function createResultEdit($alli, $result)
     {
         $this->conn->insert('forum_edit', ['alliance' => $alli, 'result' => $result]);
-        return $this->conn->getLastInsertId();
+        return $this->conn->lastInsertId();
     }
 
     public function updateResultEdit($alli, $result)
     {
-        return $this->conn->update('forum_edit', ['result' => $result], ['alliance' => $alli]);
+        return $this->conn->from('forum_edit')
+            ->set('result', $result)
+            ->where('alliance = :alli', [':alli' => $alli])
+            ->update();
     }
 
     public function updateEditTopic($id, $title, $cat)
     {
-        return $this->conn->update('forum_topic', ['title' => $title, 'cat' => $cat], ['id' => $id]);
+        return $this->conn
+            ->from('forum_topic')
+            ->set('title', $title)
+            ->set('cat', $cat)
+            ->where('id = :id', [':id' => $id])
+            ->update();
     }
 
     public function updateEditForum($id, $name, $des)
     {
-        return $this->conn->update('forum_cat', ['forum_name' => $name, 'forum_des' => $des], ['id' => $id]);
+        return $this->conn
+            ->from('forum_cat')
+            ->set('forum_name', $name)
+            ->set('forum_des', $des)
+            ->where('id = :id', [':id' => $id])
+            ->update();
     }
 
     public function stickTopic($id, $mode)
     {
-        return $this->conn->update('forum_topic', ['stick' => $mode], ['id' => $id]);
+        return $this->conn
+            ->from('forum_topic')
+            ->set('stick', $mode)
+            ->where('id = :id', [':id' => $id])
+            ->update();
     }
 
     public function forumCatTopic($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_topic')
-            ->where(['cat' => $id, 'stick' => ''])
-            ->orderBy('post_date DESC')
+            ->where('cat = :id AND stick = ""', [':id' => $id])
+            ->orderByDesc('post_date')
             ->get();
     }
 
     public function forumCatTopicStick($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_topic')
-            ->where(['cat' => $id, 'stick' => '1'])
-            ->orderBy('post_date DESC')
+            ->where('cat = :id AND stick = :stick', [':id' => $id, ':stick' => 1])
+            ->orderByDesc('post_date')
             ->get();
     }
 
     public function showTopic($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_topic')
-            ->where(['id' => $id])
+            ->where('id = :id', [':id' => $id])
             ->get();
     }
 
     public function showPost($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_post')
-            ->where(['topic' => $id])
+            ->where('topic = :id', [':id' => $id])
             ->get();
     }
 
     public function showPostEdit($id)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('forum_post')
-            ->where(['id' => $id])
+            ->where('id = :id', [':id' => $id])
             ->get();
     }
 
-    public function createForum($owner, $alli, $name, $des, $area)
+    public function creatForum($owner, $alli, $name, $des, $area)
     {
-        $this->conn->insert('forum_cat', ['owner' => $owner, 'alliance' => $alli, 'forum_name' => $name, 'forum_des' => $des, 'area' => $area]);
-        return $this->conn->getLastInsertId();
+        $data = [
+            'owner' => $owner,
+            'alliance' => $alli,
+            'forum_name' => $name,
+            'forum_des' => $des,
+            'forum_area' => $area
+        ];
+        return $this->conn->insert('forum_cat', $data);
     }
 
-    public function createTopic($title, $post, $cat, $owner, $alli, $ends)
+    public function creatTopic($title, $post, $cat, $owner, $alli, $ends, $alliance, $player, $coor, $report)
+    {
+        $data = [
+            'title' => $title,
+            'post' => $post,
+            'post_date' => time(),
+            'last_post' => time(),
+            'cat' => $cat,
+            'owner' => $owner,
+            'alliance' => $alli,
+            'sticky' => '',
+            'closed' => '',
+            'edited' => '',
+            'edit_user' => $alliance,
+            'edit_date' => $player,
+            'edit_rea' => $coor,
+            'edit_topic' => $report
+        ];
+        return $this->conn->insert('forum_topic', $data);
+    }
+
+    public function creatPost($post, $tids, $owner, $alliance, $player, $coor, $report)
     {
         $date = time();
-        return $this->conn->insert('forum_topic', ['title' => $title, 'post' => $post, 'post_date' => $date, 'last_post' => $date, 'cat' => $cat, 'owner' => $owner, 'alliance' => $alli, 'ends' => $ends]) ? $this->conn->getLastInsertId() : null;
-    }
-
-    public function createPost($post, $tids, $owner)
-    {
-        $this->conn->insert('forum_post', ['post' => $post, 'topic' => $tids, 'owner' => $owner, 'date' => time()]);
-        return $this->conn->getLastInsertId();
+        $data = [
+            'post' => $post,
+            'topic' => $tids,
+            'owner' => $owner,
+            'post_date' => $date,
+            'alliance' => $alliance,
+            'player' => $player,
+            'coor' => $coor,
+            'report' => $report
+        ];
+        return $this->conn->insert('forum_post', $data);
     }
 
     public function updatePostDate($id)
     {
-        return $this->conn->update('forum_topic', ['post_date' => time()], ['id' => $id]);
+        $date = time();
+        return $this->conn->update('forum_topic', ['post_date' => $date], 'id = :id', [':id' => $id]);
     }
 
-    public function editUpdateTopic($id, $post)
+    public function editUpdateTopic($id, $post, $alliance, $player, $coor, $report)
     {
-        return $this->conn->update('forum_topic', ['post' => $post], ['id' => $id]);
+        return $this->conn
+            ->from('forum_topic')
+            ->set('post', $post)
+            ->set('alliance0', $alliance)
+            ->set('player0', $player)
+            ->set('coor0', $coor)
+            ->set('report0' , $report)
+            ->where('id = :id', [':id' => $id])
+            ->update();
     }
 
-    public function editUpdatePost($id, $post)
+    public function editUpdatePost($id, $post, $alliance, $player, $coor, $report)
     {
-        return $this->conn->update('forum_post', ['post' => $post], ['id' => $id]);
+        return $this->conn->from('forum_post')
+            ->set('post', $post)
+            ->set('alliance0', $alliance)
+            ->set('player0', $player)
+            ->set('coor0', $coor)
+            ->set('report0', $report)
+            ->where('id = :id', [':id' => $id])
+            ->update();
     }
 
     public function lockTopic($id, $mode)
     {
-        return $this->conn->update('forum_topic', ['close' => $mode], ['id' => $id]);
+        return $this->conn->from('forum_topic')
+            ->set('close', $mode)
+            ->where('id = :id', [':id' => $id])
+            ->update();
     }
 
     public function deleteCat($id)
     {
-        $this->conn->delete('forum_cat', ['id' => $id]);
-        $this->conn->delete('forum_topic', ['cat' => $id]);
+        $this->conn->delete('forum_cat', 'id = :id', [':id' => $id]);
+        $this->conn->delete('forum_topic', 'cat = :id', [':id' => $id]);
     }
 
     public function deleteTopic($id)
     {
-        return $this->conn->delete('forum_topic', ['id' => $id]);
+        return $this->conn->delete('forum_topic', 'id = :id', [':id' => $id]);
     }
 
     public function deletePost($id)
     {
-        return $this->conn->delete('forum_post', ['id' => $id]);
+        return $this->conn->delete('forum_post', 'id = :id', [':id' => $id]);
     }
 
     public function getAllianceName($id)
     {
-        if (!$id) {
-            return false;
-        }
         $result = $this->conn
             ->select('tag')
             ->from('alidata')
-            ->where(['id' => $id])
+            ->where('id = :id', [':id' => $id])
             ->get();
-
         return $result ? $result['tag'] : false;
     }
 
     public function getAlliancePermission($ref, $field, $mode)
     {
         if (!$mode) {
-            $result = $this->conn
+            return $this->conn
                 ->select($field)
                 ->from('ali_permission')
-                ->where(['uid' => $ref])
+                ->where('uid = :ref', [':ref' => $ref])
                 ->get();
-
         } else {
-            $result = $this->conn
+            return $this->conn
                 ->select($field)
                 ->from('ali_permission')
-                ->where(['username' => $ref])
+                ->where('username = :ref', [':ref' => $ref])
                 ->get();
-
-        }
-        return $result ? $result[$field] : null;
-    }
-
-    public function changePos($id, $mode)
-    {
-        $forumArea = $this->conn
-            ->select('forum_area')
-            ->from('forum_cat')
-            ->where(['id' => $id])
-            ->get();
-
-        if (!$forumArea) return;
-
-        if ($mode == '-1') {
-            $prevCat = $this->conn
-                ->select('id')
-                ->from('forum_cat')
-                ->where(['forum_area' => $forumArea['forum_area'], 'id <' => $id])
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            if ($prevCat) {
-                $this->conn->update('forum_cat', ['id' => 0], ['id' => $prevCat['id']]);
-                $this->conn->update('forum_cat', ['id' => -1], ['id' => $id]);
-                $this->conn->update('forum_cat', ['id' => $id], ['id' => 0]);
-                $this->conn->update('forum_cat', ['id' => $prevCat['id']], ['id' => -1]);
-            }
-        } elseif ($mode == 1) {
-            $nextCat = $this->conn
-                ->select('id')
-                ->from('forum_cat')
-                ->where(['forum_area' => $forumArea['forum_area'], 'id >' => $id])
-                ->orderBy('id', 'ASC')
-                ->get();
-
-            if ($nextCat) {
-                $this->conn->update('forum_cat', ['id' => 0], ['id' => $nextCat['id']]);
-                $this->conn->update('forum_cat', ['id' => -1], ['id' => $id]);
-                $this->conn->update('forum_cat', ['id' => $id], ['id' => 0]);
-                $this->conn->update('forum_cat', ['id' => $nextCat['id']], ['id' => -1]);
-            }
         }
     }
 
-    public function forumCatAlliance($id)
+    public function getAlliance($id)
     {
-        $result = $this->conn
-            ->select('alliance')
-            ->from('forum_cat')
-            ->where(['id' => $id])
+        return $this->conn
+            ->select('*')
+            ->from('alidata')
+            ->where('id = :id', [':id' => $id])
             ->get();
-
-        return $result ? $result['alliance'] : null;
-    }
-
-    public function createPoll($id, $name, $p1_name, $p2_name, $p3_name, $p4_name)
-    {
-        return $this->conn->insert('forum_poll', ['id' => $id, 'name' => $name, 'p1_name' => $p1_name, 'p2_name' => $p2_name, 'p3_name' => $p3_name, 'p4_name' => $p4_name]) ? $this->conn->lastInsertId() : null;
-    }
-
-    public function createForumRules($aid, $id, $users_id, $users_name, $alli_id, $alli_name)
-    {
-        return $this->conn->insert('fpost_rules', ['aid' => $aid, 'id' => $id, 'users_id' => $users_id, 'users_name' => $users_name, 'alli_id' => $alli_id, 'alli_name' => $alli_name]) ? $this->conn->lastInsertId() : null;
     }
 
     public function setAlliName($aid, $name, $tag)
     {
-        if (!$aid) {
-            return false;
-        }
-        return $this->conn->update('alidata', ['name' => $name, 'tag' => $tag], ['id' => $aid]);
+        return $this->conn->from('alidata')->set('name', $name)->set('tag', $tag)->where('id = :aid', [':aid' => $aid])->update();
     }
 
     public function isAllianceOwner($id)
     {
-        if (!$id) {
-            return false;
-        }
         $result = $this->conn
-            ->select('id')
+            ->select()
             ->from('alidata')
-            ->where(['leader' => $id])
+            ->where('leader = :id', [':id' => $id])
             ->get();
-
-        return $result ? true : false;
+        return count($result) > 0;
     }
 
     public function aExist($ref, $type)
     {
         $result = $this->conn
-            ->select('alidata')
-            ->where([$type => $ref])
+            ->select($type)
+            ->from('alidata')
+            ->where("$type = :ref", [':ref' => $ref])
             ->get();
+        return count($result) > 0;
+    }
 
-        return $result ? true : false;
+    public function modifyPoints($aid, $points, $amt)
+    {
+        return $this->conn->from('users')->set($points, $points + $amt)->where('id = :aid', [':aid' => $aid])->update();
+    }
+
+    public function modifyPointsAlly($aid, $points, $amt)
+    {
+        return $this->conn->from('alidata')->set($points, $points + $amt)->where('id = :aid', [':aid' => $aid])->update();
     }
 
     public function createAlliance($tag, $name, $uid, $max)
     {
-        return $this->conn->insert('alidata', ['name' => $name, 'tag' => $tag, 'leader' => $uid, 'max' => $max]) ? $this->conn->lastInsertId() : null;
+        $data = [
+            'name' => $name,
+            'tag' => $tag,
+            'leader' => $uid,
+            'max' => $max
+        ];
+        return $this->conn->insert('alidata', $data);
+    }
+
+    public function procAllyPop($aid)
+    {
+        $ally = $this->getAlliance($aid);
+        $memberlist = $this->getAllMember($ally['id']);
+        $oldrank = 0;
+        foreach ($memberlist as $member) {
+            $oldrank += $this->getVSumField($member['id'], 'pop');
+        }
+        if ($ally['oldrank'] != $oldrank) {
+            if ($ally['oldrank'] < $oldrank) {
+                $totalpoints = $oldrank - $ally['oldrank'];
+                $this->addclimberrankpopAlly($ally['id'], $totalpoints);
+                $this->updateoldrankAlly($ally['id'], $oldrank);
+            } else if ($ally['oldrank'] > $oldrank) {
+                $totalpoints = $ally['oldrank'] - $oldrank;
+                $this->removeclimberrankpopAlly($ally['id'], $totalpoints);
+                $this->updateoldrankAlly($ally['id'], $oldrank);
+            }
+        }
     }
 
     public function insertAlliNotice($aid, $notice)
     {
-        return $this->conn->insert('ali_log', ['aid' => $aid, 'notice' => $notice, 'date' => time()]) ? $this->conn->lastInsertId() : null;
+        $data = [
+            'aid' => $aid,
+            'notice' => $notice,
+            'time' => time()
+        ];
+        return $this->conn->insert('ali_log', $data);
     }
 
     public function deleteAlliance($aid)
     {
-        $result = $this->conn
-            ->select('id')
-            ->from('users')
-            ->where(['alliance' => $aid])
-            ->get();
-        if (!$result) {
-            return $this->conn->delete('alidata', ['id' => $aid]);
+        $result = $this->conn->select('alliance')->from('users')->where('alliance = :aid', [':aid' => $aid])->get();
+        $num_rows = count($result);
+        if ($num_rows == 0) {
+            $this->conn->delete('alidata', 'id = :id', [':id' => $aid]);
         }
-        return false;
     }
 
     public function readAlliNotice($aid)
@@ -1455,24 +1300,50 @@ class Database
         return $this->conn
             ->select()
             ->from('ali_log')
-            ->where(['aid' => $aid])
+            ->where('aid = :aid', [':aid' => $aid])
             ->orderByDesc('date')
             ->get();
     }
 
     public function createAlliPermissions($uid, $aid, $rank, $opt1, $opt2, $opt3, $opt4, $opt5, $opt6, $opt7, $opt8)
     {
-        return $this->conn->insert('ali_permission', ['uid' => $uid, 'aid' => $aid, 'rank' => $rank, 'opt1' => $opt1, 'opt2' => $opt2, 'opt3' => $opt3, 'opt4' => $opt4, 'opt5' => $opt5, 'opt6' => $opt6, 'opt7' => $opt7, 'opt8' => $opt8]) ? $this->conn->lastInsertId() : null;
+        $data = [
+            'uid' => $uid,
+            'aid' => $aid,
+            'rank' => $rank,
+            'opt1' => $opt1,
+            'opt2' => $opt2,
+            'opt3' => $opt3,
+            'opt4' => $opt4,
+            'opt5' => $opt5,
+            'opt6' => $opt6,
+            'opt7' => $opt7,
+            'opt8' => $opt8
+        ];
+
+        return $this->conn->insert('ali_permission', $data);
     }
 
     public function deleteAlliPermissions($uid)
     {
-        return $this->conn->delete('ali_permission', ['uid' => $uid]);
+        return $this->conn->delete('ali_permission', 'uid = :uid', [':uid' => $uid]);
     }
 
-    public function updateAlliPermissions($uid, $aid, $rank, $opt1, $opt2, $opt3, $opt4, $opt5, $opt6, $opt7, $opt8 = 0)
+    public function updateAlliPermissions($uid, $aid, $rank, $opt1, $opt2, $opt3, $opt4, $opt5, $opt6, $opt7, $opt8)
     {
-        return $this->conn->update('ali_permission', ['rank' => $rank, 'opt1' => $opt1, 'opt2' => $opt2, 'opt3' => $opt3, 'opt4' => $opt4, 'opt5' => $opt5, 'opt6' => $opt6, 'opt7' => $opt7, 'opt8' => $opt8], ['uid' => $uid, 'alliance' => $aid]);
+        return $this->conn
+            ->from('ali_permission')
+            ->where('uid = :uid AND alliance = :aid', [':uid' => $uid, ':aid' => $aid])
+            ->set('rank', $rank)
+            ->set('opt1', $opt1)
+            ->set('opt2', $opt2)
+            ->set('opt3', $opt3)
+            ->set('opt4', $opt4)
+            ->set('opt5', $opt5)
+            ->set('opt6', $opt6)
+            ->set('opt7', $opt7)
+            ->set('opt8', $opt8)
+            ->update();
     }
 
     public function getAlliPermissions($uid, $aid)
@@ -1486,23 +1357,31 @@ class Database
 
     public function submitAlliProfile($aid, $notice, $desc)
     {
-        if (!$aid) {
-            return false;
-        }
-        return $this->conn->update('alidata', ['notice' => $notice, 'desc' => $desc], ['id' => $aid]);
+        return $this->conn->from('alidata')
+            ->set('notice', $notice)
+            ->set('desc', $desc)
+            ->where('id = :aid', [':aid' => $aid])
+            ->update();
     }
 
     public function diplomacyInviteAdd($alli1, $alli2, $type)
     {
-        return $this->conn->insert('diplomacy', ['alli1' => $alli1, 'alli2' => $alli2, 'type' => intval($type), 'accepted' => 0]);
+        $data = [
+            'alli1' => $alli1,
+            'alli2' => $alli2,
+            'type' => $type,
+            'accepted' => 0
+        ];
+
+        return $this->conn->insert('diplomacy', $data);
     }
 
-    public function diplomacyOwnOffers($alliance)
+    public function diplomacyOwnOffers($session_alliance)
     {
         return $this->conn
-            ->select('*')
+            ->select()
             ->from('diplomacy')
-            ->where(['alli1' => $alliance, 'accepted' => 0])
+            ->where('alli1 = :session_alliance AND accepted = 0', [':session_alliance' => $session_alliance])
             ->get();
     }
 
@@ -1511,661 +1390,886 @@ class Database
         $result = $this->conn
             ->select('id')
             ->from('alidata')
-            ->where(['tag' => $this->RemoveXSS($name)])
-            ->get();
-        return $result ? $result['id'] : null;
+            ->where('tag = :name', [':name' => $this->removeXSS($name)])
+            ->first();
+        return $result['id'];
     }
 
-    public function RemoveXSS($val)
-    {
-        return htmlspecialchars($val, ENT_QUOTES);
-    }
-
-    public function diplomacyCancelOffer($id)
-    {
-        return $this->conn->delete('diplomacy', ['id' => $id]);
-    }
-
-    public function diplomacyInviteAccept($id, $alliance)
-    {
-        return $this->conn->update('diplomacy', ['accepted' => 1], ['id' => $id, 'alli2' => $alliance]);
-    }
-
-    public function diplomacyInviteDenied($id, $alliance)
-    {
-        return $this->conn->delete('diplomacy', ['id' => $id, 'alli2' => $alliance]);
-    }
-
-    public function diplomacyInviteCheck($alliance)
-    {
-        return $this->conn
-            ->select('*')
-            ->from('diplomacy')
-            ->where(['alli2' => $alliance, 'accepted' => 0])
-            ->get();
-    }
-
-    public function diplomacyExistingRelationships($alliance)
-    {
-        return $this->conn
-            ->select('*')
-            ->from('diplomacy')
-            ->where(['alli2' => $alliance, 'accepted' => 1])
-            ->get();
-    }
-
-    public function diplomacyExistingRelationships2($alliance)
-    {
-        return $this->conn
-            ->select('*')
-            ->from('diplomacy')
-            ->where(['alli1' => $alliance, 'accepted' => 1])
-            ->get();
-    }
-
-    public function diplomacyCancelExistingRelationship($id, $alliance)
-    {
-        return $this->conn->delete('diplomacy', ['id' => $id, 'alli2' => $alliance]);
-    }
-
-    public function getUserAlliance($id)
-    {
-        if (!$id) {
-            return false;
-        }
-        $result = $this->conn->select('users JOIN alidata', 'alidata.tag', 'users.alliance = alidata.id AND users.id = :id', ['id' => $id]);
-        return $result ? $result['tag'] : "-";
-    }
-
-    public function modifyResource($vid, $wood, $clay, $iron, $crop, $mode)
-    {
-        $updateFields = [
-            'wood' => ($mode ? '+' : '-') . $wood,
-            'clay' => ($mode ? '+' : '-') . $clay,
-            'iron' => ($mode ? '+' : '-') . $iron,
-            'crop' => ($mode ? '+' : '-') . $crop
-        ];
-        return $this->conn->update('vdata', $updateFields, ['wref' => $vid]);
-    }
-
-    public function modifyProduction($vid, $woodp, $clayp, $ironp, $cropp, $upkeep)
-    {
-        $updateFields = [
-            'woodp' => $woodp,
-            'clayp' => $clayp,
-            'ironp' => $ironp,
-            'cropp' => $cropp,
-            'upkeep' => $upkeep
-        ];
-        return $this->conn->update('vdata', $updateFields, ['wref' => $vid]);
-    }
-
-    public function modifyOasisResource($vid, $wood, $clay, $iron, $crop, $mode)
-    {
-        $updateFields = [
-            'wood' => ($mode ? '+' : '-') . $wood,
-            'clay' => ($mode ? '+' : '-') . $clay,
-            'iron' => ($mode ? '+' : '-') . $iron,
-            'crop' => ($mode ? '+' : '-') . $crop
-        ];
-        return $this->conn->update('odata', $updateFields, ['wref' => $vid]);
-    }
-
-    public function getFieldType($vid, $field)
-    {
-        $result = $this->conn
-            ->select("f$field" . 't')
-            ->from('fdata')
-            ->where('vref = :vid', [':vid' => $vid])
-            ->get();
-        return $result ? $result["f$field" . 't'] : null;
-    }
-
-    public function getVSumField($uid, $field)
-    {
-        $result = $this->conn
-            ->select("SUM($field)")
-            ->from('vdata')
-            ->where('owner = :uid', [':uid' => $uid])
-            ->get();
-        return $result ? $result["SUM($field)"] : null;
-    }
-
-    public function updateVillage($vid)
-    {
-        return $this->conn->update('vdata', ['lastupdate' => time()], ['wref' => $vid]);
-    }
-
-    public function updateOasis($vid)
-    {
-        return $this->conn->update('odata', ['lastupdated' => time()], ['wref' => $vid]);
-    }
-
-    public function setVillageName($vid, $name)
-    {
-        if ($name == '') {
-            return false;
-        }
-        return $this->conn->update('vdata', ['name' => $name], ['wref' => $vid]);
-    }
-
-    public function modifyPop($vid, $pop, $mode)
-    {
-        return $this->conn->update('vdata', ['pop' => ($mode ? '-' : '+') . $pop], ['wref' => $vid]);
-    }
-
-    public function addCP($ref, $cp)
-    {
-        return $this->conn->update('vdata', ['cp' => 'cp + ' . $cp], ['wref' => $ref]);
-    }
-
-    public function addCel($ref, $cel, $type)
-    {
-        return $this->conn->update('vdata', ['celebration' => $cel, 'type' => $type], ['wref' => $ref]);
-    }
-
-    public function getCel()
+    public function getDiplomacy($aid)
     {
         return $this->conn
             ->select()
-            ->from('vdata')
-            ->where('celebration < :time AND celebration != 0', [':time' => time()])
+            ->from('diplomacy')
+            ->where('id = :aid', [':aid' => $aid])
             ->get();
     }
 
-    public function getActiveGCel($vref)
+    //TODO: arrumar apartir daqui
+    public function diplomacyCancelOffer($id)
+    {
+        return $this->conn
+            ->delete('diplomacy', 'id = :id', [':id' => $id]);
+    }
+
+    public function diplomacyInviteAccept($id, $session_alliance)
+    {
+        return $this->conn
+            ->update('diplomacy', ['accepted' => 1], 'id = :id AND alli2 = :session_alliance', [':id' => $id, ':session_alliance' => $session_alliance]);
+    }
+
+    public function diplomacyInviteDenied($id, $session_alliance)
+    {
+        return $this->conn
+            ->delete('diplomacy', 'id = :id AND alli2 = :session_alliance', [':id' => $id, ':session_alliance' => $session_alliance]);
+    }
+
+    function diplomacyInviteCheck($session_alliance)
+    {
+        return $this->conn
+            ->select('*')
+            ->from('diplomacy')
+            ->where('alli2 = :session_alliance AND accepted = 0')
+            ->bind([':session_alliance' => $session_alliance])
+            ->fetchAll();
+    }
+
+    function diplomacyExistingRelationships($session_alliance)
+    {
+        return $this->conn
+            ->select('*')
+            ->from('diplomacy')
+            ->where('alli2 = :session_alliance AND accepted = 1')
+            ->bind([':session_alliance' => $session_alliance])
+            ->fetchAll();
+    }
+
+    function diplomacyExistingRelationships2($session_alliance)
+    {
+        return $this->conn
+            ->select('*')
+            ->from('diplomacy')
+            ->where('alli1 = :session_alliance AND accepted = 1')
+            ->bind([':session_alliance' => $session_alliance])
+            ->fetchAll();
+    }
+
+    function diplomacyCancelExistingRelationship($id, $session_alliance)
+    {
+        return $this->conn
+            ->delete('diplomacy', 'id = :id AND alli2 = :session_alliance', [':id' => $id, ':session_alliance' => $session_alliance]);
+    }
+
+    function getUserAlliance($id)
+    {
+        $q = $this->conn->select("alidata.tag")
+            ->from("users")
+            ->join("alidata", "users.alliance", "=", "alidata.id")
+            ->where("users.id", "=", $id)
+            ->execute()
+            ->fetchColumn();
+        return $q ? $q : "-";
+    }
+
+    function modifyResource($vid, $wood, $clay, $iron, $crop, $mode)
+    {
+        if (!$mode) {
+            return $this->conn->update("vdata")
+                ->set([
+                    'wood' => "vdata.wood - :wood",
+                    'clay' => "vdata.clay - :clay",
+                    'iron' => "vdata.iron - :iron",
+                    'crop' => "vdata.crop - :crop"
+                ])
+                ->where('wref', '=', $vid)
+                ->execute([':wood' => $wood, ':clay' => $clay, ':iron' => $iron, ':crop' => $crop]);
+        } else {
+            return $this->conn->update("vdata")
+                ->set([
+                    'wood' => "vdata.wood + :wood",
+                    'clay' => "vdata.clay + :clay",
+                    'iron' => "vdata.iron + :iron",
+                    'crop' => "vdata.crop + :crop"
+                ])
+                ->where('wref', '=', $vid)
+                ->execute([':wood' => $wood, ':clay' => $clay, ':iron' => $iron, ':crop' => $crop]);
+        }
+    }
+
+    function modifyOasisResource($vid, $wood, $clay, $iron, $crop, $mode)
+    {
+        if (!$mode) {
+            return $this->conn->update("odata")
+                ->set([
+                    'wood' => "odata.wood - :wood",
+                    'clay' => "odata.clay - :clay",
+                    'iron' => "odata.iron - :iron",
+                    'crop' => "odata.crop - :crop"
+                ])
+                ->where('wref', '=', $vid)
+                ->execute([':wood' => $wood, ':clay' => $clay, ':iron' => $iron, ':crop' => $crop]);
+        } else {
+            return $this->conn->update("odata")
+                ->set([
+                    'wood' => "odata.wood + :wood",
+                    'clay' => "odata.clay + :clay",
+                    'iron' => "odata.iron + :iron",
+                    'crop' => "odata.crop + :crop"
+                ])
+                ->where('wref', '=', $vid)
+                ->execute([':wood' => $wood, ':clay' => $clay, ':iron' => $iron, ':crop' => $crop]);
+        }
+    }
+
+    function getFieldLevel($vid, $field)
+    {
+        $q = $this->conn->select("f$field")
+            ->from("fdata")
+            ->where('vref', '=', $vid)
+            ->execute()
+            ->fetchColumn();
+        return $q ? $q : false;
+    }
+
+    function getFieldType($vid, $field)
+    {
+        $q = $this->conn->select("f$field" . "t")
+            ->from("fdata")
+            ->where('vref', '=', $vid)
+            ->execute()
+            ->fetchColumn();
+        return $q ? $q : false;
+    }
+
+    function getVSumField($uid, $field)
+    {
+        $q = $this->conn->select("SUM($field)")
+            ->from("vdata")
+            ->where('owner', '=', $uid)
+            ->execute()
+            ->fetchColumn();
+        return $q ? $q : false;
+    }
+
+    function updateVillage($vid)
     {
         $time = time();
-        return $this->conn->select('vdata', '*', "vref = $vref AND celebration > $time AND type = 2");
+        return $this->conn->update("vdata")
+            ->set(['lastupdate' => $time])
+            ->where('wref', '=', $vid)
+            ->execute();
     }
 
-    public function clearCel($ref)
+    function updateOasis($vid)
     {
-        return $this->conn->update('vdata', ['celebration' => 0, 'type' => 0], ['wref' => $ref]);
+        $time = time();
+        return $this->conn->update("odata")
+            ->set(['lastupdated' => $time])
+            ->where('wref', '=', $vid)
+            ->execute();
     }
 
-    public function setCelCp($user, $cp)
+    function updateOasis2($vid)
     {
-        return $this->conn->update('users', ['cp' => $cp], ['id' => $user]);
+        $time = time();
+        return $this->conn->update("odata")
+            ->set(['lastupdated2' => $time])
+            ->where('wref', '=', $vid)
+            ->execute();
     }
 
-    public function getInvitation($uid, $ally)
+    function setVillageName($vid, $name)
     {
-        return $this->conn->select('ali_invite', '*', "uid = ? AND alliance = ?", [$uid, $ally]);
+        return $this->conn->update("vdata")
+            ->set(['name' => $name])
+            ->where('wref', '=', $vid)
+            ->execute();
     }
 
-    public function getInvitation2($uid)
+    function modifyPop($vid, $pop, $mode)
     {
-        return $this->conn->select('ali_invite', '*', "uid = ?", [$uid]);
+        $field = (!$mode) ? 'pop + ' : 'pop - ';
+        return $this->conn->update("vdata")
+            ->set(['pop' => "pop $field $pop"])
+            ->where('wref', '=', $vid)
+            ->execute();
     }
 
-    public function getAliInvitations($aid)
+    function addCP($ref, $cp)
     {
-        return $this->conn->select('ali_invite', '*', "alliance = ? AND accept = 0", [$aid]);
+        return $this->conn->update("vdata")
+            ->set(['cp' => "cp + $cp"])
+            ->where('wref', '=', $ref)
+            ->execute();
     }
 
-    public function sendInvitation($uid, $alli, $sender)
+    function addCel($ref, $cel, $type)
     {
-        return $this->conn->insert('ali_invite', ['uid' => $uid, 'alliance' => $alli, 'sender' => $sender, 'timestamp' => time(), 'accept' => 0]);
+        return $this->conn->update("vdata")
+            ->set(['celebration' => $cel, 'type' => $type])
+            ->where('wref', '=', $ref)
+            ->execute();
     }
 
-    public function removeInvitation($id)
+    function getCel()
     {
-        return $this->conn->delete('ali_invite', "id = ?", [$id]);
+        $time = time();
+        $q = $this->conn->select("*")
+            ->from("vdata")
+            ->where('celebration', '<', $time)
+            ->where('celebration', '!=', 0)
+            ->execute();
+        return $this->mysql_fetch_all($q);
     }
 
-    public function delMessage($id)
+    function clearCel($ref)
     {
-        return $this->conn->delete('mdata', "id = ?", [$id]);
+        return $this->conn->update("vdata")
+            ->set(['celebration' => 0, 'type' => 0])
+            ->where('wref', '=', $ref)
+            ->execute();
     }
 
-    public function delNotice($id, $uid)
+    function setCelCp($user, $cp)
     {
-        return $this->conn->delete('ndata', "id = ? AND uid = ?", [$id, $uid]);
+        return $this->conn->update("users")
+            ->set(['cp' => "cp + $cp"])
+            ->where('id', '=', $user)
+            ->execute();
     }
 
-    public function sendMessage($client, $owner, $topic, $message, $send, $alliance, $player, $coor, $report)
+    function clearExpansionSlot($id)
     {
-        $fields = ['client' => $client, 'owner' => $owner, 'topic' => $topic, 'message' => $message, 'send' => $send, 'alliance' => $alliance, 'player' => $player, 'coor' => $coor, 'report' => $report, 'time' => time()];
-        return $this->conn->insert('mdata', $fields);
+        for ($i = 1; $i <= 3; $i++) {
+            $this->conn->update("vdata")
+                ->set(['exp' . $i => 0])
+                ->where('exp' . $i, '=', $id)
+                ->execute();
+        }
     }
 
-    public function setArchived($id)
+    function getInvitation($uid)
     {
-        return $this->conn->update('mdata', ['archived' => 1], ['id' => $id]);
+        return $this->conn->select("*")
+            ->from("ali_invite")
+            ->where('uid', '=', $uid)
+            ->execute();
     }
 
-    public function setNorm($id)
+    function getInvitation2($uid, $aid)
     {
-        return $this->conn->update('mdata', ['archived' => 0], ['id' => $id]);
+        return $this->conn->select("*")
+            ->from("ali_invite")
+            ->where('uid', '=', $uid)
+            ->where('alliance', '=', $aid)
+            ->execute();
     }
 
-    public function getMessage($id, $mode)
+    function getAliInvitations($aid)
+    {
+        return $this->conn->select("*")
+            ->from("ali_invite")
+            ->where('alliance', '=', $aid)
+            ->where('accept', '=', 0)
+            ->execute();
+    }
+
+    function sendInvitation($uid, $alli, $sender)
+    {
+        $time = time();
+        return $this->conn->insert("ali_invite")
+            ->values(['uid' => $uid, 'alliance' => $alli, 'sender' => $sender, 'time' => $time, 'accept' => 0])
+            ->execute();
+    }
+
+    function removeInvitation($id)
+    {
+        return $this->conn->delete("ali_invite")
+            ->where('id', '=', $id)
+            ->execute();
+    }
+
+    function delNotice($id, $uid)
+    {
+        return $this->conn->delete("ndata")
+            ->where('id', '=', $id)
+            ->where('uid', '=', $uid)
+            ->execute();
+    }
+
+    function sendMessage($client, $owner, $topic, $message, $send, $alliance, $player, $coor, $report)
+    {
+        $time = time();
+        return $this->conn->insert("mdata")
+            ->values([
+                'client' => $client,
+                'owner' => $owner,
+                'topic' => $topic,
+                'message' => $message,
+                'send' => $send,
+                'time' => $time,
+                'alliance' => $alliance,
+                'player' => $player,
+                'coor' => $coor,
+                'report' => $report
+            ])
+            ->execute();
+    }
+
+    function setArchived($id)
+    {
+        return $this->conn->update("mdata")
+            ->set(['archived' => 1])
+            ->where('id', '=', $id)
+            ->execute();
+    }
+
+    function setNorm($id)
+    {
+        return $this->conn->update("mdata")
+            ->set(['archived' => 0])
+            ->where('id', '=', $id)
+            ->execute();
+    }
+
+    function getMessage($id, $mode)
     {
         switch ($mode) {
             case 1:
-                $conditions = "target = ? AND send = 0 AND archived = 0";
-                $values = [$id];
-                break;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('target', '=', $id)
+                    ->where('send', '=', 0)
+                    ->where('archived', '=', 0)
+                    ->orderBy('time', 'DESC')
+                    ->execute();
             case 2:
-                $conditions = "owner = ?";
-                $values = [$id];
-                break;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('owner', '=', $id)
+                    ->orderBy('time', 'DESC')
+                    ->execute();
             case 3:
-            case 12:
-                $conditions = "id = ?";
-                $values = [$id];
-                break;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('id', '=', $id)
+                    ->execute();
             case 4:
-                $fields = ['viewed' => 1];
-                $conditions = ['id' => $id, 'target' => Session::get('uid')];
-                return $this->conn->update('mdata', $fields, $conditions);
+                return $this->conn->update("mdata")
+                    ->set(['viewed' => 1])
+                    ->where('id', '=', $id)
+                    ->where('target', '=', $session->uid)
+                    ->execute();
             case 5:
-                $fields = ['deltarget' => 1, 'viewed' => 1];
-                $conditions = ['id' => $id];
-                return $this->conn->update('mdata', $fields, $conditions);
+                return $this->conn->update("mdata")
+                    ->set(['deltarget' => 1, 'viewed' => 1])
+                    ->where('id', '=', $id)
+                    ->execute();
             case 6:
-                $conditions = "target = ? AND send = 0 AND archived = 1";
-                $values = [$id];
-                break;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('target', '=', $id)
+                    ->where('send', '=', 0)
+                    ->where('archived', '=', 1)
+                    ->execute();
             case 7:
-                $fields = ['delowner' => 1];
-                $conditions = ['id' => $id];
-                return $this->conn->update('mdata', $fields, $conditions);
+                return $this->conn->update("mdata")
+                    ->set(['delowner' => 1])
+                    ->where('id', '=', $id)
+                    ->execute();
             case 8:
-                $fields = ['deltarget' => 1, 'delowner' => 1, 'viewed' => 1];
-                $conditions = ['id' => $id];
-                return $this->conn->update('mdata', $fields, $conditions);
+                return $this->conn->update("mdata")
+                    ->set(['deltarget' => 1, 'delowner' => 1, 'viewed' => 1])
+                    ->where('id', '=', $id)
+                    ->execute();
             case 9:
-                $conditions = "target = ? AND send = 0 AND archived = 0 AND deltarget = 0 AND viewed = 0";
-                $values = [$id];
-                break;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('target', '=', $id)
+                    ->where('send', '=', 0)
+                    ->where('archived', '=', 0)
+                    ->where('deltarget', '=', 0)
+                    ->orderBy('time', 'DESC')
+                    ->execute();
             case 10:
-                $conditions = "owner = ? AND delowner = 0";
-                $values = [$id];
-                break;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('owner', '=', $id)
+                    ->where('delowner', '=', 0)
+                    ->orderBy('time', 'DESC')
+                    ->execute();
             case 11:
-                $conditions = "target = ? AND send = 0 AND archived = 1 AND deltarget = 0";
-                $values = [$id];
-                break;
-        }
-
-        if ($mode <= 3 || $mode == 6 || $mode > 8) {
-            return $this->conn->select('mdata', '*', $conditions, $values, 'time DESC');
-        } else {
-            return false;
+                return $this->conn->select()
+                    ->from("mdata")
+                    ->where('target', '=', $id)
+                    ->where('send', '=', 0)
+                    ->where('archived', '=', 1)
+                    ->where('deltarget', '=', 0)
+                    ->execute();
         }
     }
 
-    public function addBuilding($wid, $field, $type, $loop, $time, $master, $level)
+    function getDelSent($uid)
     {
-        $this->conn->update('fdata', ["f$field" . "t" => $type], "vref = :wid", ['wid' => $wid]);
-
-        return $this->conn->insert('bdata', [
-            'wid' => $wid,
-            'field' => $field,
-            'type' => $type,
-            'loop' => $loop,
-            'time' => $time,
-            'master' => $master,
-            'level' => $level
-        ]);
+        return $this->conn
+            ->from("mdata")
+            ->where('owner = :uid AND delowner = 1', [':uid' => $uid])
+            ->orderBy('time', 'DESC')
+            ->fetchAll();
     }
 
-    public function removeBuilding($id)
+    function getDelInbox($uid)
     {
-        $building = new Building();
-
-        $jobs = $building->buildArray;
-
-        $jobDeleted = -1;
-        $jobLoopconID = -1;
-        $jobMaster = -1;
-
-        foreach ($jobs as $i => $job) {
-            if ($job['id'] == $id) {
-                $jobDeleted = $i;
-            }
-            if ($job['loopcon'] == 1) {
-                $jobLoopconID = $i;
-            }
-            if ($job['master'] == 1) {
-                $jobMaster = $i;
-            }
-        }
-
-        $sameBuildCount = $this->calculateSameBuildCount($jobs);
-
-        if ($sameBuildCount > 0) {
-            $this->handleSameBuildCount($jobs, $sameBuildCount, $jobDeleted, $jobMaster);
-        } else {
-            $this->handleDifferentBuildCount($jobs, $jobDeleted, $jobLoopconID, $building);
-        }
-
-        return $this->conn->delete('bdata', 'id = :id', [':id' => $id]);
+        return $this->conn
+            ->from("mdata")
+            ->where('target = :uid AND deltarget = 1', [':uid' => $uid])
+            ->orderBy('time', 'DESC')
+            ->fetchAll();
     }
 
-    private function calculateSameBuildCount($jobs)
+    function getDelArchive($uid)
     {
-        $sameBuildCount = 0;
-        $fieldCounts = array_count_values(array_column($jobs, 'field'));
-
-        foreach ($fieldCounts as $count) {
-            if ($count > 1) {
-                $sameBuildCount += $count;
-            }
-        }
-
-        return $sameBuildCount;
+        return $this->conn
+            ->from("mdata")
+            ->where('(target = :uid AND archived = 1 AND deltarget = 1) OR (owner = :uid AND archived = 1 AND delowner = 1)', [':uid' => $uid])
+            ->orderBy('time', 'DESC')
+            ->fetchAll();
     }
 
-    private function handleSameBuildCount($jobs, $sameBuildCount, $jobDeleted, $jobMaster)
+    function unarchiveNotice($id)
     {
-        $building = new Building();
-
-        if ($sameBuildCount > 3) {
-            if ($sameBuildCount == 4 || $sameBuildCount == 5) {
-                if ($jobDeleted == 0) {
-                    $uprequire = $building->resourceRequired($jobs[1]['field'], $jobs[1]['type'], 1);
-                    $timestamp = time() + $uprequire['time'];
-                    $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], ['id' => $jobs[1]['id']]);
-                }
-            } elseif ($sameBuildCount == 6) {
-                if ($jobDeleted == 0) {
-                    $uprequire = $building->resourceRequired($jobs[2]['field'], $jobs[2]['type'], 1);
-                    $timestamp = time() + $uprequire['time'];
-                    $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], ['id' => $jobs[2]['id']]);
-                }
-            } elseif ($sameBuildCount == 7) {
-                if ($jobDeleted == 1) {
-                    $uprequire = $building->resourceRequired($jobs[2]['field'], $jobs[2]['type'], 1);
-                    $timestamp = time() + $uprequire['time'];
-                    $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], ['id' => $jobs[2]['id']]);
-                }
-            }
-            if ($sameBuildCount < 8) {
-                $uprequire1 = $building->resourceRequired($jobs[$jobMaster]['field'], $jobs[$jobMaster]['type'], 2);
-                $timestamp1 = $uprequire1['time'];
-            } else {
-                $uprequire1 = $building->resourceRequired($jobs[$jobMaster]['field'], $jobs[$jobMaster]['type'], 1);
-                $timestamp1 = $uprequire1['time'];
-            }
-        } else {
-            if ($jobDeleted == $jobs[floor($sameBuildCount / 3)]['id'] || $jobDeleted == $jobs[floor($sameBuildCount / 2) + 1]['id']) {
-                $timestamp = $jobs[floor($sameBuildCount / 3)]['timestamp'];
-                $condition = [
-                    'master' => 0,
-                    'id[>]' => $jobDeleted,
-                    'OR' => [
-                        'ID' => $jobs[floor($sameBuildCount / 3)]['id'],
-                        'ID' => $jobs[floor($sameBuildCount / 2) + 1]['id']
-                    ]
-                ];
-                $this->conn->update('bdata', ['loopcon' => 0, 'level' => 'level - 1', 'timestamp' => $timestamp], $condition);
-            }
-        }
-
-        $this->conn->update('bdata', ['level' => 'level - 1', 'timestamp' => $timestamp1], ['id' => $jobs[$jobMaster]['id']]);
+        return $this->conn
+            ->update("ndata", ['archive' => 0], 'id = :id', [':id' => $id]);
     }
 
-    private function handleDifferentBuildCount($jobs, $sameBuildCount, $jobDeleted, $jobLoopconID)
+    function archiveNotice($id)
     {
-        $building = new Building();
-
-        if ($jobs[$jobDeleted]['field'] >= 19) {
-            $field = $jobs[$jobDeleted]['field'];
-            $wid = $jobs[$jobDeleted]['wid'];
-
-            $fieldValue = $this->conn->select('fdata', "f$field", ['vref' => $wid]);
-            if ($fieldValue === 0) {
-                $updateData = ["f${field}t" => 0];
-                $condition = ['vref' => $wid];
-                $this->conn->update('fdata', $updateData, $condition);
-            }
-        }
-
-        if (($jobLoopconID >= 0) && ($jobs[$jobDeleted]['loopcon'] != 1)) {
-            if (($jobs[$jobLoopconID]['field'] <= 18 && $jobs[$jobDeleted]['field'] <= 18) || ($jobs[$jobLoopconID]['field'] >= 19 && $jobs[$jobDeleted]['field'] >= 19) || sizeof($jobs) < 3) {
-                $uprequire = $building->resourceRequired($jobs[$jobLoopconID]['field'], $jobs[$jobLoopconID]['type']);
-                $this->conn->update('bdata', ['loopcon' => 0, 'timestamp' => time() + $uprequire['time']], ['wid' => $jobs[$jobDeleted]['wid'], 'loopcon' => 1, 'master' => 0]);
-            }
-        }
+        return $this->conn
+            ->update("ndata", ['archive' => 1], 'id = :id', [':id' => $id]);
     }
 
-    public function getNotice($uid)
+    function removeNotice($id)
     {
-        return $this->conn->select('ndata', '*', 'uid = :uid', ['uid' => $uid]);
+        return $this->conn
+            ->update("ndata", ['del' => 1, 'viewed' => 1], 'id = :id', [':id' => $id]);
     }
 
-    public function addNotice($uid, $toWref, $ally, $type, $topic, $data, $time = 0)
+    function noticeViewed($id)
+    {
+        return $this->conn
+            ->update("ndata", ['viewed' => 1], 'id = :id', [':id' => $id]);
+    }
+
+    function addNotice($uid, $toWref, $ally, $type, $topic, $data, $time = 0)
     {
         if ($time == 0) {
             $time = time();
         }
-
-        return $this->conn->insert('ndata', [
-            'uid' => $uid,
-            'toWref' => $toWref,
-            'ally' => $ally,
-            'topic' => $topic,
-            'ntype' => $type,
-            'data' => $data,
-            'time' => $time,
-            'viewed' => 0
-        ]);
+        return $this->conn
+            ->insert("ndata", [
+                'uid' => $uid,
+                'toWref' => $toWref,
+                'ally' => $ally,
+                'topic' => $topic,
+                'ntype' => $type,
+                'data' => $data,
+                'time' => $time,
+                'viewed' => 0
+            ]);
     }
 
-    public function noticeViewed($id)
+    function getNotice($uid)
     {
-        return $this->conn->update('ndata', ['viewed' => 1], 'id = :id', ['id' => $id]);
+        return $this->conn
+            ->from("ndata")
+            ->where('uid = :uid AND del = 0', [':uid' => $uid])
+            ->orderBy('time', 'DESC')
+            ->fetchAll();
     }
 
-    public function removeNotice($id)
+    function getNotice2($id, $field)
     {
-        return $this->conn->delete('ndata', 'id = :id', ['id' => $id]);
+        $result = $this->conn
+            ->from("ndata", $field)
+            ->where('id = :id', [':id' => $id])
+            ->fetch();
+        return $result[$field];
     }
 
-    public function archiveNotice($id)
+    function getNotice3($uid)
     {
-        return $this->conn->update('ndata', ['archive' => 1], 'id = :id', ['id' => $id]);
+        return $this->conn
+            ->from("ndata")
+            ->where('uid = :uid')
+            ->orderBy('time', 'DESC')
+            ->fetchAll([':uid' => $uid]);
     }
 
-    public function unarchiveNotice($id)
+    function getNotice4($id)
     {
-        return $this->conn->update('ndata', ['archive' => 0], 'id = :id', ['id' => $id]);
+        return $this->conn
+            ->from("ndata")
+            ->where('id = :id')
+            ->orderBy('time', 'DESC')
+            ->fetchAll([':id' => $id]);
     }
 
-    public function addDemolition($wid, $field)
+    function getNotice5($uid)
+    {
+        return $this->conn
+            ->from("ndata")
+            ->where('uid = :uid AND viewed = 0')
+            ->orderBy('time', 'DESC')
+            ->fetchAll([':uid' => $uid]);
+    }
+
+    function createTradeRoute($uid, $wid, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
+    {
+        $this->conn->update("users", ['gold' => 'gold - 2'], 'id = :uid', [':uid' => $uid]);
+        return $this->conn
+            ->insert("route", [
+                'uid' => $uid,
+                'wid' => $wid,
+                'from' => $from,
+                'r1' => $r1,
+                'r2' => $r2,
+                'r3' => $r3,
+                'r4' => $r4,
+                'start' => $start,
+                'deliveries' => $deliveries,
+                'merchant' => $merchant,
+                'timestamp' => $time
+            ]);
+    }
+
+    function getTradeRoute($uid)
+    {
+        return $this->conn
+            ->from("route")
+            ->where('uid = :uid')
+            ->orderBy('timestamp', 'ASC')
+            ->fetchAll([':uid' => $uid]);
+    }
+
+    function getTradeRoute2($id)
+    {
+        return $this->conn
+            ->from("route")
+            ->where('id = :id')
+            ->fetch([':id' => $id]);
+    }
+
+    function getTradeRouteUid($id)
+    {
+        return $this->conn
+            ->from("route")
+            ->where('id = :id')
+            ->fetchColumn([':id' => $id], 'uid');
+    }
+
+    function editTradeRoute($id, $column, $value, $mode)
+    {
+        $data = [$column => ($mode ? "$column + $value" : $value)];
+        return $this->conn
+            ->update("route", $data, 'id = :id', [':id' => $id]);
+    }
+
+    function deleteTradeRoute($id)
+    {
+        return $this->conn
+            ->delete("route", 'id = :id', [':id' => $id]);
+    }
+
+    function getAttacks($ref)
+    {
+        return $this->conn
+            ->from("attacks")
+            ->where('id = :ref')
+            ->fetchAll([':ref' => $ref]);
+    }
+
+    function getAlliAttacks($aid)
+    {
+        return $this->conn
+            ->from("ndata")
+            ->where('ally = :aid')
+            ->orderBy('time', 'DESC')
+            ->fetchAll([':aid' => $aid]);
+    }
+
+    function addBuilding($wid, $field, $type, $loop, $time, $master, $level)
+    {
+        $this->conn->update("fdata", ["f" . $field . "t" => $type], 'vref = :wid', [':wid' => $wid]);
+        return $this->conn
+            ->insert("bdata", [
+                'wid' => $wid,
+                'field' => $field,
+                'type' => $type,
+                'loopcon' => $loop,
+                'timestamp' => $time,
+                'master' => $master,
+                'level' => $level
+            ]);
+    }
+
+    function removeBuilding($d)
+    {
+        global $building;
+
+        $jobLoopconID = -1;
+        $SameBuildCount = 0;
+        $jobs = $building->buildArray;
+
+        foreach ($jobs as $key => $job) {
+            if ($job['id'] == $d) {
+                $jobDeleted = $key;
+            }
+            if ($job['loopcon'] == 1) {
+                $jobLoopconID = $key;
+            }
+        }
+
+        $fieldsCount = array_count_values(array_column($jobs, 'field'));
+        $SameBuildCount = max($fieldsCount) - 1;
+
+        if ($SameBuildCount > 0) {
+            if ($SameBuildCount >= 3 && $jobDeleted == 0) {
+                $uprequire = $building->resourceRequired($jobs[1]['field'], $jobs[1]['type'], $SameBuildCount == 4 || $SameBuildCount == 5 ? 1 : 2);
+                $time = $uprequire['time'] + time();
+                $this->conn->update("bdata", ["loopcon" => 0, "level" => "level-1", "timestamp" => $time], ["id" => $jobs[1]['id']]);
+            } elseif ($SameBuildCount == 6 && $jobDeleted == 0) {
+                $uprequire = $building->resourceRequired($jobs[2]['field'], $jobs[2]['type'], 1);
+                $time = $uprequire['time'] + time();
+                $this->conn->update("bdata", ["loopcon" => 0, "level" => "level-1", "timestamp" => $time], ["id" => $jobs[2]['id']]);
+            } elseif ($SameBuildCount == 7 && $jobDeleted == 1) {
+                $uprequire = $building->resourceRequired($jobs[2]['field'], $jobs[2]['type'], 1);
+                $time = $uprequire['time'] + time();
+                $this->conn->update("bdata", ["loopcon" => 0, "level" => "level-1", "timestamp" => $time], ["id" => $jobs[2]['id']]);
+            }
+            if ($SameBuildCount < 8) {
+                $uprequire1 = $building->resourceRequired($jobs[$jobDeleted]['field'], $jobs[$jobDeleted]['type'], $SameBuildCount < 3 ? 2 : 1);
+                $time1 = $uprequire1['time'];
+                $timestamp1 = $time1;
+                $this->conn->update("bdata", ["level" => "level-1", "timestamp" => $timestamp1], ["id" => $jobs[$jobDeleted]['id']]);
+            } else {
+                $uprequire1 = $building->resourceRequired($jobs[$jobDeleted]['field'], $jobs[$jobDeleted]['type'], 1);
+                $time1 = $uprequire1['time'];
+                $timestamp1 = $time1;
+                $this->conn->update("bdata", ["level" => "level-1", "timestamp" => $timestamp1], ["id" => $jobs[$jobDeleted]['id']]);
+            }
+        } else {
+            $field = $jobs[$jobDeleted]['field'];
+            if ($field >= 19) {
+                $x = "SELECT f$field FROM " . "fdata WHERE vref=" . $jobs[$jobDeleted]['wid'];
+                $result = $this->conn->query($x) or die($this->conn->error());
+                $fieldlevel = $result->fetch_row();
+                if ($fieldlevel[0] == 0) {
+                    $x = "UPDATE " . "fdata SET f$field=0 WHERE vref=" . $jobs[$jobDeleted]['wid'];
+                    $this->conn->query($x) or die($this->conn->error());
+                }
+            }
+            if (($jobLoopconID >= 0) && ($jobs[$jobDeleted]['loopcon'] != 1)) {
+                if (($jobs[$jobLoopconID]['field'] <= 18 && $jobs[$jobDeleted]['field'] <= 18) || ($jobs[$jobLoopconID]['field'] >= 19 && $jobs[$jobDeleted]['field'] >= 19) || sizeof($jobs) < 3) {
+                    $uprequire = $building->resourceRequired($jobs[$jobLoopconID]['field'], $jobs[$jobLoopconID]['type']);
+                    $x = "UPDATE " . "bdata SET loopcon=0,timestamp=" . (time() + $uprequire['time']) . " WHERE wid=" . $jobs[$jobDeleted]['wid'] . " AND loopcon=1 AND master=0";
+                    $this->conn->query($x) or die($this->conn->error());
+                }
+            }
+        }
+        $this->conn->delete("bdata", ["id" => $d]);
+    }
+
+    function addDemolition($wid, $field)
     {
         global $building, $village;
 
-        $conditions = ['field' => $field, 'wid' => $wid];
-        $this->conn->delete('bdata', $conditions);
+        $this->conn->delete("bdata", ["field" => $field, "wid" => $wid]);
 
-        $uprequire = $building->resourceRequired($field - 1, $village->resarray['f' . $field . 't']);
-
-        $fieldLevel = $this->conn->getFieldLevel($wid, $field) - 1;
-
+        $uprequire = $building->resourceRequired($field, $village->resarray['f' . $field . 't']);
         $timestamp = time() + floor($uprequire['time'] / 2);
 
-        $data = [
-            'wid' => $wid,
-            'field' => $field,
-            'field_level' => $fieldLevel,
-            'timestamp' => $timestamp
-        ];
-        $this->conn->insert('demolition', $data);
-
-        return true;
+        $this->conn->insert("demolition", ["vref" => $wid, "field" => $field, "level" => ($this->getFieldLevel($wid, $field) - 1), "timetofinish" => $timestamp]);
     }
 
-    public function getFieldLevel($vid, $field)
+    function getDemolition($wid = 0)
     {
-        $result = $this->conn->select('fdata', 'f' . $field, ['vref' => $vid]);
-        return $result['f' . $field];
-    }
-
-    public function getDemolition($wid = 0)
-    {
-        $conditions = ($wid) ? ['vref' => $wid] : 'timetofinish <= ' . time();
-        $result = $this->conn->select('demolition', 'vref, buildnumber, timetofinish', $conditions);
-        return $result ? $result : NULL;
-    }
-
-    public function finishDemolition($wid)
-    {
-        return $this->conn->update('demolition', ['timetofinish' => 0], ['vref' => $wid]);
-    }
-
-    public function delDemolition($wid)
-    {
-        return $this->conn->delete('demolition', ['vref' => $wid]);
-    }
-
-    public function getJobs($wid)
-    {
-        return $this->conn->select('bdata', '*', ['wid' => $wid], ['ID ASC']);
-    }
-
-    public function FinishWoodcutter($wid)
-    {
-        $job = $this->conn->select('bdata', 'id', ['wid' => $wid, 'type' => 1], ['master, timestamp ASC']);
-        if ($job) {
-            $this->conn->update('bdata', ['timestamp' => time() - 1], ['id' => $job['id']]);
+        if ($wid) {
+            $condition = ["vref" => $wid];
+        } else {
+            $condition = ["timetofinish[<=]" => time()];
         }
+
+        $result = $this->conn->select("demolition", "*", $condition);
+
+        return ($result) ? $result->fetchAll() : NULL;
     }
 
-    public function FinishCropLand($wid)
+    function finishDemolition($wid)
+    {
+        $this->conn->update("demolition", ["timetofinish" => time()], ["vref" => $wid]);
+    }
+
+    function delDemolition($wid)
+    {
+        $this->conn->delete("demolition", ["vref" => $wid]);
+    }
+
+    function getJobs($wid)
+    {
+        $result = $this->conn->select("bdata", "*", ["wid" => $wid], ["ORDER" => ["master", "timestamp" => "ASC"]]);
+
+        return ($result) ? $result->fetchAll() : NULL;
+    }
+
+    function FinishWoodcutter($wid)
     {
         $time = time() - 1;
-        $job = $this->conn->select('bdata', ['id', 'timestamp'], ['wid' => $wid, 'type' => 4], ['master, timestamp ASC']);
-        if ($job) {
-            $this->conn->update('bdata', ['timestamp' => $time], ['id' => $job['id']]);
+        $woodcutterResult = $this->conn->select("bdata", "*", ["wid" => $wid, "type" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+        if ($woodcutterResult) {
+            $woodcutterId = $woodcutterResult['id'];
+            $this->conn->update("bdata", ["timestamp" => $time], ["id" => $woodcutterId]);
+
+            $tribe = $this->getUserField($this->getVillageField($wid, "owner"), "tribe", 0);
+            if ($tribe == 1) {
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1, "field[<=]" => 18], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+            } else {
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+            }
+            if ($loopconQuery) {
+                $wc_time = $woodcutterResult['timestamp'];
+                $this->conn->update("bdata", ["timestamp[-]" => $wc_time], ["id" => $loopconQuery['id']]);
+            }
         }
-        $jobs = $this->conn->select('bdata', ['id', 'timestamp'], ['wid' => $wid, 'loopcon' => 1, 'field' => ['<=', 18]], ['master, timestamp ASC']);
-        foreach ($jobs as $job) {
-            $this->conn->update('bdata', ['timestamp' => $job['timestamp'] - time()], ['id' => $job['id']]);
+    }
+
+    function FinishRallyPoint($wid)
+    {
+        $time = time() - 1;
+        $rallyPointResult = $this->conn->select("bdata", "*", ["wid" => $wid, "type" => 16], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+        if ($rallyPointResult) {
+            $rallyPointId = $rallyPointResult['id'];
+            $this->conn->update("bdata", ["timestamp" => $time], ["id" => $rallyPointId]);
+
+            $tribe = $this->getUserField($this->getVillageField($wid, "owner"), "tribe", 0);
+            if ($tribe == 1) {
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1, "field[>=]" => 19], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+            } else {
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+            }
+            if ($loopconQuery) {
+                $rally_time = $rallyPointResult['timestamp'];
+                $this->conn->update("bdata", ["timestamp[-]" => $rally_time], ["id" => $loopconQuery['id']]);
+            }
         }
     }
 
-    public function finishBuildings($wid)
+    function getMasterJobs($wid)
     {
-        $buildings = $this->conn->select('bdata', 'id', ['wid' => $wid], ['master, timestamp ASC']);
-        foreach ($buildings as $building) {
-            $this->conn->update('bdata', ['timestamp' => time() - 1], ['id' => $building['id']]);
+        return $this->conn->select("bdata", "*", ["wid" => $wid, "master" => 1], ["ORDER" => ["master", "timestamp" => "ASC"]])->fetchAll();
+    }
+
+    function getMasterJobsByField($wid, $field)
+    {
+        return $this->conn->select("bdata", "*", ["wid" => $wid, "field" => $field, "master" => 1], ["ORDER" => ["master", "timestamp" => "ASC"]])->fetchAll();
+    }
+
+    function getBuildingByField($wid, $field)
+    {
+        return $this->conn->select("bdata", "*", ["wid" => $wid, "field" => $field, "master" => 0])->fetchAll();
+    }
+
+    function getBuildingByType($wid, $type)
+    {
+        return $this->conn->select("bdata", "*", ["wid" => $wid, "type" => $type, "master" => 0])->fetchAll();
+    }
+
+    function getDorf1Building($wid)
+    {
+        return $this->conn->select("bdata", "*", ["wid" => $wid, "field[<]" => 19, "master" => 0])->fetchAll();
+    }
+
+    function getDorf2Building($wid)
+    {
+        return $this->conn->select("bdata", "*", ["wid" => $wid, "field[>]" => 18, "master" => 0])->fetchAll();
+    }
+
+    function updateBuildingWithMaster($id, $time, $loop)
+    {
+        return $this->conn->update(
+            "bdata",
+            ["master" => 0, "timestamp" => $time, "loopcon" => $loop],
+            ["id" => $id]
+        );
+    }
+
+    function getVillageByName($name)
+    {
+        $result = $this->conn->select("vdata", "wref", ["name" => $name, "LIMIT" => 1]);
+        $dbarray = $result->fetch();
+        return $dbarray['wref'];
+    }
+
+    function setMarketAcc($id)
+    {
+        return $this->conn->update(
+            "market",
+            ["accept" => 1],
+            ["id" => $id]
+        );
+    }
+
+    function sendResource($ref, $clay, $iron, $crop, $merchant, $mode)
+    {
+        if (!$mode) {
+            $data = [
+                "ref" => $ref,
+                "clay" => $clay,
+                "iron" => $iron,
+                "crop" => $crop,
+                "merchant" => $merchant
+            ];
+            return $this->conn->insert("send", $data);
+        } else {
+            return $this->conn->delete("send", ["id" => $ref]);
         }
     }
 
-    public function getMasterJobs($wid)
+    function getResourcesBack($vref, $gtype, $gamt)
     {
-        return $this->conn->select('bdata', 'id', ['wid' => $wid, 'master' => 1], ['master, timestamp ASC']);
-    }
-
-    public function getBuildingByField($wid, $field)
-    {
-        return $this->conn->select('bdata', 'id', ['wid' => $wid, 'field' => $field, 'master' => 0]);
-    }
-
-    public function getBuildingByType($wid, $type)
-    {
-        return $this->conn->select('bdata', 'id', ['wid' => $wid, 'type' => $type, 'master' => 0]);
-    }
-
-    public function getDorf1Building($wid)
-    {
-        return $this->conn->select('bdata', 'timestamp', ['wid' => $wid, 'field' => '< 19', 'master' => 0]);
-    }
-
-    public function getDorf2Building($wid)
-    {
-        return $this->conn->select('bdata', 'timestamp', ['wid' => $wid, 'field' => '> 18', 'master' => 0]);
-    }
-
-    public function updateBuildingWithMaster($id, $time, $loop)
-    {
-        $data = [
-            'master' => 0,
-            'timestamp' => $time,
-            'loopcon' => $loop
-        ];
-        return $this->conn->update('bdata', $data, ['id' => $id]);
-    }
-
-    public function getVillageByName($name)
-    {
-        $result = $this->conn->select('vdata', 'wref', ['name' => $name]);
-        return $result['wref'];
-    }
-
-    public function setMarketAcc($id)
-    {
-        return $this->conn->update('market', ['accept' => 1], ['id' => $id]);
-    }
-
-    public function sendResource($wood, $clay, $iron, $crop, $merchant)
-    {
-        $data = [
-            'wood' => $wood,
-            'clay' => $clay,
-            'iron' => $iron,
-            'crop' => $crop,
-            'merchant' => $merchant
-        ];
-        return $this->conn->insert('send', $data);
-    }
-
-    public function sendResourceMORE($wood, $clay, $iron, $crop, $send)
-    {
-        $data = [
-            'wood' => $wood,
-            'clay' => $clay,
-            'iron' => $iron,
-            'crop' => $crop,
-            'send' => $send
-        ];
-        return $this->conn->insert('send', $data);
-    }
-
-    public function removeSend($ref)
-    {
-        return $this->conn->delete('send', ['id' => $ref]);
-    }
-
-    public function getResourcesBack($vref, $gtype, $gamt)
-    {
-        $data = [];
+        //Xtype (1) = wood, (2) = clay, (3) = iron, (4) = crop
+        $column = '';
         switch ($gtype) {
             case 1:
-                $data['wood'] = "wood + $gamt";
+                $column = 'wood';
                 break;
             case 2:
-                $data['clay'] = "clay + $gamt";
+                $column = 'clay';
                 break;
             case 3:
-                $data['iron'] = "iron + $gamt";
+                $column = 'iron';
                 break;
             case 4:
-                $data['crop'] = "crop + $gamt";
+                $column = 'crop';
                 break;
             default:
-                return false;
+                return false; // Tipo de recurso inválido
         }
-        $conditions = ['wref' => $vref];
-        return $this->conn->update('vdata', $data, $conditions);
+
+        $data = [$column => $gamt];
+        return $this->conn->update("vdata", $data, ["wref" => $vref]);
     }
 
-    public function getMarketField($vref, $field)
+    function getMarketField($vref, $field)
     {
-        $result = $this->conn->select('market', $field, ['vref' => $vref]);
-        return $result ? $result[$field] : false;
+        $data = $this->conn->select($field)->from("market")->where(['vref' => $vref])->fetch();
+        return $data[$field] ?? null;
     }
 
-    public function removeAcceptedOffer($id)
+    function removeAcceptedOffer($id)
     {
-        return $this->conn->delete('market', ['id' => $id]);
+        $this->conn->delete("market")->where(['id' => $id])->execute();
     }
 
-    public function addMarket($vid, $gtype, $gamt, $wtype, $wamt, $time, $alliance, $merchant, $mode)
+    function addMarket($vid, $gtype, $gamt, $wtype, $wamt, $time, $alliance, $merchant, $mode)
     {
         if (!$mode) {
             $data = [
@@ -2174,395 +2278,611 @@ class Database
                 'gamt' => $gamt,
                 'wtype' => $wtype,
                 'wamt' => $wamt,
-                'accept' => 0,
-                'expire' => $time,
+                'time' => $time,
                 'alliance' => $alliance,
                 'merchant' => $merchant
             ];
-            return $this->conn->insert('market', $data);
+            $this->conn->insert("market")->values($data)->execute();
+            return $this->conn->lastInsertId();
         } else {
-            return $this->conn->delete('market', ['id' => $gtype, 'vref' => $vid]);
+            $this->conn->delete("market")->where(['id' => $gtype, 'vref' => $vid])->execute();
+            return true;
         }
     }
 
-    public function getMarket($vid, $mode)
+    function getMarket($vid, $mode)
     {
         $alliance = $this->getUserField($this->getVillageField($vid, "owner"), "alliance", 0);
         if (!$mode) {
-            $conditions = ['vref' => $vid, 'accept' => 0];
+            return $this->conn
+                ->select('*')
+                ->from("market")
+                ->where(['vref' => $vid, 'accept' => 0])
+                ->orderBy('id', 'DESC')
+                ->execute()
+                ->fetchAll();
         } else {
-            $conditions = [
-                'vref[!]' => $vid,
-                'alliance' => $alliance,
-                'OR' => [
-                    'alliance' => 0,
-                    'accept' => 0
-                ]
-            ];
-        }
-        return $this->conn->select('market', '*', $conditions, ['id DESC']);
-    }
-
-    public function getUserField($ref, $field, $mode)
-    {
-        $conditions = !$mode ? ['id' => $ref] : ['username' => $ref];
-        $result = $this->conn->select('users', $field, $conditions);
-        return $result[$field];
-    }
-
-    public function getVillageField($ref, $field)
-    {
-        $result = $this->conn->select('vdata', $field, ['wref' => $ref]);
-        return $result[$field];
-    }
-
-    public function getMarketInfo($id)
-    {
-        return $this->conn->select('market', 'vref,gtype,wtype,merchant,wamt', ['id' => $id]);
-    }
-
-    public function setMovementProc($moveid)
-    {
-        $data = ['proc' => 1];
-        $where = ['moveid' => $moveid];
-        return $this->conn->update('movement', $data, $where);
-    }
-
-    public function totalMerchantUsed($vid)
-    {
-        $sql = "SELECT SUM(send.merchant)
-            FROM send
-            JOIN movement ON send.id = movement.ref
-            WHERE movement.from = :vid AND movement.proc = 0 AND movement.sort_type = 0";
-
-        $stmt = $this->conn->executeQuery($sql, [':vid' => $vid]);
-        $row = $stmt->fetchColumn();
-
-        $sql2 = "SELECT SUM(send.merchant)
-             FROM send
-             JOIN movement ON send.id = movement.ref
-             WHERE movement.to = :vid AND movement.proc = 0 AND movement.sort_type = 1";
-
-        $stmt2 = $this->conn->executeQuery($sql2, [':vid' => $vid]);
-        $row2 = $stmt2->fetchColumn();
-
-        $sql3 = "SELECT SUM(merchant)
-             FROM market
-             WHERE vref = :vid AND accept = 0";
-
-        $stmt3 = $this->conn->executeQuery($sql3, [':vid' => $vid]);
-        $row3 = $stmt3->fetchColumn();
-
-        return ($row + $row2 + $row3);
-    }
-
-    public function getMovementById($id)
-    {
-        $results = $this->conn->select('movement', "starttime, to, from", "moveid = :id", [':id' => $id]);
-        return !empty($results) ? $results : [];
-    }
-
-    public function cancelMovement($id, $newfrom, $newto)
-    {
-        $refstr = '';
-        $amove = $this->conn->select('movement', 'ref', 'moveid = :id', [':id' => $id]);
-
-        if (!empty($amove)) {
-            $mov = $amove;
-            if ($mov['ref'] == 0) {
-                $ref = $this->addAttack($newto, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0, 0, 0);
-                $refstr = ', ref = ' . $ref;
-            }
-
-            $this->conn->update(
-                'movement',
-                ['from' => $newfrom, 'to' => $newto, 'sort_type' => 4, 'endtime' => time() - 'starttime', 'starttime' => time(), 'ref' => $ref],
-                ['moveid' => $id]
-            );
+            return $this->conn
+                ->select('*')
+                ->from("market")
+                ->where([
+                    'AND' => [
+                        ['vref', '!=', $vid],
+                        ['accept', '=', 0],
+                        ['OR' => [['alliance', '=', $alliance], ['alliance', '=', 0]]]
+                    ]
+                ])
+                ->orderBy('id', 'DESC')
+                ->execute()
+                ->fetchAll();
         }
     }
 
-    public function addAttack($vid, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type, $ctar1, $ctar2, $spy)
+    function getMarketInfo($id)
     {
-        $data = [
-            'vid' => $vid,
-            't1' => $t1,
-            't2' => $t2,
-            't3' => $t3,
-            't4' => $t4,
-            't5' => $t5,
-            't6' => $t6,
-            't7' => $t7,
-            't8' => $t8,
-            't9' => $t9,
-            't10' => $t10,
-            't11' => $t11,
-            'type' => $type,
-            'ctar1' => $ctar1,
-            'ctar2' => $ctar2,
-            'spy' => $spy
-        ];
-
-        return $this->conn->insert('attacks', $data);
+        return $this->conn
+            ->select('*')
+            ->from("market")
+            ->where(['id' => $id])
+            ->execute()
+            ->fetchAssoc();
     }
 
-    public function getAdvMovement($village)
+    function setMovementProc($moveid)
     {
-        $sql = "SELECT moveid FROM movement WHERE from = :village AND sort_type = 9";
-        return $this->conn->select($sql, [':village' => $village]);
+        $q = "UPDATE " . "movement SET proc = 1 WHERE moveid = $moveid";
+        return $this->conn->query($q);
     }
 
-    public function getCompletedAdvMovement($village)
+    function totalMerchantUsed($vid)
     {
-        $sql = "SELECT moveid FROM movement WHERE from = :village AND sort_type = 9 AND proc = 1";
-        return $this->conn->select($sql, [':village' => $village]);
+        $time = time();
+
+        $q1 = $this->conn
+            ->select('SUM(' . 'send.merchant)')
+            ->from('send, ' . 'movement')
+            ->where('movement.from = :vid')
+            ->andWhere('send.id = ' . 'movement.ref')
+            ->andWhere('movement.proc = 0')
+            ->andWhere(['sort_type' => 0])
+            ->bindValue(':vid', $vid)
+            ->execute()
+            ->fetchRow();
+
+        $q2 = $this->conn
+            ->select('SUM(ref)')
+            ->from('movement')
+            ->where(['sort_type' => 2])
+            ->andWhere('movement.to = :vid')
+            ->andWhere(['proc' => 0])
+            ->bindValue(':vid', $vid)
+            ->execute()
+            ->fetchRow();
+
+        $q3 = $this->conn
+            ->select('SUM(merchant)')
+            ->from('market')
+            ->where(['vref' => $vid])
+            ->andWhere(['accept' => 0])
+            ->execute()
+            ->fetchRow();
+
+        return $q1[0] + $q2[0] + $q3[0];
     }
 
-    public function addA2b($ckey, $timestamp, $to, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type)
+    function getMovement($type, $village, $mode)
     {
-        $data = [
-            'ckey' => $ckey,
-            'time_check' => $timestamp,
-            'to_vid' => $to,
-            'u1' => $t1,
-            'u2' => $t2,
-            'u3' => $t3,
-            'u4' => $t4,
-            'u5' => $t5,
-            'u6' => $t6,
-            'u7' => $t7,
-            'u8' => $t8,
-            'u9' => $t9,
-            'u10' => $t10,
-            'u11' => $t11,
-            'type' => $type
-        ];
-
-        return $this->conn->insert('a2b', $data);
-    }
-
-    public function getA2b($ckey, $check)
-    {
-        return $this->conn->select('a2b', ['ckey' => $ckey, 'time_check' => $check]);
-    }
-
-    public function removeA2b($ckey, $check)
-    {
-        $where = "ckey = :ckey AND time_check = :check";
-        return $this->conn->delete('a2b', $where, [':ckey' => $ckey, ':check' => $check]);
-    }
-
-    public function addMovement($type, $from, $to, $ref, $data, $endtime)
-    {
-        $data = [
-            'type' => $type,
-            'from' => $from,
-            'to' => $to,
-            'ref' => $ref,
-            'data' => $data,
-            'starttime' => time(),
-            'endtime' => $endtime,
-            'proc' => 0
-        ];
-
-        return $this->conn->insert('movement', $data);
-    }
-
-    public function modifyAttack($aid, $unit, $amt)
-    {
-        $unitColumn = 't' . $unit;
-
-        if (!in_array($unitColumn, ['t1', 't2', 't3', 't4', 't5'])) {
-            return false;
+        $time = time();
+        if (!$mode) {
+            $where = "from";
+        } else {
+            $where = "to";
         }
-
-        $currentAmt = $this->conn->select('attacks', $unitColumn, ['id' => $aid]);
-        if ($currentAmt !== false) {
-            return $this->conn->update('attacks', [$unitColumn => max(0, $currentAmt - $amt)], ['id' => $aid]);
-        }
-
-        return false;
-    }
-
-
-    public function getRanking()
-    {
-        $sql = "SELECT id, username, alliance, ap, apall, dp, dpall, access FROM users WHERE tribe <= 3 AND access < :access";
-        return $this->conn->select($sql, [':access' => (INCLUDE_ADMIN ? 10 : 8)]);
-    }
-
-    public function getBuildList($type, $wid = 0)
-    {
-        $where = 'TRUE';
-        $params = [];
-        if ($type) {
-            $where .= ' AND type = :type';
-            $params[':type'] = $type;
-        }
-        if ($wid) {
-            $where .= ' AND wid = :wid';
-            $params[':wid'] = $wid;
-        }
-        $sql = "SELECT id FROM bdata WHERE $where";
-        return $this->conn->select($sql, $params);
-    }
-
-    public function getVRanking()
-    {
-        $sql = "SELECT v.wref, v.name, v.owner, v.pop FROM vdata AS v, users AS u WHERE v.owner = u.id AND u.tribe <= 3 AND v.wref != '' AND u.access < :access";
-        return $this->conn->select($sql, [':access' => (INCLUDE_ADMIN ? 10 : 8)]);
-    }
-
-    public function getARanking()
-    {
-        $sql = "SELECT id, name, tag FROM alidata WHERE id != ''";
-        return $this->conn->select($sql);
-    }
-
-    public function getHeroRanking($limit = '')
-    {
-        $sql = "SELECT uid, level, experience FROM hero ORDER BY experience DESC $limit";
-        return $this->conn->select($sql);
-    }
-
-    public function getAllMember($aid)
-    {
-        $sql = "SELECT id, username, timestamp FROM users WHERE alliance = :aid ORDER BY (SELECT SUM(pop) FROM vdata WHERE owner = users.id) DESC";
-        return $this->conn->select($sql, [':aid' => $aid]);
-    }
-
-    public function getUnit($vid)
-    {
-        return $this->conn->select('units', 'unit_id, unit_type, unit_quantity', ['vref' => $vid]);
-    }
-
-    public function getHUnit($vid)
-    {
-        $row = $this->conn->select('units', 'hero', [':vid' => $vid]);
-        return $row['hero'] != 0;
-    }
-
-    public function getHero($uid = 0, $id = 0, $dead = 2)
-    {
-        $where = 'TRUE';
-        $params = [];
-        if ($uid) {
-            $where .= ' AND uid = :uid';
-            $params[':uid'] = $uid;
-        }
-        if ($id) {
-            $where .= ' AND id = :id';
-            $params[':id'] = $id;
-        }
-        if ($dead != 2) {
-            $where .= ' AND dead = :dead';
-            $params[':dead'] = $dead;
-        }
-        return $this->conn->select('hero', $where, $params, ['LIMIT 1']);
-    }
-
-    public function modifyHero($uid, $id, $column, $value, $mode = 0)
-    {
-        $cmd = '';
-        switch ($mode) {
+        switch ($type) {
             case 0:
-                $cmd .= " $column = :value ";
-                break;
-            case 1:
-                $cmd .= " $column = $column + :value ";
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'send')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.ref = ' . 'send.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('movement.sort_type = 0')
+                    ->bindValue(':village', $village)
+                    ->execute();
                 break;
             case 2:
-                $cmd .= " $column = $column - :value ";
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('movement.sort_type = 2')
+                    ->bindValue(':village', $village)
+                    ->execute();
                 break;
             case 3:
-                $cmd .= " $column = $column * :value ";
-                break;
             case 4:
-                $cmd .= " $column = $column / :value ";
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'attacks')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.ref = ' . 'attacks.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('(' . 'movement.sort_type = 3 OR ' . 'movement.sort_type = 4)')
+                    ->orderBy('endtime ASC')
+                    ->bindValue(':village', $village)
+                    ->execute();
+                break;
+            case 5:
+            case 9:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere(['sort_type' => $type])
+                    ->andWhere(['proc' => 0])
+                    ->bindValue(':village', $village)
+                    ->execute();
+                break;
+            case 6:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'odata, ' . 'attacks')
+                    ->where('odata.conqured = :village')
+                    ->andWhere('movement.to = ' . 'odata.wref')
+                    ->andWhere('movement.ref = ' . 'attacks.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('movement.sort_type = 3')
+                    ->orderBy('endtime ASC')
+                    ->bindValue(':village', $village)
+                    ->execute();
+                break;
+            case 34:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'attacks')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.ref = ' . 'attacks.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('(' . 'movement.sort_type = 3 OR ' . 'movement.sort_type = 4)')
+                    ->orderBy('endtime ASC')
+                    ->bindValue(':village', $village)
+                    ->execute();
                 break;
         }
+        return $query->fetchAll();
+    }
 
-        switch ($column) {
-            case 'r0':
-            case 'r1':
-            case 'r2':
-            case 'r3':
-            case 'r4':
-                $cmd .= " ,rc = 1 ";
+    function getMovement2($type, $village, $mode)
+    {
+        $time = time();
+        if (!$mode) {
+            $where = "from";
+        } else {
+            $where = "to";
+        }
+        switch ($type) {
+            case 3:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'attacks')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.ref = ' . 'attacks.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('movement.sort_type = 3')
+                    ->andWhere('attacks.attack_type != 2')
+                    ->orderBy('endtime DESC')
+                    ->bindValue(':village', $village)
+                    ->execute();
+                break;
+            case 34:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'attacks')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.ref = ' . 'attacks.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('movement.sort_type = 3')
+                    ->andWhere('attacks.attack_type != 3')
+                    ->andWhere('attacks.attack_type != 4')
+                    ->orWhere('movement.sort_type = 4')
+                    ->orderBy('endtime DESC')
+                    ->bindValue(':village', $village)
+                    ->execute();
+                break;
+            case 5:
+            case 9:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere(['sort_type' => $type])
+                    ->andWhere(['proc' => 0])
+                    ->bindValue(':village', $village)
+                    ->execute();
+                break;
+            case 7:
+                $query = $this->conn
+                    ->select('*')
+                    ->from('movement, ' . 'attacks')
+                    ->where('movement.' . $where . ' = :village')
+                    ->andWhere('movement.ref = ' . 'attacks.id')
+                    ->andWhere('movement.proc = 0')
+                    ->andWhere('movement.sort_type = 3')
+                    ->andWhere('attacks.attack_type = 2')
+                    ->orderBy('endtime DESC')
+                    ->bindValue(':village', $village)
+                    ->execute();
                 break;
         }
+        return $query->fetchAll();
+    }
 
-        $where = 'TRUE';
-        $params = [':value' => $value];
-        if ($uid) {
-            $where .= ' AND uid = :uid ';
-            $params[':uid'] = $uid;
+    function addA2b($ckey, $timestamp, $to, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type)
+    {
+        $query = $this->conn
+            ->insert('a2b')
+            ->columns('ckey', 'time_check', 'to_vid', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u11', 'type')
+            ->values([$ckey, $timestamp, $to, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type])
+            ->execute();
+
+        return $query->lastInsertId();
+    }
+
+    function getA2b($ckey, $check)
+    {
+        $query = $this->conn
+            ->select('*')
+            ->from('a2b')
+            ->where(['ckey' => $ckey, 'time_check' => $check])
+            ->execute();
+
+        return $query->fetch();
+    }
+
+    function addMovement($type, $from, $to, $ref, $data, $endtime, $send = 1, $wood = 0, $clay = 0, $iron = 0, $crop = 0, $ref2 = 0)
+    {
+        $query = $this->conn
+            ->insert('movement')
+            ->columns('type', 'from', 'to', 'ref', 'ref2', 'data', 'endtime', 'sort_type', 'proc', 'send', 'wood', 'clay', 'iron', 'crop')
+            ->values([$type, $from, $to, $ref, $ref2, $data, $endtime, 0, $send, $wood, $clay, $iron, $crop])
+            ->execute();
+
+        return $query->lastInsertId();
+    }
+
+    function addAttack($vid, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type, $ctar1, $ctar2, $spy)
+    {
+        $query = $this->conn
+            ->insert('attacks')
+            ->columns('vid', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10', 't11', 'type', 'ctar1', 'ctar2', 'spy')
+            ->values([$vid, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $type, $ctar1, $ctar2, $spy])
+            ->execute();
+
+        return $query->lastInsertId();
+    }
+
+    function modifyAttack($aid, $unit, $amt)
+    {
+        $unit = 't' . $unit;
+        $query = $this->conn
+            ->update('attacks')
+            ->set([$unit => $unit - $amt])
+            ->where(['id' => $aid])
+            ->execute();
+
+        return $query->rowCount();
+    }
+
+    function modifyAttack2($aid, $unit, $amt)
+    {
+        $unit = 't' . $unit;
+        $query = $this->conn
+            ->update('attacks')
+            ->set([$unit => $unit . ' + ' . $amt])
+            ->where(['id' => $aid])
+            ->execute();
+
+        return $query->rowCount();
+    }
+
+    function getRanking()
+    {
+        $query = $this->conn
+            ->select('id', 'username', 'alliance', 'ap', 'apall', 'dp', 'dpall', 'access')
+            ->from('users')
+            ->where('tribe', '<=', 3)
+            ->andWhere('access', '<', INCLUDE_ADMIN ? 10 : 8)
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function getBuildList($type)
+    {
+        $query = $this->conn
+            ->select('*')
+            ->from('bdata')
+            ->where('type', '=', $type)
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function getVRanking()
+    {
+        $query = $this->conn
+            ->select('v.wref', 'v.name', 'v.owner', 'v.pop')
+            ->from('vdata', 'v')
+            ->leftJoin('users', 'u', 'v.owner = u.id')
+            ->where('u.tribe', '<=', 3)
+            ->andWhere('v.wref', '!=', '')
+            ->andWhere('u.access', '<', INCLUDE_ADMIN ? 10 : 8)
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function getARanking($limit = "")
+    {
+        $query = $this->conn
+            ->select('id', 'name', 'tag', 'oldrank', 'Aap', 'Adp')
+            ->from('alidata')
+            ->where('id', '!=', '')
+            ->append($limit)
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function getARanking2()
+    {
+        $query = $this->conn
+            ->select()
+            ->from('alidata')
+            ->where('id', '!=', '')
+            ->execute();
+
+        return $query->rowCount();
+    }
+
+    function getARanking3($limit = "")
+    {
+        $query = $this->conn
+            ->select()
+            ->from('alidata')
+            ->where('id', '!=', '')
+            ->append($limit)
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function getHeroRanking()
+    {
+        $query = $this->conn
+            ->select()
+            ->from('hero')
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function getAllMember($aid)
+    {
+        $query = $this->conn
+            ->select('*')
+            ->from('users')
+            ->where('alliance', '=', $aid)
+            ->orderBy('(SELECT sum(pop) FROM ' . 'vdata WHERE owner = ' . 'users.id)', 'desc')
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function addUnits($vid)
+    {
+        return $this->conn->insert('units', ['vref' => $vid]);
+    }
+
+    function getUnit($vid)
+    {
+        $query = $this->conn
+            ->select()
+            ->from('units')
+            ->where('vref', '=', $vid)
+            ->execute();
+
+        $result = $query->fetch();
+        return $result ? $result : NULL;
+    }
+
+    function getHUnit($vid)
+    {
+        $query = $this->conn
+            ->select('hero')
+            ->from('units')
+            ->where('vref', '=', $vid)
+            ->execute();
+
+        $result = $query->fetch();
+        return $result['hero'] != 0;
+    }
+
+    function getHero($uid = 0)
+    {
+        if (!$uid) {
+            $query = $this->conn
+                ->select()
+                ->from('hero')
+                ->execute();
+        } else {
+            $query = $this->conn
+                ->select()
+                ->from('hero')
+                ->where('dead', '=', 0)
+                ->andWhere('uid', '=', $uid)
+                ->limit(1)
+                ->execute();
         }
-        if ($id) {
-            $where .= ' AND heroid = :id ';
-            $params[':id'] = $id;
+
+        return $query->fetchAll();
+    }
+
+    function modifyHero($column, $value, $heroid, $mode = 0)
+    {
+        if (!$mode) {
+            $query = $this->conn
+                ->update('hero')
+                ->set([$column => $value])
+                ->where('heroid', '=', $heroid)
+                ->execute();
+        } elseif ($mode == 1) {
+            $query = $this->conn
+                ->update('hero')
+                ->set([$column => $column . ' + ' . $value])
+                ->where('heroid', '=', $heroid)
+                ->execute();
+        } elseif ($mode == 2) {
+            $query = $this->conn
+                ->update('hero')
+                ->set([$column => $column . ' - ' . $value])
+                ->where('heroid', '=', $heroid)
+                ->execute();
         }
 
-        $sql = "UPDATE hero SET $cmd WHERE $where";
-        return $this->conn->executeQuery($sql, $params);
+        return $query->rowCount();
     }
 
-    public function clearTech($vref)
+    function modifyHero2($column, $value, $uid, $mode)
     {
-        $this->conn->delete('tdata', 'vref = :vref', [':vref' => $vref]);
-        return $this->addTech($vref);
+        if (!$mode) {
+            $query = $this->conn
+                ->update('hero')
+                ->set([$column => $value])
+                ->where('uid', '=', $uid)
+                ->execute();
+        } elseif ($mode == 1) {
+            $query = $this->conn
+                ->update('hero')
+                ->set([$column => $column . ' + ' . $value])
+                ->where('uid', '=', $uid)
+                ->execute();
+        } elseif ($mode == 2) {
+            $query = $this->conn
+                ->update('hero')
+                ->set([$column => $column . ' - ' . $value])
+                ->where('uid', '=', $uid)
+                ->execute();
+        }
+
+        return $query->rowCount();
     }
 
-    public function clearABTech($vref)
+    function addTech($vid)
     {
-        $this->conn->delete('abdata', 'vref = :vref', [':vref' => $vref]);
-        return $this->addABTech($vref);
+        return $this->conn->insert('tdata', ['vref' => $vid]);
     }
 
-    public function getABTech($vid)
+    function addABTech($vid)
     {
-        return $this->conn->select('abdata', 'vref = :vid', [':vid' => $vid]);
+        return $this->conn->insert('abdata', ['vref' => $vid]);
     }
 
-    public function addResearch($vid, $tech, $time)
+    function getABTech($vid)
     {
-        return $this->conn->insert('research', ['vref' => $vid, 'tech' => $tech, 'time' => $time]);
+        $query = $this->conn
+            ->select()
+            ->from('abdata')
+            ->where('vref', '=', $vid)
+            ->execute();
+
+        return $query->fetchAssoc();
     }
 
-    public function getResearching($vid)
+    function addResearch($vid, $tech, $time)
     {
-        return $this->conn->select('research', '*', 'vref = :vid', [':vid' => $vid]);
+        $query = $this->conn
+            ->insert('research')
+            ->values([
+                'vref' => $vid,
+                'tech' => $tech,
+                'time' => $time
+            ])
+            ->execute();
+
+        return $query->rowCount();
     }
 
-    public function checkIfResearched($vref, $unit)
+    function getResearching($vid)
     {
-        $row = $this->conn->select('tdata', $unit, 'vref = :vref', [':vref' => $vref]);
-        return $row[$unit];
+        $query = $this->conn
+            ->select()
+            ->from('research')
+            ->where('vref', '=', $vid)
+            ->execute();
+
+        return $query->fetchAll();
     }
 
-    public function getTech($vid)
+    function checkIfResearched($vref, $unit)
     {
-        return $this->conn->select('tdata', 'vref = :vid', [':vid' => $vid]);
+        $query = $this->conn
+            ->select($unit)
+            ->from('tdata')
+            ->where('vref', '=', $vref)
+            ->execute();
+
+        $result = $query->fetch();
+        return $result[$unit];
     }
 
-    public function getTraining($vid)
+    function getTech($vid)
     {
-        return $this->conn->select('training', '*', 'vref = :vid ORDER BY id', [':vid' => $vid]);
+        $query = $this->conn
+            ->select()
+            ->from('tdata')
+            ->where('vref', '=', $vid)
+            ->execute();
+
+        return $query->fetchAssoc();
     }
 
-    public function trainUnit($vid, $unit, $amt, $pop, $each, $commence, $mode)
+    function getTraining($vid)
     {
-        $technology = new Technology();
+        $query = $this->conn->select()
+            ->from('training')
+            ->where('vref', '=', $vid)
+            ->orderBy('id')
+            ->execute();
+
+        return $query->fetchAll();
+    }
+
+    function countTraining($vid)
+    {
+        $query = $this->conn->select()
+            ->from('training', 'COUNT(*)')
+            ->where('vref', '=', $vid)
+            ->execute();
+
+        $result = $query->fetch();
+        return $result['COUNT(*)'];
+    }
+
+    function trainUnit($vid, $unit, $amt, $pop, $each, $time, $mode)
+    {
+        global $village, $building, $session, $technology;
 
         if (!$mode) {
-            $barracks = [1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 41, 42, 43, 44];
-            $greatbarracks = [61, 62, 63, 71, 72, 73, 84, 81, 82, 91, 92, 93, 94, 101, 102, 103, 104];
-            $stables = [4, 5, 6, 15, 16, 23, 24, 25, 26, 35, 36, 45, 46];
-            $greatstables = [64, 65, 66, 75, 76, 83, 84, 85, 86, 95, 96, 105, 106];
-            $workshop = [7, 8, 17, 18, 27, 28, 37, 38, 47, 48];
-            $greatworkshop = [67, 68, 77, 78, 87, 88, 97, 98, 107, 108];
-            $residence = [9, 10, 19, 20, 29, 30, 39, 40, 49, 50];
-            $trap = [199];
+            $barracks = array(1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44);
+            $greatbarracks = array(61, 62, 63, 71, 72, 73, 84, 81, 82, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104);
+            $stables = array(4, 5, 6, 15, 16, 23, 24, 25, 26, 45, 46);
+            $greatstables = array(64, 65, 66, 75, 76, 83, 84, 85, 86, 105, 106);
+            $workshop = array(7, 8, 17, 18, 27, 28, 47, 48);
+            $greatworkshop = array(67, 68, 77, 78, 87, 88, 107, 108);
+            $residence = array(9, 10, 19, 20, 29, 30, 49, 50);
+            $trapper = array(99);
 
             if (in_array($unit, $barracks)) {
                 $queued = $technology->getTrainingList(1);
@@ -2572,73 +2892,101 @@ class Database
                 $queued = $technology->getTrainingList(3);
             } elseif (in_array($unit, $residence)) {
                 $queued = $technology->getTrainingList(4);
-            } elseif (in_array($unit, $greatbarracks)) {
-                $queued = $technology->getTrainingList(5);
             } elseif (in_array($unit, $greatstables)) {
                 $queued = $technology->getTrainingList(6);
+            } elseif (in_array($unit, $greatbarracks)) {
+                $queued = $technology->getTrainingList(5);
             } elseif (in_array($unit, $greatworkshop)) {
                 $queued = $technology->getTrainingList(7);
-            } elseif (in_array($unit, $trap)) {
+            } elseif (in_array($unit, $trapper)) {
                 $queued = $technology->getTrainingList(8);
             }
-            $timestamp = time();
+            $now = time();
 
-            if (!empty($queued) && $queued[count($queued) - 1]['unit'] == $unit) {
-                $endat = $each * $amt / 1000;
-                $q = "UPDATE training SET amt = amt + :amt, timestamp = :timestamp, endat = endat + :endat WHERE id = :id";
-                $params = [
-                    ':amt' => $amt,
-                    ':timestamp' => $timestamp,
-                    ':endat' => $endat,
-                    ':id' => $queued[count($queued) - 1]['id']
-                ];
+            if ($each == 0) {
+                $each = 1;
+            }
+            $time2 = $now + $each;
+            if (count($queued) > 0) {
+                $time += $queued[count($queued) - 1]['timestamp'] - $now;
+                $time2 += $queued[count($queued) - 1]['timestamp'] - $now;
+            }
+            if ($queued[count($queued) - 1]['unit'] == $unit) {
+                $time = $amt * $queued[count($queued) - 1]['eachtime'];
+                $query = $this->conn->update('training')
+                    ->set('amt', 'amt + ' . $amt)
+                    ->set('timestamp', 'timestamp + ' . $time)
+                    ->where('id', '=', $queued[count($queued) - 1]['id'])
+                    ->execute();
             } else {
-                $endat = $timestamp + ($each * $amt / 1000);
-                $q = "INSERT INTO training (vref, unit, amt, pop, timestamp, eachtime, commence, endat) VALUES (:vid, :unit, :amt, :pop, :timestamp, :each, :commence, :endat)";
-                $params = [
-                    ':vid' => $vid,
-                    ':unit' => $unit,
-                    ':amt' => $amt,
-                    ':pop' => $pop,
-                    ':timestamp' => $timestamp,
-                    ':each' => $each,
-                    ':commence' => $commence,
-                    ':endat' => $endat
-                ];
+                $query = $this->conn->insert('training')
+                    ->values(array(
+                        'vref' => $vid,
+                        'unit' => $unit,
+                        'amt' => $amt,
+                        'pop' => $pop,
+                        'timestamp' => $time,
+                        'eachtime' => $each,
+                        'time2' => $time2
+                    ))
+                    ->execute();
             }
         } else {
-            $q = "DELETE FROM training WHERE id = :id";
-            $params = [':id' => $vid];
+            $query = $this->conn->delete('training')
+                ->where('id', '=', $vid)
+                ->execute();
         }
 
-        return $this->conn->executeQuery($q, $params);
+        return $query;
     }
 
-    public function removeZeroTrain()
+    function getHeroTrain($vid)
     {
-        return $this->conn->delete('training', ['unit[!]' => 0, 'amt[<]' => 1]);
+        $query = $this->conn->select()
+            ->from('training')
+            ->where('vref', '=', $vid)
+            ->andWhere('unit', '=', 0)
+            ->execute();
+
+        return $this->mysql_fetch_assoc($query);
     }
 
-    public function getHeroTrain($vid)
-    {
-        return $this->conn->select('training', 'id, eachtime', ['vref' => $vid, 'unit' => 0]);
-    }
-
-    public function trainHero($vid, $each, $endat, $mode)
+    function trainHero($vid, $each, $mode)
     {
         if (!$mode) {
-            return $this->conn->insert('training', ['vref' => $vid, 'amt' => 0, 'eachtime' => 1, 'unit' => 6, 'timestamp' => time(), 'timestamp' => $each, 'timestamp' => $endat]);
+            $time = time();
+            $query = $this->conn->insert('training')
+                ->values(array(
+                    'vref' => $vid,
+                    'unit' => 0,
+                    'amt' => 1,
+                    'pop' => 6,
+                    'timestamp' => $time,
+                    'eachtime' => $each,
+                    'time2' => $each
+                ))
+                ->execute();
         } else {
-            return $this->conn->delete('training', ['id' => $vid]);
+            $query = $this->conn->delete('training')
+                ->where('id', '=', $vid)
+                ->execute();
         }
+
+        return $query;
     }
 
-    public function updateTraining($id, $trained)
+    function updateTraining($id, $trained, $each)
     {
-        return $this->conn->update('training', ['amt' => 'GREATEST(amt - :trained, 0)', 'timestamp' => time()], ['id' => $id], [':trained' => $trained]);
+        $tableName = "training";
+        $data = array(
+            'amt' => 'amt - ' . $trained,
+            'timestamp2' => 'timestamp2 + ' . $each
+        );
+        $where = array('id' => $id);
+        return $this->conn->update($tableName, $data, $where);
     }
 
-    public function modifyUnit($vref, $unit, $amt, $mode)
+    function modifyUnit($vref, $unit, $amt, $mode)
     {
         if ($unit == 230) {
             $unit = 30;
@@ -2657,1406 +3005,1421 @@ class Database
         } else {
             $unit = 'u' . $unit;
         }
-        switch ($mode) {
-            case 0:
-                $q = "SELECT $unit FROM units WHERE vref = :vref";
-                $result = $this->conn->executeQuery($q, [':vref' => $vref]);
-                $row = $result->fetch(PDO::FETCH_ASSOC);
-                $amt = min($row[$unit], $amt);
-                $q = "UPDATE units SET $unit = ($unit - :amt) WHERE vref = :vref";
-                break;
-            case 1:
-                $q = "UPDATE units SET $unit = $unit + :amt WHERE vref = :vref";
-                break;
-            case 2:
-                $q = "UPDATE units SET $unit = :amt WHERE vref = :vref";
-                break;
+        $tableName = "units";
+        $data = array(
+            $unit => ($mode ? "$unit + $amt" : "$unit - $amt")
+        );
+        $where = array('vref' => $vref);
+        return $this->conn->update($tableName, $data, $where);
+    }
+
+    function getEnforce($vid, $from)
+    {
+        $tableName = "enforcement";
+        $columns = "*";
+        $where = "`from` = $from AND vref = $vid";
+        $result = $this->conn->select($tableName, $columns, $where);
+        return mysql_fetch_assoc($result);
+    }
+
+    function checkEnforce($vid, $from)
+    {
+        $tableName = "enforcement";
+        $columns = "*";
+        $where = "`from` = ? AND vref = ?";
+        $values = array($from, $vid);
+        $result = $this->conn->select($tableName, $columns, $where, $values);
+        if ($result->numRows() > 0) {
+            return $result->insertId();
+        } else {
+            return true;
         }
-        return $this->conn->executeQuery($q, [':vref' => $vref, ':amt' => $amt]);
     }
 
-    public function getFilledTrapCount($vref)
+    function addEnforce($data)
     {
-        $result = 0;
-        $trapped = $this->conn->select('trapped', ['vref' => $vref]);
-        foreach ($trapped as $trap) {
-            for ($i = 1; $i <= 50; $i++) {
-                $result += max(0, $trap['u' . $i]);
-            }
-            $result += max(0, $trap['hero']);
+        $tableName = "enforcement";
+        $enforceData = array(
+            'vref' => $data['to'],
+            '`from`' => $data['from']
+        );
+        $this->conn->insert($tableName, $enforceData);
+        $id = $this->conn->insertId();
+        if ($data['from'] != 0) {
+            $owntribe = $this->getUserField($this->getVillageField($data['from'], "owner"), "tribe", 0);
+        } else {
+            $owntribe = 4;
         }
-        return $result;
-    }
-
-    public function getTrapped($id)
-    {
-        return $this->conn->select('trapped', ['id' => $id]);
-    }
-
-    public function getTrappedIn($vref)
-    {
-        return $this->conn->select('trapped', ['vref' => $vref]);
-    }
-
-    public function getTrappedFrom($from)
-    {
-        return $this->conn->select('trapped', ['from' => $from]);
-    }
-
-    public function addTrapped($vref, $from)
-    {
-        $id = $this->hasTrapped($vref, $from);
-        if (!$id) {
-            return $this->conn->insert('trapped', ['vref' => $vref, 'from' => $from]);
-        }
-        return $id;
-    }
-
-    public function hasTrapped($vref, $from)
-    {
-        return $this->conn->select('trapped', 'id', ['vref' => $vref, 'from' => $from]);
-    }
-
-    public function modifyTrapped($id, $unit, $amt, $mode)
-    {
-        $columnName = ($unit == 'hero') ? 'hero' : 'u' . $unit;
-        $operation = ($mode == 0) ? '-' : '+';
-        $this->conn->update('trapped', [$columnName => $columnName . $operation . $amt], ['id' => $id]);
-    }
-
-    public function removeTrapped($id)
-    {
-        $this->conn->delete('trapped', ['id' => $id]);
-    }
-
-    public function removeAnimals($id)
-    {
-        $this->conn->delete('enforcement', ['id' => $id]);
-    }
-
-    public function checkEnforce($vid, $from)
-    {
-        $enforce = $this->conn->select('enforcement', 'id', ['from' => $from, 'vref' => $vid]);
-        return $enforce ? $enforce['id'] : false;
-    }
-
-    public function addEnforce($data)
-    {
-        $id = $this->conn->insert('enforcement', ['vref' => $data['to'], 'from' => $data['from']]);
-
-        $fromVillage = $this->isVillageOasis($data['from']) ? $this->getOMInfo($data['from']) : $this->getMInfo($data['from']);
-        $fromTribe = $this->getUserField($fromVillage["owner"], "tribe", 0);
-        $start = ($fromTribe - 1) * 10 + 1;
-        $end = ($fromTribe * 10);
-
-        $j = 1;
+        $start = ($owntribe - 1) * 10 + 1;
+        $end = ($owntribe * 10);
+        //add unit
+        $j = '1';
         for ($i = $start; $i <= $end; $i++) {
-            $this->modifyEnforce($id, $i, $data['t' . $j], 1);
+            $this->modifyEnforce($id, $i, $data['t' . $j . ''], 1);
             $j++;
         }
-
         return $id;
     }
 
-    public function getOMInfo($id)
+    function addHeroEnforce($data)
     {
-        return $this->conn->leftJoin('wdata', 'odata', 'odata.wref = wdata.id', '*', 'wdata.id = :id', [':id' => $id]);
+        $enforceData = array(
+            'vref' => $data['to'],
+            '`from`' => $data['from'],
+            'hero' => 1
+        );
+        $this->conn->insert("enforcement", $enforceData);
     }
 
-    public function getMInfo($id)
+    function modifyEnforce($id, $unit, $amt, $mode)
     {
-        return $this->conn->leftJoin('wdata', 'vdata', 'vdata.wref = wdata.id', '*', 'wdata.id = :id', [':id' => $id]);
-    }
-
-    public function modifyEnforce($id, $unit, $amt, $mode)
-    {
-        $columnName = ($unit == 'hero') ? 'hero' : 'u' . $unit;
-        $operation = ($mode == 0) ? '-' : '+';
-
-        $this->conn->update('enforcement', [$columnName => ["$columnName $operation :amt"]], ['id' => $id], [':amt' => $amt]);
-    }
-
-    public function addHeroEnforce($data)
-    {
-        $this->conn->insert("enforcement", ['vref' => $data['to'], 'from' => $data['from'], 'hero' => 1]);
-    }
-
-    public function getEnforceArray($id, $mode)
-    {
+        if ($unit == 'hero') {
+            $unit = 'hero';
+        } else {
+            $unit = 'u' . $unit;
+        }
+        $tableName = "enforcement";
         if (!$mode) {
-            return $this->conn->select("enforcement", "*", "id = :id", [':id' => $id]);
+            $data = array($unit => "$unit - $amt");
         } else {
-            return $this->conn->select("enforcement", "*", "from = :id", [':id' => $id]);
+            $data = array($unit => "$unit + $amt");
         }
+        $where = "id = ?";
+        $values = array($id);
+        $this->conn->update($tableName, $data, $where, $values);
     }
 
-    public function getEnforceVillage($id, $mode)
+    function getEnforceArray($id, $mode)
     {
+        $tableName = "enforcement";
         if (!$mode) {
-            return $this->conn->select("enforcement", "*", "vref = :id", [':id' => $id]);
+            $where = "id = ?";
+            $values = array($id);
         } else {
-            return $this->conn->select("enforcement", "*", "from = :id", [':id' => $id]);
+            $where = "`from` = ?";
+            $values = array($id);
         }
+        return $this->conn->selectOne($tableName, "*", $where, $values);
     }
 
-    public function getOasesEnforce($id)
+    function getEnforceVillage($id, $mode)
     {
-        $oasisowned = $this->getOasis($id);
-        if (!empty($oasisowned) && count($oasisowned) > 0) {
-            $inos = '(';
-            foreach ($oasisowned as $oo) $inos .= $oo['wref'] . ',';
-            $inos = substr($inos, 0, strlen($inos) - 1);
-            $inos .= ')';
-            return $this->conn->select("enforcement", "*", "from = :id AND vref IN " . $inos, [':id' => $id]);
+        $tableName = "enforcement";
+        if (!$mode) {
+            $where = "`vref` = ?";
+            $values = array($id);
         } else {
-            return null;
+            $where = "`from` = ?";
+            $values = array($id);
         }
+        return $this->conn->selectAll($tableName, "*", $where, $values);
     }
 
-    public function getOasis($vid)
-    {
-        return $this->conn->select("odata", "type, wref", "conqured = :vid", [":vid" => $vid]);
-    }
-
-    public function getVillageMovement($id)
+    function getVillageMovement($id)
     {
         $vinfo = $this->getVillage($id);
-        if (isset($vinfo['owner'])) {
-            $vtribe = $this->getUserField($vinfo['owner'], "tribe", 0);
-            $movingunits = [];
-            $outgoingarray = $this->getMovement(3, $id, 0);
-            for ($i = 1; $i <= 10; $i++) $movingunits['u' . (($vtribe - 1) * 10 + $i)] = 0;
-            $movingunits['hero'] = 0;
-            if (!empty($outgoingarray)) {
-                foreach ($outgoingarray as $out) {
-                    for ($i = 1; $i <= 10; $i++) {
-                        $movingunits['u' . (($vtribe - 1) * 10 + $i)] += $out['t' . $i];
-                    }
-                    $movingunits['hero'] += $out['t11'];
-                }
-            }
-            $returningarray = $this->getMovement(4, $id, 1);
-            if (!empty($returningarray)) {
-                foreach ($returningarray as $ret) {
-                    if ($ret['attack_type'] != 1) {
-                        for ($i = 1; $i <= 10; $i++) {
-                            $movingunits['u' . (($vtribe - 1) * 10 + $i)] += $ret['t' . $i];
-                        }
-                        $movingunits['hero'] += $ret['t11'];
-                    }
-                }
-            }
-            $settlerarray = $this->getMovement(5, $id, 0);
-            if (!empty($settlerarray)) {
-                $movingunits['u' . ($vtribe * 10)] += 3 * count($settlerarray);
-            }
-            $advarray = $this->getMovement(9, $id, 0);
-            if (!empty($advarray)) {
-                $movingunits['hero'] += 1;
-            }
-            return $movingunits;
-        } else {
-            return [];
-        }
-    }
+        $vtribe = $this->getUserField($vinfo['owner'], "tribe", 0);
+        $movingunits = array();
 
-    /**
-     * Function to retrieve movement of village
-     * Type 0: Send Resource
-     * Type 1: Send Merchant
-     * Type 2: Return Resource
-     * Type 3: Attack
-     * Type 4: Return
-     * Type 5: Settler
-     * Type 6: Bounty
-     * Type 7: Reinf.
-     * Type 9: Adventure
-     * Mode 0: Send/Out
-     * Mode 1: Recieve/In
-     * References: Type, Village, Mode
-     */
-    public function getMovement($type, $village, $mode)
-    {
-        if (!$mode) {
-            $where = "from";
-        } else {
-            $where = "to";
-        }
-        switch ($type) {
-            case 0:
-                $q = "SELECT * FROM movement, send where movement." . $where . " = $village and movement.ref = send.id and movement.proc = 0 and movement.sort_type = 0";
-                break;
-            case 1:
-                $q = "SELECT * FROM movement, send where movement." . $where . " = $village and movement.ref = send.id and movement.proc = 0 and movement.sort_type = 1";
-                break;
-            case 2:
-                $q = "SELECT * FROM movement where movement." . $where . " = $village and movement.proc = 0 and movement.sort_type = 2";
-                break;
-            case 3:
-                $q = "SELECT * FROM movement, attacks where movement." . $where . " = $village and movement.ref = attacks.id and movement.proc = 0 and movement.sort_type = 3 ORDER BY endtime ASC";
-                break;
-            case 4:
-                $q = "SELECT * FROM movement, attacks where movement." . $where . " = $village and movement.ref = attacks.id and movement.proc = 0 and movement.sort_type = 4 ORDER BY endtime ASC";
-                break;
-            case 5:
-                $q = "SELECT * FROM movement where movement." . $where . " = $village and sort_type = 5 and proc = 0";
-                break;
-            case 6:
-                $q = "SELECT * FROM movement,odata, attacks where odata.conqured = $village and movement.to = odata.wref and movement.ref = attacks.id and movement.proc = 0 and movement.sort_type = 3 ORDER BY endtime ASC";
-                break;
-            case 9:
-                $q = "SELECT * FROM movement where movement." . $where . " = $village and sort_type = 9 and proc = 0";
-                break;
-            case 34:
-                $q = "SELECT * FROM movement, attacks where (movement." . $where . " = $village and movement.ref = attacks.id and movement.proc = 0) and (movement.sort_type = 3 or  movement.sort_type = 4) ORDER BY endtime ASC";
-                break;
-        }
-        $result = $this->conn->executeQuery($q);
-        return $result->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public function getVillageMovementArray(int $id)
-    {
-        $movingarray = [];
         $outgoingarray = $this->getMovement(3, $id, 0);
         if (!empty($outgoingarray)) {
-            $movingarray = array_merge($movingarray, $outgoingarray);
+            foreach ($outgoingarray as $out) {
+                for ($i = 1; $i <= 10; $i++) {
+                    $movingunits['u' . (($vtribe - 1) * 10 + $i)] += $out['t' . $i];
+                }
+            }
         }
+
         $returningarray = $this->getMovement(4, $id, 1);
         if (!empty($returningarray)) {
-            $movingarray = array_merge($movingarray, $returningarray);
-        }
-        return $movingarray;
-    }
-
-    public function getWW()
-    {
-        $result = $this->conn->select('fdata', 'vref', 'f99t = ?', [40]);
-        return !empty($result);
-    }
-
-    public function getWWLevel($vref)
-    {
-        $result = $this->conn->select('fdata', 'f99', 'vref = ?', [$vref]);
-
-        if ($result !== false && isset($result['f99'])) {
-            return $result['f99'];
+            foreach ($returningarray as $ret) {
+                if ($ret['attack_type'] != 1) {
+                    for ($i = 1; $i <= 10; $i++) {
+                        $movingunits['u' . (($vtribe - 1) * 10 + $i)] += $ret['t' . $i];
+                    }
+                }
+            }
         }
 
-        return null;
-    }
-
-    public function getWWOwnerID($vref)
-    {
-        $result = $this->conn->select('vdata', 'owner', 'wref = ?', [$vref]);
-        if ($result !== false && isset($result['owner'])) {
-            return (int)$result['owner'];
-        }
-        return null;
-    }
-
-    public function getUserAllianceID($id)
-    {
-        $result = $this->conn->select('users', 'alliance', 'id = ?', [$id]);
-        if ($result !== false && isset($result['alliance'])) {
-            return (int)$result['alliance'];
-        }
-        return null;
-    }
-
-    public function getWWName($vref)
-    {
-        $result = $this->conn->select('fdata', 'wwname', 'vref = ?', [$vref]);
-        if ($result !== false && isset($result['wwname'])) {
-            return $result['wwname'];
-        }
-        return null;
-    }
-
-    public function submitWWname($vref, $name)
-    {
-        return $this->conn->update('fdata', ['wwname' => $name], 'vref = ?', [$vref]);
-    }
-
-    public function modifyCommence($id, $commence = 0)
-    {
-        if ($commence == 0) {
-            $commence = time();
-        }
-        return $this->conn->update('training', ['commence' => $commence], 'id = ?', [$id]);
-    }
-
-    public function getTrainingList()
-    {
-        $result = $this->conn->select('training', 'id, vref, unit, eachtime, endat, commence, amt', 'amt != ?', [0]);
-        return !empty($result) ? $result : [];
-    }
-
-    public function getNeedDelete()
-    {
-        $result = $this->conn->select('deleting', 'uid', 'timestamp <= ?', [time()]);
-        return !empty($result) ? $result : [];
-    }
-
-    public function countUser()
-    {
-        $result = $this->conn->select('users', 'COUNT(id) as total', 'id != ?', [0]);
-        if ($result !== false && isset($result['total'])) {
-            return (int)$result['total'];
-        }
-        return 0;
-    }
-
-    public function countAlli()
-    {
-        $result = $this->conn->select('alidata', 'COUNT(id) as total', 'id != ?', [0]);
-
-        if ($result !== false && isset($result['total'])) {
-            return (int)$result['total'];
-        }
-        return 0;
-    }
-
-    public function getWoodAvailable($wref)
-    {
-        $result = $this->conn->select('vdata', 'wood', 'wref = ?', [$wref]);
-
-        if ($result !== false && isset($result['wood'])) {
-            return (int)$result['wood'];
+        $settlerarray = $this->getMovement(5, $id, 0);
+        if (!empty($settlerarray)) {
+            $movingunits['u' . ($vtribe * 10)] += 3 * count($settlerarray);
         }
 
-        return 0;
+        return $movingunits;
     }
 
-    public function getClayAvailable($wref)
+    function getWW()
     {
-        $result = $this->conn->select('vdata', 'clay', 'wref = ?', [$wref]);
-
-        if ($result !== false && isset($result['clay'])) {
-            return (int)$result['clay'];
+        $tableName = "fdata";
+        $where = "f99t = ?";
+        $values = array(40);
+        $result = $this->conn->select($tableName, "*", $where, $values);
+        if ($result) {
+            return true;
+        } else {
+            return false;
         }
-
-        return 0;
     }
 
-    public function getIronAvailable($wref)
+    function getWWLevel($vref)
     {
-        $result = $this->conn->select('vdata', 'iron', 'wref = ?', [$wref]);
-
-        if ($result !== false && isset($result['iron'])) {
-            return (int)$result['iron'];
+        $tableName = "fdata";
+        $columns = array("f99");
+        $where = "vref = ?";
+        $values = array($vref);
+        $result = $this->conn->select($tableName, $columns, $where, $values);
+        if ($result && $this->conn->numRows($result) > 0) {
+            $row = $this->conn->fetchAssoc($result);
+            return $row['f99'];
+        } else {
+            return false;
         }
-
-        return 0;
     }
 
-    public function getCropAvailable($wref)
+    function getWWOwnerID($vref)
     {
-        $result = $this->conn->select('vdata', 'crop', 'wref = ?', [$wref]);
-
-        if ($result !== false && isset($result['crop'])) {
-            return (int)$result['crop'];
+        $tableName = "vdata";
+        $columns = array("owner");
+        $where = "wref = ?";
+        $values = array($vref);
+        $result = $this->conn->select($tableName, $columns, $where, $values);
+        if ($result && $this->conn->numRows($result) > 0) {
+            $row = $this->conn->fetchAssoc($result);
+            return $row['owner'];
+        } else {
+            return false;
         }
+    }
 
-        return 0;
+    function getUserAllianceID($id)
+    {
+        $tableName = "users";
+        $columns = array("alliance");
+        $where = "id = ?";
+        $values = array($id);
+        $result = $this->conn->select($tableName, $columns, $where, $values);
+        if ($result && $this->conn->numRows($result) > 0) {
+            $row = $this->conn->fetchAssoc($result);
+            return $row['alliance'];
+        } else {
+            return false;
+        }
+    }
+
+    function getWWName($vref)
+    {
+        $tableName = "fdata";
+        $columns = array("wwname");
+        $where = "vref = ?";
+        $values = array($vref);
+        $result = $this->conn->select($tableName, $columns, $where, $values);
+        if ($result && $this->conn->numRows($result) > 0) {
+            $row = $this->conn->fetchAssoc($result);
+            return $row['wwname'];
+        } else {
+            return false;
+        }
+    }
+
+    function submitWWname($vref, $name)
+    {
+        $tableName = "fdata";
+        $data = array("wwname" => $name);
+        $where = "vref = ?";
+        $values = array($vref);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+// Funções relacionadas a medalhas
+    function addclimberpop($user, $cp)
+    {
+        $tableName = "users";
+        $data = array("Rc" => "Rc + $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function addclimberrankpop($user, $cp)
+    {
+        $tableName = "users";
+        $data = array("clp" => "clp + $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function removeclimberrankpop($user, $cp)
+    {
+        $tableName = "users";
+        $data = array("clp" => "clp - $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function updateoldrank($user, $cp)
+    {
+        $tableName = "users";
+        $data = array("oldrank" => $cp);
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function setclimberrankpop($user, $cp)
+    {
+        $tableName = "users";
+        $data = array("clp" => $cp);
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function removeclimberpop($user, $cp)
+    {
+        $tableName = "users";
+        $data = array("Rc" => "Rc - $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function addclimberpopAlly($user, $cp)
+    {
+        $tableName = "alidata";
+        $data = array("Rc" => "Rc + $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function addclimberrankpopAlly($user, $cp)
+    {
+        $tableName = "alidata";
+        $data = array("clp" => "clp + $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function removeclimberrankpopAlly($user, $cp)
+    {
+        $tableName = "alidata";
+        $data = array("clp" => "clp - $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function updateoldrankAlly($user, $cp)
+    {
+        $tableName = "alidata";
+        $data = array("oldrank" => $cp);
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function removeclimberpopAlly($user, $cp)
+    {
+        $tableName = "alidata";
+        $data = array("Rc" => "Rc - $cp");
+        $where = "id = ?";
+        $values = array($user);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function modifyCommence($id)
+    {
+        $time = time();
+        $tableName = "training";
+        $data = array("commence" => $time);
+        $where = "id = ?";
+        $values = array($id);
+        return $this->conn->update($tableName, $data, $where, $values);
+    }
+
+    function getTrainingList()
+    {
+        $tableName = "training";
+        $columns = "*";
+        $where = "vref != ''";
+        $trainingList = $this->conn->select($tableName, $columns, $where);
+        return $trainingList;
+    }
+
+    function getNeedDelete()
+    {
+        $tableName = "deleting";
+        $columns = "uid";
+        $time = time();
+        $where = "timestamp < ?";
+        $values = array($time);
+        $needDelete = $this->conn->select($tableName, $columns, $where, $values);
+        return $needDelete;
+    }
+
+    function countUser()
+    {
+        $tableName = "users";
+        $columns = "count(id)";
+        $where = "id != 0";
+        $countUser = $this->conn->select($tableName, $columns, $where);
+        return $countUser[0]['count(id)'];
+    }
+
+    function countAlli()
+    {
+        $tableName = "alidata";
+        $columns = "count(id)";
+        $where = "id != 0";
+        $countAlli = $this->conn->select($tableName, $columns, $where);
+        return $countAlli[0]['count(id)'];
+    }
+
+    function RemoveXSS($val)
+    {
+        return htmlspecialchars($val, ENT_QUOTES);
+    }
+
+    function getWoodAvailable($wref)
+    {
+        $tableName = "vdata";
+        $columns = "wood";
+        $where = "wref = ?";
+        $values = array($wref);
+        $woodAvailable = $this->conn->select($tableName, $columns, $where, $values);
+        return $woodAvailable[0]['wood'];
+    }
+
+    function getClayAvailable($wref)
+    {
+        $tableName = "vdata";
+        $columns = "clay";
+        $where = "wref = ?";
+        $values = array($wref);
+        $clayAvailable = $this->conn->select($tableName, $columns, $where, $values);
+        return $clayAvailable[0]['clay'];
+    }
+
+    function getIronAvailable($wref)
+    {
+        $tableName = "vdata";
+        $columns = "iron";
+        $where = "wref = ?";
+        $values = array($wref);
+        $ironAvailable = $this->conn->select($tableName, $columns, $where, $values);
+        return $ironAvailable[0]['iron'];
+    }
+
+    function getCropAvailable($wref)
+    {
+        $tableName = "vdata";
+        $columns = "crop";
+        $where = "wref = ?";
+        $values = array($wref);
+        $cropAvailable = $this->conn->select($tableName, $columns, $where, $values);
+        return $cropAvailable[0]['crop'];
+    }
+
+    function Getowner($vid)
+    {
+        $tableName = "vdata";
+        $columns = "owner";
+        $where = "wref = ?";
+        $values = array($vid);
+        $ownerResult = $this->conn->select($tableName, $columns, $where, $values);
+        return $ownerResult[0]['owner'];
+    }
+
+    public function debug($time, $uid, $debug_info)
+    {
+        $tableName = "debug_info";
+        $data = array(
+            'time' => $time,
+            'uid' => $uid,
+            'debug_info' => $debug_info
+        );
+        if ($this->conn->insert($tableName, $data)) {
+            return $this->conn->getLastInsertedId();
+        } else {
+            return false;
+        }
+    }
+
+    function poulateOasisdata()
+    {
+        $selectQuery = $this->conn->select()
+            ->from("wdata")
+            ->where("oasistype != 0");
+        $result2 = $this->conn->query($selectQuery);
+
+        while ($row = $result2->fetch_assoc()) {
+            $wid = $row['id'];
+            switch ($row['oasistype']) {
+                case 1:
+                    $tt =  "1000,1000,1000,1000,1000,1000";
+                    break;
+                case 2:
+                    $tt =  "2000,1000,1000,2000,1000,2000";
+                    break;
+                case 3:
+                    $tt =  "2000,1000,1000,2000,2000,2000";
+                    break;
+                case 4:
+                    $tt =  "1000,1000,1000,1000,1000,1000";
+                    break;
+                case 5:
+                    $tt =  "1000,2000,1000,2000,1000,2000";
+                    break;
+                case 6:
+                    $tt =  "1000,2000,1000,2000,1000,2000";
+                    break;
+                case 7:
+                    $tt =  "1000,1000,1000,1000,1000,1000";
+                    break;
+                case 8:
+                    $tt =  "1000,1000,2000,2000,1000,2000";
+                    break;
+                case 9:
+                    $tt =  "1000,1000,2000,2000,2000,2000";
+                    break;
+                case 10:
+                    $tt =  "1000,1000,1000,1000,1000,1000";
+                    break;
+                case 11:
+                    $tt =  "1000,1000,1000,2000,2000,2000";
+                    break;
+                case 12:
+                    $tt =  "1000,1000,1000,2000,2000,2000";
+                    break;
+            }
+            $basearray = $this->getOMInfo($wid);
+            $insertQuery = $this->conn->insert("odata")
+                ->set(array(
+                    'id' => $basearray['id'],
+                    'oasistype' => $basearray['oasistype'],
+                    'conqured' => 0,
+                    'r0' => $tt,
+                    'r1' => time(),
+                    'r2' => time(),
+                    'r3' => 100,
+                    'r4' => 3,
+                    'updateTime' => time(),
+                    'loyalty' => 3,
+                    'type' => 'Unoccupied oasis',
+                    'name' => 'Unoccupied oasis'
+                ));
+            $this->conn->query($insertQuery);
+        }
     }
 
     public function getAvailableExpansionTraining()
     {
-        $building = new Building();
+        global $building, $session, $technology, $village;
 
-        $result = $this->conn->select('vdata', '(IF(exp1=0,1,0)+IF(exp2=0,1,0)+IF(exp3=0,1,0))', 'wref = ?', [$village->wid]);
-        $maxslots = $result !== false ? (int)$result : 0;
+        // Obtém o número máximo de slots de expansão disponíveis no aldeamento
+        $selectQuery = $this->conn->select(array($this->conn->raw("(IF(exp1=0,1,0)+IF(exp2=0,1,0)+IF(exp3=0,1,0))")))
+            ->from("vdata")
+            ->where('wref', '=', $village->wid);
+        $maxslots = $this->conn->getValue($selectQuery);
 
-        $residence = $building->getTypeLevel(25);
-        $palace = $building->getTypeLevel(26);
-        if ($residence > 0) {
-            $maxslots -= (3 - floor($residence / 10));
-        }
-        if ($palace > 0) {
-            $maxslots -= (3 - floor(($palace - 5) / 5));
-        }
+        // Calcula os slots ocupados pelos Settlers e Chiefs
+        $settlersQuery = $this->conn->select(array($this->conn->raw("(u10+u20+u30)")))
+            ->from("units")
+            ->where('vref', '=', $village->wid);
+        $settlers = $this->conn->getValue($settlersQuery);
 
-        $result = $this->conn->select('units', '(u10+u20+u30)', 'vref = ?', [$village->wid]);
-        $settlers = $result !== false ? (int)$result : 0;
+        $chiefsQuery = $this->conn->select(array($this->conn->raw("(u9+u19+u29)")))
+            ->from("units")
+            ->where('vref', '=', $village->wid);
+        $chiefs = $this->conn->getValue($chiefsQuery);
 
-        $result = $this->conn->select('units', '(u9+u19+u29)', 'vref = ?', [$village->wid]);
-        $chiefs = $result !== false ? (int)$result : 0;
+        // Leva em consideração os movimentos de tropas
+        $settlers += 3 * count($this->getMovement(5, $village->wid, 0));
+        $chiefs += count($this->getMovement(5, $village->wid, 0));
 
-        $current_movement = $this->getMovement(5, $village->wid, 0);
-        $settlers += 3 * count($current_movement);
-        foreach ($current_movement as $build) {
-            $settlers += $build['t10'];
-            $chiefs += $build['t9'];
-        }
-
-        $movements = [3, 4];
-        foreach ($movements as $movement) {
-            for ($i = 0; $i <= 1; $i++) {
-                $current_movement = $this->getMovement($movement, $village->wid, $i);
-                if (!empty($current_movement)) {
-                    foreach ($current_movement as $build) {
-                        $settlers += $build['t10'];
-                        $chiefs += $build['t9'];
-                    }
-                }
-            }
+        // Calcula os slots ocupados por tropas em movimento
+        $currentMovements = array(3, 4);
+        foreach ($currentMovements as $movementType) {
+            $movementsQuery = $this->conn->select(array($this->conn->raw("(SUM(t10)+SUM(t9))")))
+                ->from("movement")
+                ->where('type', '=', $movementType)
+                ->where('from', '=', $village->wid);
+            $movements = $this->conn->getValue($movementsQuery);
+            $settlers += $movements['SUM(t10)'];
+            $chiefs += $movements['SUM(t9)'];
         }
 
-        $result = $this->conn->select('enforcement', '(u10+u20+u30)', 'from = ?', [$village->wid]);
-        if (!empty($result)) {
-            $settlers += (int)$result;
-        }
+        // Calcula os slots ocupados pelas tropas de reforço
+        $reinforcementsQuery = $this->conn->select(array($this->conn->raw("(SUM(u10)+SUM(u20)+SUM(u30))"), $this->conn->raw("(SUM(u9)+SUM(u19)+SUM(u29))")))
+            ->from("enforcement")
+            ->where('from', '=', $village->wid);
+        $reinforcements = $this->conn->getRow($reinforcementsQuery);
+        $settlers += $reinforcements['SUM(u10)'];
+        $chiefs += $reinforcements['SUM(u9)'];
 
-        $result = $this->conn->select('trapped', '(u10+u20+u30)', 'from = ?', [$village->wid]);
-        if (!empty($result)) {
-            $settlers += (int)$result;
-        }
-
-        $result = $this->conn->select('enforcement', '(u9+u19+u29)', 'from = ?', [$village->wid]);
-        if (!empty($result)) {
-            $chiefs += (int)$result;
-        }
-
-        $result = $this->conn->select('trapped', '(u9+u19+u29)', 'from = ?', [$village->wid]);
-        if (!empty($result)) {
-            $chiefs += (int)$result;
-        }
-
-        $trainlist = $technology->getTrainingList(4);
-        if (!empty($trainlist)) {
-            foreach ($trainlist as $train) {
-                if ($train['unit'] % 10 == 0) {
-                    $settlers += $train['amt'];
-                }
-                if ($train['unit'] % 10 == 9) {
-                    $chiefs += $train['amt'];
-                }
-            }
-        }
-
+        // Calcula os slots disponíveis para Settlers e Chiefs
         $settlerslots = $maxslots * 3 - $settlers - $chiefs * 3;
         $chiefslots = $maxslots - $chiefs - floor(($settlers + 2) / 3);
 
-        if (!$technology->getTech((Session::get('tribe') - 1) * 10 + 9)) {
+        // Verifica se a pesquisa para Chiefs está disponível para a tribo atual
+        if (!$technology->getTech(($session->tribe - 1) * 10 + 9)) {
             $chiefslots = 0;
         }
-        $slots = ["chiefs" => $chiefslots, "settlers" => $settlerslots];
-        return $slots;
+
+        return array("chiefs" => $chiefslots, "settlers" => $settlerslots);
     }
 
-    public function addArtefact($vref, $owner, $type, $size, $name, $desc, $effecttype, $effect, $aoe, $img)
+    function addArtefact($vref, $owner, $type, $size, $name, $desc, $effect, $img)
     {
-        $data = [
-            "vref" => $vref,
-            "owner" => $owner,
-            "type" => $type,
-            "size" => $size,
-            "conquered" => time(),
-            "name" => $name,
-            "desc" => $desc,
-            "effecttype" => $effecttype,
-            "effect" => $effect,
-            "aoe" => $aoe,
-            "img" => $img
-        ];
-
-        return $this->conn->insert("artefacts", $data);
+        $data = array(
+            'vref' => $vref,
+            'owner' => $owner,
+            'type' => $type,
+            'size' => $size,
+            'conquered' => time(),
+            'name' => $name,
+            'desc' => $desc,
+            'effect' => $effect,
+            'img' => $img
+        );
+        $insertQuery = $this->conn->insert('artefacts')->set($data);
+        return $this->conn->execute($insertQuery);
     }
 
-
-    public function getOwnArtefactInfo($vref)
+    function getOwnArtefactInfo($vref)
     {
-        return $this->conn->select('artefacts', '*', 'vref = ?', [$vref]);
+        $selectQuery = $this->conn->select()->from('artefacts')->where('vref', '=', $vref);
+        return $this->conn->fetchRow($selectQuery);
     }
 
-    public function getArtefactInfo($sizes)
+    function getOwnArtefactInfo2($vref)
     {
-        $conditions = "";
-        $params = [];
-
-        if (!empty($sizes)) {
-            $placeholders = implode(",", array_fill(0, count($sizes), "?"));
-            $conditions = " AND size IN ($placeholders)";
-            $params = $sizes;
-        }
-
-        return $this->conn->select("artefacts", "*", "1 $conditions ORDER BY type", $params);
+        $selectQuery = $this->conn->select()->from('artefacts')->where('vref', '=', $vref);
+        return $this->conn->fetchAll($selectQuery);
     }
 
-    public function getArtefactInfoByDistance($coor, $distance, $sizes)
+    function getOwnArtefactInfo3($uid)
     {
-        if (count($sizes) != 0) {
-            $sizestr = ' AND ( FALSE ';
-            foreach ($sizes as $s) {
-                $sizestr .= ' OR artefacts.size = ? ';
-            }
-            $sizestr .= ' ) ';
-            $params = $sizes;
+        $selectQuery = $this->conn->select()->from('artefacts')->where('owner', '=', $uid);
+        return $this->conn->fetchAll($selectQuery);
+    }
+
+    function getOwnArtefactInfoByType($vref, $type)
+    {
+        $selectQuery = $this->conn->select()->from('artefacts')->where('vref', '=', $vref)->where('type', '=', $type)->orderBy('size');
+        return $this->conn->fetchRow($selectQuery);
+    }
+
+    function getOwnArtefactInfoByType2($vref, $type)
+    {
+        $selectQuery = $this->conn->select()->from('artefacts')->where('vref', '=', $vref)->where('type', '=', $type);
+        return $this->conn->fetchAll($selectQuery);
+    }
+
+    function getOwnUniqueArtefactInfo($id, $type, $size)
+    {
+        $selectQuery = $this->conn->select()->from('artefacts')->where('owner', '=', $id)->where('type', '=', $type)->where('size', '=', $size);
+        return $this->conn->fetchRow($selectQuery);
+    }
+
+    function getOwnUniqueArtefactInfo2($id, $type, $size, $mode)
+    {
+        if (!$mode) {
+            $selectQuery = $this->conn->select()->from('artefacts')->where('owner', '=', $id)->where('active', '=', 1)->where('type', '=', $type)->where('size', '=', $size);
         } else {
-            $sizestr = '';
-            $params = [];
+            $selectQuery = $this->conn->select()->from('artefacts')->where('vref', '=', $id)->where('active', '=', 1)->where('type', '=', $type)->where('size', '=', $size);
         }
-        $q = "SELECT *, (ROUND(SQRT(POW(LEAST(ABS( ? - wdata.x), ABS( ? - ABS( ? - wdata.x))), 2) + POW(LEAST(ABS( ? - wdata.y), ABS( ? - ABS( ? - wdata.y))), 2)),3)) AS distance"
-            . " FROM wdata, artefacts WHERE artefacts.vref = wdata.id"
-            . " AND (ROUND(SQRT(POW(LEAST(ABS( ? - wdata.x), ABS( ? - ABS( ? - wdata.x))), 2) + POW(LEAST(ABS( ? - wdata.y), ABS( ? - ABS( ? - wdata.y))), 2)),3)) <= ?"
-            . $sizestr
-            . ' ORDER BY distance';
-        $params = array_merge([$coor['x'], $coor['x'], $coor['max'], $coor['y'], $coor['y'], $coor['max'], $coor['x'], $coor['x'], $coor['max'], $coor['y'], $coor['y'], $coor['max'], $distance], $params);
-        return $this->conn->executeQuery($q, $params);
+        return $this->conn->fetchAll($selectQuery);
     }
 
-    public function arteIsMine($id, $newvref, $newowner)
+    function getFoolArtefactInfo($type, $vid, $uid)
     {
-        $this->conn->update('artefacts', ['owner' => $newowner], 'id = ?', [$id]);
-        $this->captureArtefact($id, $newvref, $newowner);
+        $selectQuery = $this->conn->select()->from('artefacts')->where('vref', '=', $vid)->where('type', '=', 8)->where('kind', '=', $type)->orWhere('owner', '=', $uid)->where('size', '>', 1)->where('active', '=', 1)->where('type', '=', 8)->where('kind', '=', $type);
+        return $this->conn->fetchAll($selectQuery);
     }
 
-    public function captureArtefact($id, $newvref, $newowner)
+    function claimArtefact($vref, $ovref, $id)
     {
-        $currentArte = $this->getArtefactDetails($id);
-
-        if ($currentArte['size'] == 2 || $currentArte['size'] == 3) {
-            $ulArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 1 AND size <> 1', [$newowner]);
-            if (!empty($ulArts) && count($ulArts) > 0) {
-                foreach ($ulArts as $art) {
-                    $this->conn->update('artefacts', ['status' => 2], 'id = ?', [$art['id']]);
-                }
-            }
-        }
-        $vArts = $this->conn->select('artefacts', '*', 'vref = ? AND status = 1', [$newvref]);
-        if (!empty($vArts) && count($vArts) > 0) {
-            foreach ($vArts as $art) {
-                $this->conn->update('artefacts', ['status' => 2], 'id = ?', [$art['id']]);
-            }
-        } else {
-            $uArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 1 ORDER BY conquered DESC', [$newowner]);
-            if (!empty($uArts) && count($uArts) > 2) {
-                for ($i = 2; $i < count($uArts); $i++) {
-                    $this->conn->update('artefacts', ['status' => 2], 'id = ?', [$uArts[$i]['id']]);
-                }
-            }
-        }
-        $this->conn->update('artefacts', ['vref' => $newvref, 'owner' => $newowner, 'conquered' => time(), 'status' => 1], 'id = ?', [$id]);
-        if ($currentArte['status'] == 1) {
-            $ouaArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 1', [$currentArte['owner']]);
-            $ouiArts = $this->conn->select('artefacts', '*', 'owner = ? AND status = 2 ORDER BY conquered DESC', [$currentArte['owner']]);
-            if (!empty($ouaArts) && count($ouaArts) < 3 && !empty($ouiArts) && count($ouiArts) > 0) {
-                $ouiaCount = count($ouiArts);
-                for ($i = 0; $i < $ouiaCount; $i++) {
-                    $ia = $ouiArts[$i];
-                    if (count($ouaArts) < 3) {
-                        $accepted = true;
-                        foreach ($ouaArts as $aa) {
-                            if ($ia['vref'] == $aa['vref']) {
-                                $accepted = false;
-                            }
-                            if (($ia['size'] == 2 || $ia['size'] == 3) && ($aa['size'] == 2 || $aa['size'] == 3)) {
-                                $accepted = false;
-                            }
-                        }
-                        if ($accepted) {
-                            $ouaArts[] = $ia;
-                            $this->conn->update('artefacts', ['status' => 1], 'id = ?', [$ia['id']]);
-                        }
-                    }
-                }
-            }
-        }
+        $updateQuery = $this->conn->update('artefacts')->set(array('vref' => $vref, 'owner' => $id))->where('vref', '=', $ovref);
+        $this->conn->execute($updateQuery);
     }
 
-    public function getArtefactDetails($id)
+    function getArtefactDetails($id)
     {
-        return $this->conn->select('artefacts', 'id = ?', [$id]);
+        $selectQuery = $this->conn->select()->from('artefacts')->where('id', '=', $id);
+        return $this->conn->fetchRow($selectQuery);
     }
 
-    public function getHeroFace($uid)
+    function HeroFace($uid)
     {
-        return $this->conn->select('heroface', '*', 'uid = ?', [$uid]);
+        $selectQuery = $this->conn->select()->from('heroface')->where('uid', '=', $uid);
+        return $this->conn->fetchRow($selectQuery);
     }
 
-    public function addHeroFace($uid, $bread, $ear, $eye, $eyebrow, $face, $hair, $mouth, $nose, $color)
+    function addHeroFace($uid, $bread, $ear, $eye, $eyebrow, $face, $hair, $mouth, $nose, $color)
     {
-        return $this->conn->insert('heroface', ['uid' => $uid, 'beard' => $bread, 'ear' => $ear, 'eye' => $eye, 'eyebrow' => $eyebrow, 'face' => $face, 'hair' => $hair, 'mouth' => $mouth, 'nose' => $nose, 'color' => $color]);
+        $data = array(
+            'beard' => $bread,
+            'ear' => $ear,
+            'eye' => $eye,
+            'eyebrow' => $eyebrow,
+            'face' => $face,
+            'hair' => $hair,
+            'mouth' => $mouth,
+            'nose' => $nose,
+            'color' => $color,
+            'foot' => 0,
+            'helmet' => 0,
+            'horse' => 0,
+            'leftHand' => 'leftHand',
+            'rightHand' => 'rightHand'
+        );
+        $insertQuery = $this->conn->insert('heroface')->set($data);
+        return $this->conn->execute($insertQuery);
     }
 
-    public function modifyHeroFace($uid, $column, $value)
+    function modifyHeroFace($uid, $column, $value)
     {
-        $hash = md5("$uid" . time());
-        return $this->conn->update('heroface', [$column => $value, 'hash' => $hash], 'uid = ?', [$uid]);
+        $updateQuery = $this->conn->update('heroface')->set($column, $value)->where('uid', '=', $uid);
+        return $this->conn->execute($updateQuery);
     }
 
-    public function modifyWholeHeroFace($uid, $face, $color, $hair, $ear, $eyebrow, $eye, $nose, $mouth, $beard)
+    function modifyHeroXp($column, $value, $uid)
     {
-        $hash = md5("$uid" . time());
-        return $this->conn->update('heroface', ['face' => $face, 'color' => $color, 'hair' => $hair, 'ear' => $ear, 'eyebrow' => $eyebrow, 'eye' => $eye, 'nose' => $nose, 'mouth' => $mouth, 'beard' => $beard, 'hash' => $hash], 'uid = ?', [$uid]);
+        $updateQuery = $this->conn->update('hero')->set($column, $column . ' + ' . $value)->where('uid', '=', $uid);
+        return $this->conn->execute($updateQuery);
     }
 
     public function hasBeginnerProtection($vid)
     {
-        $result = $this->conn->select('users u', 'u.protect', 'INNER JOIN vdata v ON u.id=v.owner', 'v.wref = ?', [$vid]);
+        $stmt = $this->conn->prepare("SELECT u.protect FROM " . "users u INNER JOIN " . "vdata v ON u.id = v.owner WHERE v.wref = :vid");
+        $stmt->bindParam(':vid', $vid);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($result && time() < $result['protect']) {
+        if (!empty($result)) {
+            if (time() < $result['protect']) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    function addCLP($uid, $clp)
+    {
+        $q = "UPDATE " . "users SET clp = clp + ? WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('ii', $clp, $uid);
+        return $stmt->execute();
+    }
+
+    function sendwlcMessage($client, $owner, $topic, $message, $send)
+    {
+        $time = time();
+        $q = "INSERT INTO " . "mdata VALUES (0, ?, ?, ?, ?, 1, 0, ?, ?)";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('iisssi', $client, $owner, $topic, $message, $send, $time);
+        return $stmt->execute();
+    }
+
+    function getLinks($id)
+    {
+        $q = 'SELECT * FROM ' . 'links WHERE `userid` = ? ORDER BY `pos` ASC';
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    function removeLinks($id, $uid)
+    {
+        $q = "DELETE FROM " . "links WHERE `id` = ? AND `userid` = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('ii', $id, $uid);
+        return $stmt->execute();
+    }
+
+    function getFarmlist($uid)
+    {
+        $q = 'SELECT * FROM ' . 'farmlist WHERE owner = ? ORDER BY name ASC';
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $dbarray = $result->fetch_array(MYSQLI_ASSOC);
+
+        if ($dbarray['id'] != 0) {
             return true;
         } else {
             return false;
         }
     }
 
-    public function addCLP($uid, $clp)
+    function getRaidList($id)
     {
-        $condition = ['id' => $uid];
-        return $this->conn->update('users', ['clp' => 'clp + ?'], $condition, [$clp]);
+        $q = "SELECT * FROM " . "raidlist WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_array(MYSQLI_ASSOC);
     }
 
-    public function sendWlcMessage($client, $owner, $topic, $message, $send)
+    function getAllAuction()
     {
-        $data = [
-            'client' => $client,
-            'owner' => $owner,
-            'topic' => $topic,
-            'message' => $message,
-            'archived' => 1,
-            'viewed' => 0,
-            'send' => $send,
-            'time' => time()
-        ];
-        return $this->conn->insert('mdata', $data);
+        $q = "SELECT * FROM " . "auction WHERE finish = 0";
+        $result = $this->conn->query($q);
+        return $result->fetch_array(MYSQLI_ASSOC);
     }
 
-    public function getLinks($id)
+    function getVilFarmlist($wref)
     {
-        return $this->conn->select('links', 'url, name', ['userid' => $id], ['pos ASC']);
-    }
+        $q = 'SELECT * FROM ' . 'farmlist WHERE wref = ? ORDER BY wref ASC';
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $wref);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $dbarray = $result->fetch_array(MYSQLI_ASSOC);
 
-    public function removeLinks($id, $uid)
-    {
-        $condition = ['id' => $id, 'userid' => $uid];
-        return $this->conn->delete('links', $condition);
-    }
-
-    public function hasFarmlist($uid)
-    {
-        $result = $this->conn->select('id', 'farmlist', ['owner' => $uid], ['name ASC']);
-        return !empty($result);
-    }
-
-    public function getRaidList($id)
-    {
-        return $this->conn->select('raidlist', ['id' => $id]);
-    }
-
-    public function getAllAuction()
-    {
-        return $this->conn->select('auction', ['finish' => 0]);
-    }
-
-    public function hasVillageFarmlist($wref)
-    {
-        $result = $this->conn->select('farmlist', 'id', ['wref' => $wref], ['wref ASC']);
-        return !empty($result);
-    }
-
-    public function deleteFarmList($id, $owner)
-    {
-        return $this->conn->delete('farmlist', ['id' => $id, 'owner' => $owner]);
-    }
-
-    public function deleteSlotFarm($id)
-    {
-        return $this->conn->delete('raidlist', ['id' => $id]);
-    }
-
-    public function createFarmList($wref, $owner, $name)
-    {
-        $data = [
-            'wref' => $wref,
-            'owner' => $owner,
-            'name' => $name
-        ];
-        return $this->conn->insert('farmlist', $data);
-    }
-
-    public function addSlotFarm($lid, $towref, $x, $y, $distance, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10)
-    {
-        $data = [
-            'lid' => $lid,
-            'towref' => $towref,
-            'x' => $x,
-            'y' => $y,
-            'distance' => $distance,
-            't1' => $t1,
-            't2' => $t2,
-            't3' => $t3,
-            't4' => $t4,
-            't5' => $t5,
-            't6' => $t6,
-            't7' => $t7,
-            't8' => $t8,
-            't9' => $t9,
-            't10' => $t10
-        ];
-        return $this->conn->insert('raidlist', $data);
-    }
-
-    public function editSlotFarm($eid, $lid, $wref, $x, $y, $dist, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10)
-    {
-        $data = [
-            'lid' => $lid,
-            'towref' => $wref,
-            'x' => $x,
-            'y' => $y,
-            't1' => $t1,
-            't2' => $t2,
-            't3' => $t3,
-            't4' => $t4,
-            't5' => $t5,
-            't6' => $t6,
-            't7' => $t7,
-            't8' => $t8,
-            't9' => $t9,
-            't10' => $t10
-        ];
-        return $this->conn->update('raidlist', $data, ['id' => $eid]);
-    }
-
-    public function removeOases($wref)
-    {
-        $data1 = [
-            'conqured' => 0,
-            'owner' => 3,
-            'name' => UNOCCUPIEDOASES
-        ];
-        $r1 = $this->conn->update('odata', $data1, ['wref' => $wref]);
-        $r2 = $this->conn->update('wdata', ['occupied' => 0], ['id' => $wref]);
-
-        return ($r1 && $r2);
-    }
-
-    public function getArrayMemberVillage($uid)
-    {
-        $fields = ['a.wref', 'a.name', 'a.capital', 'b.x', 'b.y'];
-        $joinTables = ['vdata AS a', 'wdata AS b'];
-        $joinConditions = ['b.id' => 'a.wref'];
-        $condition = ['owner' => $uid];
-        $orderBy = 'capital DESC, pop DESC';
-        return $this->conn->join($fields, $joinTables, $joinConditions, $condition, null, $orderBy);
-    }
-
-    public function getNoticeData($nid)
-    {
-        $result = $this->conn->select('ndata', 'data', ['id' => $nid]);
-        return $result['data'];
-    }
-
-    public function getUsersNotice($uid, $ntype = -1, $viewed = -1)
-    {
-        $condition = ['uid' => $uid];
-        if ($ntype >= 0) {
-            $condition['ntype'] = $ntype;
+        if ($dbarray['id'] != 0) {
+            return true;
+        } else {
+            return false;
         }
-        if ($viewed >= 0) {
-            $condition['viewed'] = $viewed;
-        }
-        return $this->conn->select('ndata', '*', $condition);
     }
 
-    public function setSilver($uid, $silver, $mode)
+    function delFarmList($id, $owner)
+    {
+        $q = "DELETE FROM " . "farmlist WHERE id = ? AND owner = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('ii', $id, $owner);
+        return $stmt->execute();
+    }
+
+    function delSlotFarm($id)
+    {
+        $q = "DELETE FROM " . "raidlist WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $id);
+        return $stmt->execute();
+    }
+
+    function createFarmList($wref, $owner, $name)
+    {
+        $q = "INSERT INTO " . "farmlist (`wref`, `owner`, `name`) VALUES (?, ?, ?)";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('iis', $wref, $owner, $name);
+        return $stmt->execute();
+    }
+
+    function addSlotFarm($lid, $towref, $x, $y, $distance, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10)
+    {
+        $q = "INSERT INTO " . "raidlist (`lid`, `towref`, `x`, `y`, `distance`, `t1`, `t2`, `t3`, `t4`, `t5`, `t6`, `t7`, `t8`, `t9`, `t10`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('iiiiiiiiiiiiiii', $lid, $towref, $x, $y, $distance, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10);
+        return $stmt->execute();
+    }
+
+    function editSlotFarm($eid, $lid, $wref, $x, $y, $dist, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10)
+    {
+        $q = "UPDATE " . "raidlist SET lid = ?, towref = ?, x = ?, y = ?, t1 = ?, t2 = ?, t3 = ?, t4 = ?, t5 = ?, t6 = ?, t7 = ?, t8 = ?, t9 = ?, t10 = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('iiiiiiiiiiiiiiii', $lid, $wref, $x, $y, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $eid);
+        return $stmt->execute();
+    }
+
+    function getBerichte($uid)
+    {
+        $q = "SELECT id FROM " . "ndata WHERE uid = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $dbarray = $result->fetch_array(MYSQLI_ASSOC);
+        return $dbarray['id'];
+    }
+
+    function removeOases($wref)
+    {
+        $q = "UPDATE " . "odata SET conqured = 0, owner = 3, name = 'آبادی تسخیر نشده' WHERE wref = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $wref);
+        return $stmt->execute();
+    }
+
+    function getArrayMemberVillage($uid)
+    {
+        $q = 'SELECT a.wref, a.name, b.x, b.y FROM ' . 'vdata AS a LEFT JOIN ' . 'wdata AS b ON b.id = a.wref WHERE owner = ? ORDER BY capital DESC, pop DESC';
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $array = $result->fetch_all(MYSQLI_ASSOC);
+        return $array;
+    }
+
+    function getNoticeData($nid)
+    {
+        $q = "SELECT * FROM " . "ndata WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $nid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $dbarray = $result->fetch_array(MYSQLI_ASSOC);
+        return $dbarray['data'];
+    }
+
+    function setSilver($uid, $silver, $mode)
     {
         if (!$mode) {
-            $this->conn->update('users', ['silver' => "silver - $silver"], ['id' => $uid]);
-            $this->conn->update('users', ['usedsilver' => "usedsilver + $silver"], ['id' => $uid]);
+            $q = "UPDATE " . "users SET silver = silver - ? WHERE id = ?";
         } else {
-            $this->conn->update('users', ['silver' => "silver + $silver"], ['id' => $uid]);
-            $this->conn->update('users', ['Addsilver' => "Addsilver + $silver"], ['id' => $uid]);
+            $q = "UPDATE " . "users SET silver = silver + ? WHERE id = ?";
         }
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('ii', $silver, $uid);
+        return $stmt->execute();
     }
 
-    public function getAuctionSilver($uid)
+    function setNewSilver($id, $newsilver)
     {
-        return $this->conn->select('auction', '*', ['uid' => $uid, 'finish' => 0]);
+        $q = "UPDATE " . "auction SET newsilver = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('ii', $newsilver, $id);
+        return $stmt->execute();
     }
 
-    public function delAuction($id)
+    function getAuctionSilver($uid)
+    {
+        $q = "SELECT * FROM " . "auction WHERE uid = ? AND finish = 0";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_array(MYSQLI_ASSOC);
+    }
+
+    function getAuctionData($id)
+    {
+        $q = "SELECT * FROM " . "auction WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_array(MYSQLI_ASSOC);
+    }
+
+    function delAuction($id)
     {
         $aucData = $this->getAuctionData($id);
-        $usedtime = AUCTIONTIME - ($aucData['time'] - time());
-        if (($usedtime < (AUCTIONTIME / 10)) && !$aucData['bids']) {
-            $this->modifyHeroItem($aucData['itemid'], 'num', $aucData['num'], 1);
-            $this->modifyHeroItem($aucData['itemid'], 'proc', 0, 0);
-            return $this->conn->delete('auction', ['id' => $id, 'finish' => 0]);
+        $btype = $aucData['btype'];
+        if ($btype >= 7 || $btype != 12 || $btype != 13) {
+            $this->editHeroNum($aucData['itemid'], $aucData['num'], 1);
+            $this->editProcItem($aucData['itemid'], 0);
+            $q = "DELETE FROM " . "auction WHERE id = ? AND finish = 0";
+        } else {
+            $this->editProcItem($aucData['itemid'], 0);
+            $q = "DELETE FROM " . "auction WHERE id = ? AND finish = 0";
+        }
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $id);
+        return $stmt->execute();
+    }
+
+    function getAuctionUser($uid)
+    {
+        $q = "SELECT * FROM " . "auction WHERE owner = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_array(MYSQLI_ASSOC);
+    }
+
+    function addAuction($owner, $itemid, $btype, $type, $amount)
+    {
+        $time = time() + AUCTIONTIME;
+        if ($btype == 7 || $btype == 8 || $btype == 9 || $btype == 10 || $btype == 11 || $btype == 13 || $btype == 14) {
+            $silver = $amount;
+
+            $itemData = $this->getItemData($itemid);
+            if ($amount == $itemData['num']) {
+                $q = "INSERT INTO " . "auction (`owner`, `itemid`, `btype`, `type`, `num`, `uid`, `bids`, `silver`, `newsilver`, `time`, `finish`) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 0)";
+                $this->editProcItem($itemid, 1);
+            } else {
+                $this->editHeroNum($itemid, $amount, 0);
+                $q = "INSERT INTO " . "auction (`owner`, `itemid`, `btype`, `type`, `num`, `uid`, `bids`, `silver`, `newsilver`, `time`, `finish`) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 0)";
+                $this->editProcItem($itemid, 0);
+            }
+        } else {
+            $silver = 100;
+            $q = "INSERT INTO " . "auction (`owner`, `itemid`, `btype`, `type`, `num`, `uid`, `bids`, `silver`, `time`, `finish`) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, 0)";
+            $this->editProcItem($itemid, 1);
+        }
+
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('iiiiiiiii', $owner, $itemid, $btype, $type, $amount, $silver, $silver, $time);
+        return $stmt->execute();
+    }
+
+    function addBid($id, $uid, $newsilver)
+    {
+        $q = "UPDATE " . "auction SET uid = ?, silver = newsilver + 1, newsilver = ?, bids = bids + 1 WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('iii', $uid, $newsilver, $id);
+        return $stmt->execute();
+    }
+
+    function removeBidNotice($id)
+    {
+        $q = "DELETE FROM " . "auction WHERE id = ?";
+        $stmt = $this->conn->prepare($q);
+        $stmt->bind_param('i', $id);
+        return $stmt->execute();
+    }
+
+    //TODO só copiei
+
+    function addHeroItem($uid, $btype, $type, $num)
+    {
+        $q = "INSERT INTO " . "heroitems (`uid`, `btype`, `type`, `num`, `proc`) VALUES ('$uid', '$btype', '$type', '$num', 0)";
+    }
+
+    function checkHeroItem($uid, $btype)
+    {
+        $q = "SELECT * FROM " . "heroitems WHERE uid = '$uid' and btype = '$btype' and proc = 0";
+        $result = mysql_query($q, $this->conn);
+        $dbarray = mysql_fetch_array($result);
+        if ($dbarray['btype'] == $btype) {
+            return $dbarray['id'];
         } else {
             return false;
         }
     }
 
-    public function getAuctionData($id)
+    function checkAttack($wref, $toWref)
     {
-        return $this->conn->select('auction', '*', ['id' => $id]);
-    }
-
-    public function modifyHeroItem($id, $column, $value, $mode)
-    {
-        switch ($mode) {
-            case 0:
-                $data = [$column => $value];
-                break;
-            case 1:
-                $data = [$column => "$column + $value"];
-                break;
-            case 2:
-                $data = [$column => "$column - $value"];
-                break;
-            case 3:
-                $data = [$column => "$column * $value"];
-                break;
-            case 4:
-                $data = [$column => "$column / $value"];
-                break;
-        }
-        return $this->conn->update('heroitems', $data, ['id' => $id]);
-    }
-
-    public function getAuctionUser($uid)
-    {
-        return $this->conn->select('auction', '*', ['owner' => $uid]);
-    }
-
-    public function addAuction($owner, $itemid, $btype, $type, $amount)
-    {
-        $time = time() + AUCTIONTIME;
-        $itemData = $this->getHeroItem($itemid);
-        if ($amount >= $itemData['num']) {
-            $amount = $itemData['num'];
-            $this->modifyHeroItem($itemid, 'proc', 1, 0);
-        }
-        if ($amount <= 0) {
+        $q = "SELECT * FROM " . "movement WHERE `from` = '$wref' AND `to` = '$toWref' AND `proc` = '0' AND `sort_type` = '3'";
+        $result = mysql_query($q, $this->conn);
+        if (mysql_num_rows($result)) {
+            return mysql_fetch_array($result);
+        } else {
             return false;
         }
-        $this->modifyHeroItem($itemid, 'num', $amount, 2);
-        switch ($btype) {
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 11:
-            case 14:
-                $silver = $amount;
-                break;
-            default:
-                $silver = $amount * 100;
-                break;
-        }
-        $data = [
-            'owner' => $owner,
-            'itemid' => $itemid,
-            'btype' => $btype,
-            'type' => $type,
-            'num' => $amount,
-            'uid' => 0,
-            'bids' => 0,
-            'silver' => $silver,
-            'maxsilver' => $silver,
-            'time' => $time,
-            'finish' => 0
-        ];
-        return $this->conn->insert('auction', $data);
     }
 
-    public function getHeroItem($id = 0, $uid = 0, $btype = 0, $type = 0, $proc = 2)
+    function getHeroItemID($uid, $btype)
     {
-        $conditions = [];
-        if ($id) {
-            $conditions['id'] = $id;
-        }
-        if ($uid) {
-            $conditions['uid'] = $uid;
-        }
-        if ($btype) {
-            $conditions['btype'] = $btype;
-        }
-        if ($type) {
-            $conditions['type'] = $type;
-        }
-        if ($proc != 2) {
-            $conditions['proc'] = $proc;
-        }
-
-        $result = $this->conn->select('heroitems', $conditions);
-
-        if ($id) {
-            return isset($result) ? $result : [];
-        }
-        return $result;
+        $q = "SELECT * FROM " . "heroitems where uid = " . $uid . " AND btype = " . $btype . "";
+        $result = mysql_query($q, $this->conn);
+        $dbarray = mysql_fetch_array($result);
+        return $dbarray['id'];
     }
 
-    public function addBid($id, $uid, $silver, $maxsilver, $time)
+    function getHeroItemID2($uid, $btype, $type)
     {
-        $data = [
-            'uid' => $uid,
-            'silver' => $silver,
-            'maxsilver' => $maxsilver,
-            'bids' => 'bids + 1',
-            'time' => $time
-        ];
-        return $this->conn->update('auction', $data, ['id' => $id]);
+        $q = "SELECT * FROM " . "heroitems where uid = " . $uid . " AND btype = " . $btype . " AND type = " . $type . "";
+        $result = mysql_query($q, $this->conn);
+        $dbarray = mysql_fetch_array($result);
+        return $dbarray['id'];
     }
 
-    public function removeBidNotice($id)
+    function getItemData($id)
     {
-        return $this->conn->delete('auction', ['id' => $id]);
+        $q = "SELECT * FROM " . "heroitems WHERE id = $id";
     }
 
-    public function addHeroItem($uid, $btype, $type, $num)
+    function editHeroNum($id, $num, $mode)
     {
-        $data = [
-            'uid' => $uid,
-            'btype' => $btype,
-            'type' => $type,
-            'num' => $num,
-            'proc' => 0
-        ];
-        return $this->conn->insert('heroitems', $data);
-    }
-
-    public function checkHeroItem($uid, $btype, $type = 0, $proc = 2)
-    {
-        $conditions = [];
-        if ($uid) {
-            $conditions['uid'] = $uid;
+        if ($mode == 0) {
+            $q = "UPDATE " . "heroitems set num = num - $num where id = $id and proc = 0";
+        } elseif ($mode == 1) {
+            $q = "UPDATE " . "heroitems set num = num + $num where id = $id and proc = 0";
+        } else {
+            $q = "UPDATE " . "heroitems set num = $num where id = $id and proc = 0";
         }
-        if ($btype) {
-            $conditions['btype'] = $btype;
+    }
+
+    function editHeroNum2($id, $num, $mode)
+    {
+        if ($mode == 0) {
+            $q = "UPDATE " . "heroitems set num = num - $num where id = $id";
+        } elseif ($mode == 1) {
+            $q = "UPDATE " . "heroitems set num = num + $num where id = $id";
+        } else {
+            $q = "UPDATE " . "heroitems set num = $num where id = $id";
         }
-        if ($type) {
-            $conditions['type'] = $type;
+    }
+
+    function editHeroType($id, $type, $mode)
+    {
+        if ($mode == 0) {
+            $q = "UPDATE " . "heroitems set type = type - $type where id = $id";
+        } elseif ($mode == 1) {
+            $q = "UPDATE " . "heroitems set type = type + $type where id = $id";
+        } else {
+            $q = "UPDATE " . "heroitems set type = $type where id = $id";
         }
-        if ($proc != 2) {
-            $conditions['proc'] = $proc;
+    }
+
+    function editProcItem($id, $mode)
+    {
+        if ($mode == 0) {
+            $q = "UPDATE " . "heroitems set proc = 0 where id = $id";
+        } else {
+            $q = "UPDATE " . "heroitems set proc = 1 where id = $id";
         }
-
-        $result = $this->conn->select('heroitems', 'id, btype', $conditions);
-        return $result ? $result['id'] : false;
     }
 
-    public function editBid($id, $maxsilver, $minsilver)
+    function editBid($id, $silver)
     {
-        $data = [
-            'maxsilver' => $maxsilver,
-            'silver' => $minsilver
-        ];
-        return $this->conn->update('auction', $data, ['id' => $id]);
+        $q = "UPDATE " . "auction set silver = $silver where id = $id";
     }
 
-    public function getBidData($id)
+    function checkBid($id, $newsilver)
     {
-        return $this->conn->select('auction', '*', ['id' => $id]);
-    }
+        $q = "SELECT * FROM " . "auction WHERE id = '$id'";
+        $result = mysql_query($q, $this->conn);
+        $dbarray = mysql_fetch_array($result);
 
-    public function getFLData($id)
-    {
-        return $this->conn->select('farmlist', '*', ['id' => $id]);
-    }
-
-    public function getHeroField($uid, $field)
-    {
-        $result = $this->conn->select('hero', $field, ['uid' => $uid]);
-        return $result[$field] ?? null;
-    }
-
-    public function getCapBrewery($uid)
-    {
-        $capWref = $this->getVFH($uid);
-        if ($capWref) {
-            $dbarray = $this->conn->select('fdata', '*', ['vref' => $capWref]);
-            if (!empty($dbarray)) {
-                for ($i = 19; $i <= 40; $i++) {
-                    if ($dbarray['f' . $i . 't'] == 35) {
-                        return $dbarray['f' . $i];
-                    }
-                }
-            }
+        if ($dbarray['newsilver'] >= $newsilver) {
+            return false;
+        } else {
+            return true;
         }
-        return 0;
     }
 
-    public function getVFH($uid)
+    function getBidData($id)
     {
-        $result = $this->conn->select('vdata', 'wref', ['owner' => $uid, 'capital' => 1]);
-        return $result['wref'] ?? null;
+        $q = "SELECT * FROM " . "auction WHERE id = $id";
     }
 
-    public function getNotice2($id, $field)
+    function setHeroInventory($uid, $field, $value)
     {
-        $result = $this->conn->select('ndata', $field, ['id' => $id]);
-        return $result[$field] ?? null;
+        $q = "UPDATE " . "heroinventory set $field = '$value' where uid = $uid";
     }
 
-    public function addAdventure($wref, $uid, $time = 0, $dif = 0)
+    function getHeroInventory($uid)
     {
-        if ($time == 0) {
-            $time = time();
+        $q = "SELECT * FROM " . "heroinventory WHERE uid = $uid";
+    }
+
+    function getHeroData($uid)
+    {
+        $q = "SELECT * FROM " . "hero WHERE uid = $uid";
+    }
+
+    function getHeroData2($uid)
+    {
+        $q = "SELECT * FROM " . "hero WHERE dead = 0 and uid = $uid";
+    }
+
+    function getHeroData3($uid)
+    {
+        $q = "SELECT * FROM " . "hero WHERE dead = 0 and hide = 0 and uid = $uid";
+    }
+
+    function getFLData($id)
+    {
+        $q = "SELECT * FROM " . "farmlist where id = $id";
+    }
+
+    function getHeroField($uid, $field)
+    {
+        $q = "SELECT " . $field . " FROM " . "hero WHERE uid = $uid";
+        $result = mysql_query($q, $this->conn);
+        $dbarray = mysql_fetch_array($result);
+        return $dbarray[$field];
+    }
+
+    function getVFH($uid)
+    {
+        $q = "SELECT wref FROM " . "vdata WHERE owner = $uid and capital = 1";
+        $result = mysql_query($q, $this->conn);
+        $dbarray = mysql_fetch_array($result);
+        return $dbarray['wref'];
+    }
+
+    function addAdventure($wref, $uid)
+    {
+        $time = time() + (3600 * 120);
+        $ddd = rand(0, 3);
+        if ($ddd == 1) {
+            $dif = 1;
+        } else {
+            $dif = 0;
         }
-
-        $lastWorld = $this->conn->select('wdata', 'id', ['ORDER BY id DESC LIMIT 1']);
-
+        $sql = mysql_query("SELECT * FROM " . "wdata ORDER BY id DESC LIMIT 1");
+        $lastw = 641601;
         if (($wref - 10000) <= 10) {
             $w1 = rand(10, ($wref + 10000));
-        } elseif (($wref + 10000) >= $lastWorld) {
-            $w1 = rand(($wref - 10000), ($lastWorld - 10000));
+        } elseif (($wref + 10000) >= $lastw) {
+            $w1 = rand(($wref - 10000), ($lastw - 1000));
         } else {
             $w1 = rand(($wref - 10000), ($wref + 10000));
         }
 
-        $data = [
-            'wref' => $w1,
-            'uid' => $uid,
-            'dif' => $dif,
-            'time' => $time,
-            'end' => 0
-        ];
-
-        return $this->conn->insert('adventure', $data);
+        $q = "INSERT into " . "adventure (`wref`, `uid`, `dif`, `time`, `end`) values ('$w1', '$uid', '$dif', '$time', 0)";
     }
 
-    public function addHero($uid)
+    function addHero($uid)
     {
         $time = time();
-
         $hash = md5($time);
-
-        $tribe = $this->getUserField($uid, 'tribe', 0);
-
-        switch ($tribe) {
-            case 0:
-                $cpproduction = 0;
-                $speed = 7;
-                $rob = 0;
-                $fsperpoint = 100;
-                $extraresist = 0;
-                $vsnatars = 0;
-                $autoregen = 10;
-                $extraexpgain = 0;
-                $accountmspeed = 0;
-                $allymspeed = 0;
-                $longwaymspeed = 0;
-                $returnmspeed = 0;
-                break;
-            case 1:
-                $cpproduction = 5;
-                $speed = 6;
-                $rob = 0;
-                $fsperpoint = 100;
-                $extraresist = 4;
-                $vsnatars = 25;
-                $autoregen = 20;
-                $extraexpgain = 0;
-                $accountmspeed = 0;
-                $allymspeed = 0;
-                $longwaymspeed = 0;
-                $returnmspeed = 0;
-                break;
-            case 2:
-                $cpproduction = 0;
-                $speed = 8;
-                $rob = 10;
-                $fsperpoint = 90;
-                $extraresist = 0;
-                $vsnatars = 0;
-                $autoregen = 10;
-                $extraexpgain = 15;
-                $accountmspeed = 0;
-                $allymspeed = 0;
-                $longwaymspeed = 0;
-                $returnmspeed = 0;
-                break;
-            case 3:
-                $cpproduction = 0;
-                $speed = 10;
-                $rob = 0;
-                $fsperpoint = 80;
-                $extraresist = 0;
-                $vsnatars = 0;
-                $autoregen = 10;
-                $extraexpgain = 0;
-                $accountmspeed = 30;
-                $allymspeed = 15;
-                $longwaymspeed = 25;
-                $returnmspeed = 30;
-                break;
-            case 4:
-                $cpproduction = 0;
-                $speed = 7;
-                $rob = 0;
-                $fsperpoint = 100;
-                $extraresist = 0;
-                $vsnatars = 0;
-                $autoregen = 10;
-                $extraexpgain = 0;
-                $accountmspeed = 0;
-                $allymspeed = 0;
-                $longwaymspeed = 0;
-                $returnmspeed = 0;
-                break;
-            case 5:
-                $cpproduction = 0;
-                $speed = 7;
-                $rob = 0;
-                $fsperpoint = 100;
-                $extraresist = 0;
-                $vsnatars = 0;
-                $autoregen = 10;
-                $extraexpgain = 0;
-                $accountmspeed = 0;
-                $allymspeed = 0;
-                $longwaymspeed = 0;
-                $returnmspeed = 0;
-                break;
-            default:
-                $cpproduction = 0;
-                $speed = 7;
-                $rob = 0;
-                $fsperpoint = 100;
-                $extraresist = 0;
-                $vsnatars = 0;
-                $autoregen = 10;
-                $extraexpgain = 0;
-                $accountmspeed = 0;
-                $allymspeed = 0;
-                $longwaymspeed = 0;
-                $returnmspeed = 0;
-                break;
-        }
-
-        $heroData = [
-            'uid' => $uid,
-            'wref' => 0,
-            'level' => 0,
-            'speed' => $speed,
-            'points' => 0,
-            'experience' => 0,
-            'dead' => 0,
-            'health' => 100,
-            'power' => 0,
-            'fsperpoint' => $fsperpoint,
-            'offBonus' => 0,
-            'defBonus' => 0,
-            'product' => 4,
-            'r0' => 1,
-            'autoregen' => $autoregen,
-            'extraexpgain' => $extraexpgain,
-            'cpproduction' => $cpproduction,
-            'rob' => $rob,
-            'extraresist' => $extraresist,
-            'vsnatars' => $vsnatars,
-            'accountmspeed' => $accountmspeed,
-            'allymspeed' => $allymspeed,
-            'longwaymspeed' => $longwaymspeed,
-            'returnmspeed' => $returnmspeed,
-            'lastupdate' => $time,
-            'lastadv' => 0,
-            'hash' => $hash
-        ];
-
-        return $this->conn->insert('hero', $heroData);
+        $q = "INSERT into " . "hero (`uid`, `wref`, `level`, `speed`, `points`, `experience`, `dead`, `health`, `power`, `offBonus`, `defBonus`, `product`, `r0`, `autoregen`, `lastupdate`, `lastadv`, `hash`) values
+				('$uid', 0, 0, '7', 0, '2', 0, '100', '0', 0, 0, '4', '1', '10', '$time', '$time', '$hash')";
     }
 
-    public function addNewProc($uid, $npw, $nemail, $act, $mode)
+    function addNewProc($uid, $npw, $nemail, $act, $mode)
     {
         $time = time();
-        $data = [
-            'uid' => $uid,
-            'act' => $act,
-            'time' => $time,
-            'proc' => 0
-        ];
-
         if (!$mode) {
-            $data['npw'] = $npw;
+            $q = "INSERT into " . "newproc (uid, npw, act, time, proc) values ('$uid', '$npw', '$act', '$time', 0)";
         } else {
-            $data['nemail'] = $nemail;
+            $q = "INSERT into " . "newproc (uid, nemail, act, time, proc) values ('$uid', '$nemail', '$act', '$time', 0)";
         }
 
-        return $this->conn->insert('newproc', $data);
     }
 
-    public function checkProcExist($uid)
+    function checkProcExist($uid)
     {
-        return !$this->conn->select('newproc', ['uid' => $uid, 'proc' => 0]);
+        $q = "SELECT * FROM " . "newproc where uid = '$uid' and proc = 0";
+        $result = mysql_query($q, $this->conn);
+        if (mysql_num_rows($result)) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
-    public function removeProc($uid)
+    function removeProc($uid)
     {
-        return $this->conn->delete('newproc', ['uid' => $uid]);
+        $q = "DELETE FROM " . "newproc where uid = $uid";
     }
 
-    public function checkBan($uid)
+    function checkBan($uid)
     {
-        $user = $this->conn->select('users', ['id' => $uid]);
-
-        if (!empty($user) && ($user['access'] <= 1 /*|| $user['access']>=7*/)) {
+        $q = "SELECT * FROM " . "banlist WHERE uid = $uid";
+        $result = mysql_query($q, $this->conn);
+        if (mysql_num_rows($result)) {
             return true;
         } else {
             return false;
         }
     }
 
-    public function getNewProc($uid)
+    function getNewProc($uid)
     {
-        return $this->conn->select('newproc', 'npw, act', ['uid' => $uid]);
-    }
-
-    public function checkAdventure($uid, $wref, $end)
-    {
-        return $this->conn->select('adventure', 'id', ['uid' => $uid, 'wref' => $wref, 'end' => $end]);
-    }
-
-    public function getAdventure($uid, $wref = 0, $end = 2)
-    {
-        $conditions = ['uid' => $uid];
-        if ($wref != 0) {
-            $conditions['wref'] = $wref;
+        $q = "SELECT * FROM " . "newproc WHERE uid = $uid";
+        $result = mysql_query($q, $this->conn);
+        if (mysql_num_rows($result)) {
+            return mysql_fetch_array($result);
+        } else {
+            return false;
         }
-        if ($end != 2) {
-            $conditions['end'] = $end;
+    }
+
+    function getAdventure($uid, $wref)
+    {
+        $q = "SELECT * FROM " . "adventure WHERE uid = $uid and wref = '" . $wref . "'";
+        $result = mysql_query($q, $this->conn);
+        if (mysql_num_rows($result)) {
+            return mysql_fetch_array($result);
+        } else {
+            return false;
         }
-        return $this->conn->select('adventure', $conditions, ['id', 'dif']);
     }
 
-    public function editTableField($table, $field, $value, $refField, $ref)
+    function editTableField($table, $field, $value, $refField, $ref)
     {
-        return $this->conn->update($table, [$field => $value], [$refField => $ref]);
+        $q = "UPDATE " . "" . $table . " set $field = '$value' where " . $refField . " = '$ref'";
     }
 
-    public function config()
+    function HeroItemsNum($uid)
     {
-        return $this->conn->select('config');
+        $q = "SELECT * FROM " . "heroitems where uid = '$uid'";
     }
 
-    public function getAllianceDipProfile($aid, $type)
+    function addHeroinventory($uid)
     {
-        $conditions1 = ['alli1' => $aid, 'type' => $type, 'accepted' => 1];
-        $conditions2 = ['alli2' => $aid, 'type' => $type, 'accepted' => 1];
-        $allianceLinks = '';
+        $q = "INSERT into " . "heroinventory (`uid`) values ('$uid')";
+    }
 
-        $alliances1 = $this->conn->select('diplomacy', $conditions1, 'alli2');
-        $alliances2 = $this->conn->select('diplomacy', $conditions2, 'alli1');
+    function config()
+    {
+        $q = "SELECT * FROM " . "config";
+    }
 
-        if (!empty($alliances1)) {
-            foreach ($alliances1 as $row) {
-                $alliance = $this->getAlliance($row['alli2']);
-                $allianceLinks .= "<a href='allianz.php?aid={$alliance['id']}'>{$alliance['tag']}</a><br>";
-            }
-        }
-
-        if (!empty($alliances2)) {
-            foreach ($alliances2 as $row) {
+    function getAllianceDipProfile($aid, $type)
+    {
+        $q = "SELECT * FROM " . "diplomacy WHERE alli1 = '$aid' AND type = '$type' AND accepted = '1'";
+        $result = mysql_query($q, $this->conn);
+        if (mysql_num_rows($result) == 0) {
+            $q2 = "SELECT * FROM " . "diplomacy WHERE alli2 = '$aid' AND type = '$type' AND accepted = '1'";
+            $result2 = mysql_query($q2, $this->conn);
+            while ($row = mysql_fetch_array($result2)) {
                 $alliance = $this->getAlliance($row['alli1']);
-                $allianceLinks .= "<a href='allianz.php?aid={$alliance['id']}'>{$alliance['tag']}</a><br>";
+                $text = "";
+                $text .= "<a href=allianz.php?aid=" . $alliance['id'] . ">" . $alliance['tag'] . "</a><br> ";
+            }
+        } else {
+            while ($row = mysql_fetch_array($result)) {
+                $alliance = $this->getAlliance($row['alli2']);
+                $text = "";
+                $text .= "<a href=allianz.php?aid=" . $alliance['id'] . ">" . $alliance['tag'] . "</a><br> ";
             }
         }
-
-        if (empty($allianceLinks)) {
-            $allianceLinks = "-<br>";
+        if (strlen($text) == 0) {
+            $text = "-<br>";
         }
-
-        return $allianceLinks;
-    }
-
-    public function getAlliance($id, $mod = 0)
-    {
-        if (!$id) {
-            return 0;
-        }
-
-        switch ($mod) {
-            case 0:
-                $where = ['id' => $id];
-                break;
-            case 1:
-                $where = ['name' => $id];
-                break;
-            case 2:
-                $where = ['tag' => $id];
-                break;
-            default:
-                return null;
-        }
-
-        return $this->conn->select('alidata', 'id, tag, desc, max, name, notice', $where);
+        return $text;
     }
 
     public function canClaimArtifact($vref, $type)
     {
-        $defenderFields = $this->getResourceLevel($vref);
-        $attackerFields = $this->getResourceLevel($vref);
-
-        $defCanClaim = true;
-        $villageArtifact = false;
-        $accountArtifact = false;
-
+        $DefenderFields = $this->getResourceLevel($vref);
         for ($i = 19; $i <= 38; $i++) {
-            if ($defenderFields['f' . $i . 't'] == 27) {
-                $defCanClaim = false;
-                break;
+            if ($AttackerFields['f' . $i . 't'] == 27) {
+                $defcanclaim = FALSE;
+                $defTresuaryLevel = $AttackerFields['f' . $i];
+            } else {
+                $defcanclaim = TRUE;
             }
         }
-
+        $AttackerFields = $this->getResourceLevel($vref);
         for ($i = 19; $i <= 38; $i++) {
-            if ($attackerFields['f' . $i . 't'] == 27) {
-                $attTresuaryLevel = $attackerFields['f' . $i];
+            if ($AttackerFields['f' . $i . 't'] == 27) {
+                $attTresuaryLevel = $AttackerFields['f' . $i];
                 if ($attTresuaryLevel >= 10) {
-                    $villageArtifact = true;
+                    $villageartifact = TRUE;
+                } else {
+                    $villageartifact = FALSE;
                 }
                 if ($attTresuaryLevel == 20) {
-                    $accountArtifact = true;
+                    $accountartifact = TRUE;
+                } else {
+                    $accountartifact = FALSE;
                 }
-                break;
             }
         }
-
-        if ($type == 1 && $defCanClaim && $villageArtifact) {
-            return true;
-        } elseif (($type == 2 || $type == 3) && $defCanClaim && $accountArtifact) {
-            return true;
+        if ($type == 1) {
+            if ($defcanclaim == TRUE && $villageartifact == TRUE) {
+                return TRUE;
+            }
+        } else if ($type == 2) {
+            if ($defcanclaim == TRUE && $accountartifact == TRUE) {
+                return TRUE;
+            }
+        } else if ($type == 3) {
+            if ($defcanclaim == TRUE && $accountartifact == TRUE) {
+                return TRUE;
+            }
         } else {
-            return false;
+            return FALSE;
         }
     }
 
-    public function getCropProdstarv($wref)
+    function imagecopymerge_alpha($dst_im, $src_im, $dst_x, $dst_y, $src_x, $src_y, $src_w, $src_h, $pct)
     {
-        $owner = $this->getVillageField($wref, 'owner');
-        $bonus = $this->getUserField($owner, 'b4', 0);
-        $buildarray = $this->getResourceLevel($wref);
-
-        $basecrop = $grainmill = $bakery = 0;
-
-        foreach ($buildarray as $field => $value) {
-            $fieldType = $value['t'];
-            switch ($fieldType) {
-                case 4:
-                    $basecrop += $this->bid4[$value]['prod'];
-                    break;
-                case 8:
-                    $grainmill = $value;
-                    break;
-                case 9:
-                    $bakery = $value;
-                    break;
+        if (!isset($pct)) {
+            return false;
+        }
+        $pct /= 100;
+        // Get image width and height
+        $w = imagesx($src_im);
+        $h = imagesy($src_im);
+        // Turn alpha blending off
+        imagealphablending($src_im, false);
+        // Find the most opaque pixel in the image (the one with the smallest alpha value)
+        $minalpha = 127;
+        for ($x = 0; $x < $w; $x++)
+            for ($y = 0; $y < $h; $y++) {
+                $alpha = (imagecolorat($src_im, $x, $y) >> 24) & 0xFF;
+                if ($alpha < $minalpha) {
+                    $minalpha = $alpha;
+                }
+            }
+        //loop through image pixels and modify alpha for each
+        for ($x = 0; $x < $w; $x++) {
+            for ($y = 0; $y < $h; $y++) {
+                //get current alpha value (represents the TANSPARENCY!)
+                $colorxy = imagecolorat($src_im, $x, $y);
+                $alpha = ($colorxy >> 24) & 0xFF;
+                //calculate new alpha
+                if ($minalpha !== 127) {
+                    $alpha = 127 + 127 * $pct * ($alpha - 127) / (127 - $minalpha);
+                } else {
+                    $alpha += 127 * $pct;
+                }
+                //get the color index with new alpha
+                $alphacolorxy = imagecolorallocatealpha($src_im, ($colorxy >> 16) & 0xFF, ($colorxy >> 8) & 0xFF, $colorxy & 0xFF, $alpha);
+                //set pixel with the new color + opacity
+                if (!imagesetpixel($src_im, $x, $y, $alphacolorxy)) {
+                    return false;
+                }
             }
         }
+        // The image copy
+        imagecopy($dst_im, $src_im, $dst_x, $dst_y, $src_x, $src_y, $src_w, $src_h);
+    }
 
-        $cropo = 0;
-        $crop = 0;
-        $oasisTypes = [3, 6, 9, 10, 11, 12];
-        $oasisTypesStr = implode(', ', $oasisTypes);
-        $oases = $this->conn->select('odata', 'type', 'conqured = :wref AND type IN (' . $oasisTypesStr . ')', [':wref' => $wref]);
-        foreach ($oases as $oasis) {
-            switch ($oasis['type']) {
+    function getCropProdstarv($wref)
+    {
+        global $bid4, $bid8, $bid9, $sesion, $technology;
+
+        $basecrop = $grainmill = $bakery = 0;
+        $owner = $this->getVillageField($wref, 'owner');
+        $bonus = $this->getUserField($owner, b4, 0);
+
+        $buildarray = $this->getResourceLevel($wref);
+        $cropholder = array();
+        for ($i = 1; $i <= 38; $i++) {
+            if ($buildarray['f' . $i . 't'] == 4) {
+                array_push($cropholder, 'f' . $i);
+            }
+            if ($buildarray['f' . $i . 't'] == 8) {
+                $grainmill = $buildarray['f' . $i];
+            }
+            if ($buildarray['f' . $i . 't'] == 9) {
+                $bakery = $buildarray['f' . $i];
+            }
+        }
+        $q = "SELECT type FROM `" . "odata` WHERE conqured = $wref";
+        $oasis = $this->query_return($q);
+        foreach ($oasis as $oa) {
+            switch ($oa['type']) {
+                case 1:
+                case 2:
+                    $wood += 1;
+                    break;
                 case 3:
+                    $wood += 1;
+                    $cropo += 1;
+                    break;
+                case 4:
+                case 5:
+                    $clay += 1;
+                    break;
                 case 6:
+                    $clay += 1;
+                    $cropo += 1;
+                    break;
+                case 7:
+                case 8:
+                    $iron += 1;
+                    break;
                 case 9:
+                    $iron += 1;
+                    $cropo += 1;
+                    break;
                 case 10:
                 case 11:
                     $cropo += 1;
@@ -4066,535 +4429,147 @@ class Database
                     break;
             }
         }
-
-        if ($grainmill || $bakery) {
-            $crop += ($basecrop / 100) * ($this->bid8[$grainmill]['attri'] + $this->bid9[$bakery]['attri']);
+        for ($i = 0; $i <= count($cropholder) - 1; $i++) {
+            $basecrop += $bid4[$buildarray[$cropholder[$i]]]['prod'];
         }
-
+        $crop = $basecrop + $basecrop * 0.25 * $cropo;
+        if ($grainmill >= 1 || $bakery >= 1) {
+            $crop += $basecrop / 100 * ($bid8[$grainmill]['attri'] + $bid9[$bakery]['attri']);
+        }
         if ($bonus > time()) {
             $crop *= 1.25;
         }
-
-        $crop *= setting('speed');;
-
+        $crop *= SPEED;
         return $crop;
     }
 
-    public function getNatarsProgress()
+    function getFieldDistance($wid)
     {
-        return $this->conn->selectFirst("natarsprogress");
-    }
-
-    public function setNatarsProgress($field, $value)
-    {
-        return $this->conn->update("natarsprogress", [$field => $value], "");
-    }
-
-    public function getNatarsCapital()
-    {
-        return $this->conn->select("vdata", "wref", "owner = 2 AND capital = 1", ["created ASC"]);
-    }
-
-    public function getNatarsWWVillages()
-    {
-        return $this->conn->select("vdata", "owner", "owner = 2 AND name = 'WW Village'", ["created ASC"]);
-    }
-
-    public function addNatarsVillage($wid, $uid, $username, $capital)
-    {
-        $total = $this->conn->count("vdata", "*", "owner = '$uid'");
-        $vname = sprintf("[%05d] Natars", $total + 1);
-        $time = time();
-        $data = [
-            'wref' => $wid,
-            'owner' => $uid,
-            'name' => $vname,
-            'capital' => $capital,
-            'pop' => 2,
-            'cp' => 1,
-            'celebration' => 0,
-            'wood' => 780,
-            'clay' => 780,
-            'iron' => 780,
-            'maxstore' => 800,
-            'crop' => 780,
-            'maxcrop' => 800,
-            'lastupdate' => $time,
-            'created' => $time,
-            'natar' => 1
-        ];
-        return $this->conn->insert("vdata", $data);
-    }
-
-    public function instantTrain($vref)
-    {
-        $count = $this->conn->count("training", "*", "vref = '$vref'");
-        $this->conn->update("training", ['commence' => 0, 'eachtime' => 1, 'endat' => 0, 'timestamp' => 0], "vref = '$vref'");
-        return $count;
-    }
-
-    public function hasWinner()
-    {
-        return $this->conn->count("fdata", "*", "f99 = '100' AND f99t = '40'") > 0;
-    }
-
-    public function getVillageActiveArte($vref)
-    {
-        $conqueredThreshold = time() - max(86400 / setting('speed'), 600);
-        return $this->conn->select("artefacts", "*", "vref = :vref AND status = 1 AND conquered <= :conquered", [":vref" => $vref, ":conquered" => $conqueredThreshold]);
-    }
-
-    public function getAccountActiveArte($owner)
-    {
-        $conqueredThreshold = time() - max(86400 / setting('speed'), 600);
-        return $this->conn->select("artefacts", "*", "owner = :owner AND status = 1 AND conquered <= :conquered", [":owner" => $owner, ":conquered" => $conqueredThreshold]);
-    }
-
-    public function getArtEffMSpeed($wref)
-    {
-        $artEff = 1;
-        $res = $this->getArteEffectByType($wref, 4);
-        if ($res != 0) {
-            $artEff = $res;
-        }
-        return $artEff;
-    }
-
-    public function getArteEffectByType($wref, $type)
-    {
-        $artEff = 0;
-        $this->updateFoolArtes();
-        $vinfo = $this->getVillage($wref);
-        if (!empty($vinfo) && isset($vinfo['owner'])) {
-            $owner = $vinfo['owner'];
-            $currentTime = time();
-            $conqueredThreshold = $currentTime - max(86400 / setting('speed'), 600);
-            $result = $this->conn->select("artefacts", "vref, effect, aoe", "owner = :owner AND effecttype = :type AND status = 1 AND conquered <= :conquered", [":owner" => $owner, ":type" => $type, ":conquered" => $conqueredThreshold], "conquered DESC");
-            if (!empty($result) && count($result) > 0) {
-                $i = 0;
-                foreach ($result as $r) {
-                    if ($r['vref'] == $wref) {
-                        return $r['effect'];
-                    }
-                    if ($r['aoe'] == 3) {
-                        return $r['effect'];
-                    }
-                    $i += 1;
-                    if ($i >= 3) break;
+        $q = "SELECT * FROM " . "vdata where owner > 4 and wref != $wid";
+        $array = $this->query_return($q);
+        $coor = $this->getCoor($wid);
+        $x1 = intval($coor['x']);
+        $y1 = intval($coor['y']);
+        $prevdist = 0;
+        $q2 = "SELECT * FROM " . "vdata where owner = 4";
+        $array2 = mysql_fetch_array(mysql_query($q2));
+        $vill = $array2['wref'];
+        if (mysql_num_rows(mysql_query($q)) > 0) {
+            foreach ($array as $village) {
+                $coor2 = $this->getCoor($village['wref']);
+                $max = 2 * WORLD_MAX + 1;
+                $x2 = intval($coor2['x']);
+                $y2 = intval($coor2['y']);
+                $distanceX = min(abs($x2 - $x1), abs($max - abs($x2 - $x1)));
+                $distanceY = min(abs($y2 - $y1), abs($max - abs($y2 - $y1)));
+                $dist = sqrt(pow($distanceX, 2) + pow($distanceY, 2));
+                if ($dist < $prevdist or $prevdist == 0) {
+                    $prevdist = $dist;
+                    $vill = $village['wref'];
                 }
             }
         }
-        return $artEff;
+        return $vill;
     }
 
-    public
-    function updateFoolArtes()
-    {
-        $currentTime = time();
-        $conqueredThreshold = $currentTime - max(86400 / setting('speed'), 600);
-
-        $sql = "SELECT id,size FROM artefacts WHERE type = 3 AND status = 1 AND conquered <= :conqueredThreshold AND lastupdate <= :currentTime";
-        $params = [":conqueredThreshold" => $conqueredThreshold, ":currentTime" => $currentTime];
-
-        $result = $this->conn->executeQuery($sql, $params);
-
-        if (!empty($result)) {
-            foreach ($result as $r) {
-                $effecttype = rand(3, 9);
-                if ($effecttype == 3) $effecttype = 2;
-                $aoerand = rand(1, 100);
-                if ($aoerand <= 75) {
-                    $aoe = 1;
-                } elseif ($aoerand <= 95) {
-                    $aoe = 2;
-                } else {
-                    $aoe = 3;
-                }
-
-                switch ($effecttype) {
-                    case 2:
-                        $effect = ($r['size'] == 1) ? rand(100, 500) / 100 : rand(100, 1000) / 100;
-                        break;
-                    case 4:
-                        $effect = ($r['size'] == 1) ? rand(100, 300) / 100 : rand(100, 600) / 100;
-                        break;
-                    case 5:
-                        $effect = ($r['size'] == 1) ? rand(100, 1000) / 100 : rand(100, 2000) / 100;
-                        break;
-                    case 6:
-                        $effect = ($r['size'] == 1) ? rand(50, 100) / 100 : rand(25, 100) / 100;
-                        break;
-                    case 7:
-                        $effect = ($r['size'] == 1) ? rand(100, 50000) / 100 : rand(100, 100000) / 100;
-                        break;
-                    case 8:
-                        $effect = ($r['size'] == 1) ? rand(50, 100) / 100 : rand(25, 100) / 100;
-                        break;
-                    case 9:
-                        $effect = ($r['size'] == 1) ? 1 : 0;
-                        break;
-                }
-
-                if ($r['size'] == 1 && rand(1, 100) <= 50) {
-                    $effect = 1 / $effect;
-                }
-
-                $updateSql = "UPDATE artefacts SET effecttype = :effecttype, effect = :effect, aoe = :aoe WHERE id = :id";
-                $updateParams = [":effecttype" => $effecttype, ":effect" => $effect, ":aoe" => $aoe, ":id" => $r['id']];
-
-                $this->conn->executeQuery($updateSql, $updateParams);
-            }
-        }
-    }
-
-    public
-    function getArtEffDiet($wref)
-    {
-        $artEff = 1;
-        $res = $this->getArteEffectByType($wref, 6);
-        if ($res != 0) $artEff = $res;
-        return $artEff;
-    }
-
-    public
-    function getArtEffGrt($wref)
-    {
-        $artEff = 0;
-        $res = $this->getArteEffectByType($wref, 9);
-        if ($res != 0) $artEff = $res;
-        return $artEff;
-    }
-
-    public
-    function getArtEffArch($wref)
-    {
-        $artEff = 1;
-        $res = $this->getArteEffectByType($wref, 2);
-        if ($res != 0) $artEff = $res;
-        return $artEff;
-    }
-
-    public
-    function getArtEffSpy($wref)
-    {
-        $artEff = 0;
-        $res = $this->getArteEffectByType($wref, 5);
-        if ($res != 0) $artEff = $res;
-        return $artEff;
-    }
-
-    public
-    function getArtEffTrain($wref)
-    {
-        $artEff = 1;
-        $res = $this->getArteEffectByType($wref, 8);
-        if ($res != 0) $artEff = $res;
-        return $artEff;
-    }
-
-    public
-    function getArtEffConf($wref)
-    {
-        $artEff = 1;
-        $res = $this->getArteEffectByType($wref, 7);
-        if ($res != 0) $artEff = $res;
-        return $artEff;
-    }
-
-    public
-    function getArtEffBP($wref)
-    {
-        $artEff = 0;
-        $village = $this->getVillage($wref);
-        $owner = $village['owner'];
-
-        $conditions = ["owner" => $owner, "effecttype" => 11, "status" => 1, "conquered[<=]" => time() - max(86400 / setting('speed'), 600)];
-        $result = $this->conn->select("artefacts", "COUNT(*) as count", $conditions);
-
-        if ($result['count'] > 0) {
-            $artEff = 1;
-        }
-
-        return $artEff;
-    }
-
-    public
-    function getArtEffAllyBP($uid)
-    {
-        $artEff = 0;
-        $userAlli = $this->getUserField($uid, 'alliance', 0);
-        $q = 'SELECT alli1,alli2 FROM diplomacy WHERE alli1 = :userAlli OR alli2 = :userAlli AND accepted <> 0';
-        $params = [":userAlli" => $userAlli];
-        $diplos = $this->conn->executeQuery($q, $params);
-
-        if (!empty($diplos) && count($diplos) > 0) {
-            $alliances = [];
-            foreach ($diplos as $ds) {
-                $alliances[] = $ds['alli1'];
-                $alliances[] = $ds['alli2'];
-            }
-            $alliances = array_unique($alliances);
-            $allianceStr = implode(',', $alliances);
-            $q = 'SELECT id FROM users WHERE alliance IN (' . $allianceStr . ') AND id <> :uid';
-            $params = [":uid" => $uid];
-            $mate = $this->conn->executeQuery($q, $params);
-
-            if (!empty($mate) && count($mate) > 0) {
-                $mateIds = [];
-                foreach ($mate as $ms) {
-                    $mateIds[] = $ms['id'];
-                }
-                $mateStr = implode(',', $mateIds);
-                $q = 'SELECT id FROM artefacts WHERE owner IN (' . $mateStr . ') AND effecttype = 11 AND status = 1 AND conquered <= :conqueredThreshold ORDER BY conquered DESC';
-                $result = $this->conn->executeQuery($q, $params);
-
-                if (!empty($result) && count($result) > 0) {
-                    return 1;
-                }
-            }
-        }
-        return $artEff;
-    }
-
-    public
-    function modifyExtraVillage($wid, $column, $value)
-    {
-        return $this->conn->update('vdata', [$column => "$column + :value"], ['wref' => $wid], [':value' => $value]);
-    }
-
-    public
-    function modifyFieldLevel($wid, $field, $level, $mode)
-    {
-        $columnName = 'f' . $field;
-        $operation = $mode ? '+' : '-';
-        $values = [$columnName => "$columnName $operation :level"];
-
-        return $this->conn->update('fdata', $values, ['vref' => $wid], [':level' => $level]);
-    }
-
-    public
-    function modifyFieldType($wid, $field, $type)
-    {
-        return $this->conn->update('fdata', ['f' . $field . 't' => $type], ['vref' => $wid]);
-    }
-
-    public
-    function resendAct($mail)
-    {
-        return $this->conn->select('users', '*', ['email' => $mail]);
-    }
-
-    public
-    function changemail($mail, $id)
-    {
-        return $this->conn->update('users', ['email' => $mail], ['id' => $id]);
-    }
-
-    public
-    function register2($username, $password, $email, $act, $activateat)
+    function addGeneralAttack($casualties)
     {
         $time = time();
-        if (strtotime(START_TIME) > $time) {
-            $time = strtotime(START_TIME);
-        }
-        $timep = ($time + PROTECTION);
-        $rand = rand(8900, 9000);
-
-        $data = [
-            'username' => $username,
-            'password' => $password,
-            'access' => USER,
-            'email' => $email,
-            'timestamp' => $time,
-            'act' => $act,
-            'protect' => $timep,
-            'fquest' => '0,0,0,0,0,0,0,0,0,0,0',
-            'clp' => $rand,
-            'cp' => 1,
-            'reg2' => 1,
-            'activateat' => $activateat
-        ];
-
-        return $this->conn->insert('users', $data) ? $this->conn->getLastInsertId() : null;
+        $q = "INSERT INTO " . "general values (0,'$casualties','$time',1)";
     }
 
-    public function checkname($id)
+    function getAttackByDate($time)
     {
-        return $this->conn->select('users', ['username', 'email'], ['id' => $id]);
-    }
-
-    public function settribe($tribe, $id)
-    {
-        return $this->conn->update('users', ['tribe' => $tribe], ['id' => $id, 'reg2' => 1]);
-    }
-
-    public function checkreg($uid)
-    {
-        return $this->conn->select('users', 'reg2', ['id' => $uid]);
-    }
-
-    public function checkReg2($name)
-    {
-        return $this->conn->select('users', 'reg2', ['username' => $name]);
-    }
-
-    public function checkID($name)
-    {
-        return $this->conn->select('users', 'id', ['username' => $name]);
-    }
-
-    public function setReg2($id)
-    {
-        return $this->conn->update('users', ['reg2' => 0], ['id' => $id, 'reg2' => 1]);
-    }
-
-    public function getNotice5($uid)
-    {
-        return $this->conn->select('ndata', 'id', ['uid' => $uid, 'viewed' => 0], ['time DESC']);
-    }
-
-    public function setRef($id, $name)
-    {
-        return $this->conn->insert('reference', ['id' => $id, 'name' => $name]) ? $this->conn->getLastInsertId() : null;
-    }
-
-    public function getAttackCasualties($time)
-    {
-        $result = $this->conn->select('general', 'time, casualties', ['shown' => 1]);
-        $casualties = 0;
-
+        $q = "SELECT * FROM " . "general where shown = 1";
+        $result = $this->query_return($q);
+        $attack = 0;
         foreach ($result as $general) {
-            if (date("j. M", $time) == date("j. M", strtotime($general['time']))) {
+            if (date("j. M", $time) == date("j. M", $general['time'])) {
+                $attack += 1;
+            }
+        }
+        return $attack;
+    }
+
+    function getAttackCasualties($time)
+    {
+        $q = "SELECT * FROM " . "general where shown = 1";
+        $result = $this->query_return($q);
+        $casualties = 0;
+        foreach ($result as $general) {
+            if (date("j. M", $time) == date("j. M", $general['time'])) {
                 $casualties += $general['casualties'];
             }
         }
         return $casualties;
     }
 
-    public function getAttackByDate($time)
+    function addFriend($uid, $column, $friend)
     {
-        $result = $this->conn->select('general', ['time'], ['shown' => 1]);
-        $attack = 0;
-
-        foreach ($result as $general) {
-            if (date("j. M", $time) == date("j. M", strtotime($general['time']))) {
-                $attack += 1;
-            }
-        }
-
-        return $attack * 100;
+        $q = "UPDATE " . "users SET $column = $friend WHERE id = $uid";
     }
 
-    public function getStatsinfo($uid, $time, $inf)
+    function deleteFriend($uid, $column)
     {
-        $result = $this->conn->select('stats', [$inf, 'time'], ['owner' => $uid]);
-        $t = 0;
+        $q = "UPDATE " . "users SET $column = 0 WHERE id = $uid";
+    }
 
-        if ($inf == 'rank') {
-            foreach ($result as $user) {
-                if (date("j. M", $time) == date("j. M", strtotime($user['time']))) {
-                    $t = $user[$inf];
-                    break;
-                }
-            }
-        } else {
-            foreach ($result as $user) {
-                if (date("j. M", $time) == date("j. M", strtotime($user['time']))) {
-                    $t += $user[$inf];
+    function checkFriends($uid)
+    {
+        $user = $this->getUserArray($uid, 1);
+        for ($i = 0; $i <= 19; $i++) {
+            if ($user['friend' . $i] == 0 && $user['friend' . $i . 'wait'] == 0) {
+                for ($j = $i + 1; $j <= 19; $j++) {
+                    $k = $j - 1;
+                    if ($user['friend' . $j] != 0) {
+                        $friend = $this->getUserField($uid, "friend" . $j, 0);
+                        $this->addFriend($uid, "friend" . $k, $friend);
+                        $this->deleteFriend($uid, "friend" . $j);
+                    }
+                    if ($user['friend' . $j . 'wait'] == 0) {
+                        $friendwait = $this->getUserField($uid, "friend" . $j . "wait", 0);
+                        $this->addFriend($sessionuid, "friend" . $k . "wait", $friendwait);
+                        $this->deleteFriend($uid, "friend" . $j . "wait");
+                    }
                 }
             }
         }
-
-        return $t;
     }
 
-    public function modifyHero2($column, $value, $uid, $mode)
+    function addPrisoners($wid, $from, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11)
     {
-        switch ($mode) {
-            case 1:
-                $data = [$column => "$column + :value"];
-                break;
-            case 2:
-                $data = [$column => "$column - :value"];
-                break;
-            default:
-                $data = [$column => ":value"];
-        }
-        return $this->conn->update('hero', $data, ['uid' => $uid], [":value" => $value]);
+        $q = "INSERT INTO " . "prisoners values (0,$wid,$from,$t1,$t2,$t3,$t4,$t5,$t6,$t7,$t8,$t9,$t10,$t11)";
     }
 
-    public function createTradeRoute($uid, $wid, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
+    function updatePrisoners($wid, $from, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11)
     {
-        $this->conn->update('users', ['gold' => 'gold - 2'], ['id' => $uid]);
-
-        $data = [
-            'uid' => $uid,
-            'wid' => $wid,
-            'from' => $from,
-            'r1' => $r1,
-            'r2' => $r2,
-            'r3' => $r3,
-            'r4' => $r4,
-            'start' => $start,
-            'deliveries' => $deliveries,
-            'merchant' => $merchant,
-            'time' => $time
-        ];
-
-        return $this->conn->insert('route', $data);
+        $q = "UPDATE " . "prisoners set t1 = t1 + $t1, t2 = t2 + $t2, t3 = t3 + $t3, t4 = t4 + $t4, t5 = t5 + $t5, t6 = t6 + $t6, t7 = t7 + $t7, t8 = t8 + $t8, t9 = t9 + $t9, t10 = t10 + $t10, t11 = t11 + $t11 where wid = $wid and from = $from";
     }
 
-    public function getTradeRoute($uid)
+    function getPrisoners($wid)
     {
-        return $this->conn->select('route', ['uid' => $uid], 'timestamp ASC');
+        $q = "SELECT * FROM " . "prisoners where wref = $wid";
     }
 
-    public function getTradeRoute2($id)
+    function getPrisoners2($wid, $from)
     {
-        return $this->conn->select('route', '*', ['id' => $id]);
+        $q = "SELECT * FROM " . "prisoners where wref = $wid and from = $from";
     }
 
-    public function getTradeRouteUid($id)
+    function getPrisonersByID($id)
     {
-        $routeData = $this->conn->select('route', 'uid', ['id' => $id]);
-        return $routeData['uid'];
+        $q = "SELECT * FROM " . "prisoners where id = $id";
     }
 
-    public function editTradeRoute($id, $column, $value, $mode)
+    function getPrisoners3($from)
     {
-        if (!$mode) {
-            return $this->conn->update('route', [$column => $value], "id = :id", [":id" => $id]);
-        } else {
-            return $this->conn->update('route', [$column => "$column + :value"], "id = :id", [":id" => $id, ":value" => $value]);
-        }
+        $q = "SELECT * FROM " . "prisoners where from = $from";
     }
 
-    public function deleteTradeRoute($id)
+    function deletePrisoners($id)
     {
-        return $this->conn->delete('route', ['id' => $id]);
+        $q = "DELETE from " . "prisoners where id = '$id'";
     }
 
-    public function getHeroData($uid)
-    {
-        return $this->conn->select("hero", "*", "uid = :uid", [":uid" => $uid]);
-    }
 
-    public function getHeroData2($uid)
-    {
-        return $this->conn->select("hero", "heroid", "dead = 0 AND uid = :uid", [":uid" => $uid]);
-    }
-
-    public function getHeroInVillid($uid, $mode)
-    {
-        $villageData = $this->conn->select("vdata", "wref, name", "owner = :uid", [":uid" => $uid]);
-        $name = null;
-
-        foreach ($villageData as $row) {
-            $unitHero = $this->conn->select("units", "hero", "vref = :wref", [":wref" => $row['wref']]);
-            if ($unitHero['hero'] == 1) {
-                $name = $mode ? $row['name'] : $row['wref'];
-            }
-        }
-        return $name;
-    }
 }
