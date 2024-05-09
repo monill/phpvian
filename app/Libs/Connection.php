@@ -98,12 +98,14 @@ class Connection extends PDO
 
     public function orderByAsc($column)
     {
-        return $this->orderBy($column, 'ASC');
+        $this->orderBy = " ORDER BY $column ASC";
+        return $this;
     }
 
     public function orderByDesc($column)
     {
-        return $this->orderBy($column, 'DESC');
+        $this->orderBy = " ORDER BY $column DESC";
+        return $this;
     }
 
     public function limit($limit, $offset = 0)
@@ -240,6 +242,31 @@ class Connection extends PDO
             return $this->executeQuery($sql, $this->params);
         } catch (PDOException | RuntimeException $e) {
             throw new RuntimeException("Update error: " . $e->getMessage());
+        }
+    }
+
+    public function upgrade($table, $data, $where, $params = [])
+    {
+        $this->validateData($data);
+
+        $fields = '';
+        foreach ($data as $key => $value) {
+            $fields .= "`$key` = :$key, ";
+        }
+        $fields = rtrim($fields, ', ');
+
+        $sql = "UPDATE $table SET $fields WHERE $where";
+
+        $mergedParams = array_merge($data, $params);
+
+        try {
+            $stmt = $this->prepare($sql);
+            foreach ($mergedParams as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            return $stmt->execute();
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException("Upgrade error: " . $e->getMessage());
         }
     }
 
