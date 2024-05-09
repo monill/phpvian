@@ -3,20 +3,24 @@
 namespace PHPvian\Controllers\Auth;
 
 use PHPvian\Controllers\Controller;
+use PHPvian\Libs\Connection;
+use PHPvian\Libs\Cookie;
+use PHPvian\Libs\Generator;
 use PHPvian\Libs\Mail;
 use PHPvian\Libs\Session;
 use PHPvian\Libs\Validate;
 
-class SignupController extends Controller
+class SignupController
 {
     private $mailer;
     private $valid;
+    private $conn;
 
     public function __construct()
     {
-        parent::__construct();
         $this->mailer = new Mail();
         $this->valid = new Validate();
+        $this->conn = new Connection();
     }
 
     public function index()
@@ -38,24 +42,28 @@ class SignupController extends Controller
         $errors = $this->validSignUp($username, $email, $password, $password2);
 
         if (count($errors) == 0) {
-            $key = md5_gen();
+            $act = new Generator();
 
-            try {
-                $this->conn->insert('users', [
-                    'username' => $username,
-                    'email' => $email,
-                    'password' => md5($password),
-                    'codeactivation' => $key,
-                    'ip' => get_ip(),
-                ]);
-            } catch (\Exception $exc) {
-//                Session::flash("info", "There was an error creating your account.");
-            }
+            $this->conn->insert('users', [
+                'username' => $username,
+                'password' => md5($password),
+                'access' => 2,
+                'email' => $email,
+                'tribe' => 0,
+                'timestamp' => time(),
+                'act' => $act->generateRandStr(10),
+                'protect' => (time() + time()),
+                'clp' => random_int(8900, 9000),
+                'cp' => 1,
+                'reg2' => 1,
+                'activateat' => time()
+            ]);
 
-            $this->mailer->confirmEmail($email, $key);
+            //$this->mailer->confirmEmail($email, $key);
 
             echo json_encode(["status" => "success", "msg" => "Account created successfully check your email to activate your account, Inbox or SPAM."]);
 
+            Cookie::set('COOKUSR', $username, 3600); // Expire in 1 hour
             redirect('/login');
         } else {
             view('auth/signup', ['errors' => $errors]);
