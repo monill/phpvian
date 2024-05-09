@@ -2,12 +2,19 @@
 
 namespace PHPvian\Controllers;
 
+use PHPvian\Libs\Session;
+
 class IndexController
 {
+    public function __construct()
+    {
+        Session::startSession();
+    }
+
     public function index()
     {
-        // Checks if the file 'database.php' exists
-        if (!file_exists(dirname(__DIR__) . DIRECTORY_SEPARATOR . '../config/database.php')) {
+        // Checks if the file 'config/database.php' exists
+        if (!connection_file()) {
             redirect('/installer');
         } else {
             return view('index/index');
