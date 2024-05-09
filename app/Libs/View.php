@@ -57,14 +57,14 @@ class View
         if ($this->cacheEnabled && $this->cacheDir) {
             $cacheFile = $this->cacheDir . md5($viewFile) . '.php';
             if (file_exists($cacheFile)) {
-                include $cacheFile;
+                require $cacheFile;
                 return;
             }
         }
 
         ob_start();
-        extract($data);
-        include $viewFile;
+        extract($data, EXTR_SKIP);
+        require $viewFile;
         $content = ob_get_clean();
 
         echo $content;
@@ -85,8 +85,8 @@ class View
         $viewFile = $this->getViewFilePath($path);
         if (file_exists($viewFile)) {
             ob_start();
-            extract($data);
-            include $viewFile;
+            extract($data, EXTR_SKIP);
+            require $viewFile;
             echo ob_get_clean();
         } else {
             throw new Exception("Partial view file not found: $path");
