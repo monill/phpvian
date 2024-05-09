@@ -2,25 +2,23 @@
 
 namespace PHPvian\Controllers;
 
-use PHPvian\Libs\Connection;
 use PHPvian\Libs\Session;
 
 class Controller
 {
     protected $loginFingerPrint;
-    public Connection $conn;
 
     public function __construct()
     {
-        $this->conn = new Connection();
         $this->loginFingerPrint = config('login', 'login_fingerprint');
         Session::startSession();
+        $this->checkLoggedIn();
     }
 
     protected function checkLoggedIn()
     {
         if (!$this->isUserLoggedIn()) {
-            Session::destroySession();
+//            Session::destroySession();
             redirect('/login');
         }
     }
