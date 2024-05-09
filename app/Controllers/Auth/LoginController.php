@@ -8,14 +8,12 @@ use PHPvian\Libs\Session;
 use PHPvian\Libs\Validate;
 use PHPvian\Models\User;
 
-class LoginController extends Controller
+class LoginController
 {
     private $validation;
 
     public function __construct()
     {
-        parent::__construct();
-        //$this->checkLoggedIn();
         $this->validation = new Validate();
     }
 
