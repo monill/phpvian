@@ -13,7 +13,7 @@ class Mail extends PHPMailer
     {
         parent::__construct();
         $this->app = $this->getMailer();
-        $this->appName = config('mail', 'APP_NAME');
+        $this->appName = 'PHPvian';
     }
 
     public function confirmEmail($email, $key)
