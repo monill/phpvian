@@ -5,6 +5,7 @@ namespace PHPvian\Controllers;
 use Exception;
 use PHPvian\Libs\Connection;
 use PHPvian\Libs\Database;
+use PHPvian\Libs\Session;
 
 class InstallController
 {
@@ -16,6 +17,7 @@ class InstallController
         $this->db = new Database();
         $this->databaseFile = dirname(__DIR__) . '/../storage/database.sql';
         $this->htaccessFile = dirname(__DIR__) . '/../public/.htaccess';
+        Session::startSession();
     }
 
     public function index()
