@@ -25,15 +25,15 @@ class LoginController
     public function login()
     {
         if (!input_exists()) {
-            redirect('/aaaaa');
+            redirect('/login');
         }
 
         $email = input('email');
         $password = input('password');
 
-//        if ($this->validLogin($email, $password) > 0) {
-//            redirect('/');
-//        }
+        if ($this->validLogin($email, $password) > 0) {
+            redirect('/login');
+        }
 
 //        $user = new User();
 //        $userExists = $user->existsByEmail($email);
