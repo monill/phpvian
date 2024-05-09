@@ -416,15 +416,15 @@ class Database
         $this->conn->from('wdata')->set('occupied', 1)->where('id = :id', [':id' => $id])->update();
     }
 
-    public function addVillage($wid, $uid, $username, $capital)
+    public function addVillage($worlid, $uid, $username, $capital)
     {
         $total = count($this->getVillagesID($uid));
-        $vname = $total >= 1 ? $username . "\'s village " . ($total + 1) : $username . "\'s village";
+        $vname = $total >= 1 ? $username . "'s village " . ($total + 1) : $username . "'s village";
 
         $time = time();
 
         $data = [
-            'wref' => $wid,
+            'wref' => $worlid,
             'owner' => $uid,
             'name' => $vname,
             'capital' => $capital,
@@ -448,9 +448,9 @@ class Database
             'natar' => 0,
             'starv' => 0,
             'expandedfrom' => 0,
-            'maxstore' => config('settings', 'STORAGE_BASE'),
+            'maxstore' => 800,
             'crop' => 780,
-            'maxcrop' => config('settings', 'STORAGE_BASE'),
+            'maxcrop' => 800,
             'lastupdate' => $time,
             'created' => $time
         ];
@@ -526,10 +526,10 @@ class Database
     public function getVillageType($wref)
     {
         $result = $this->conn
-            ->select('fieldtype')
+            ->select('id, fieldtype')
             ->from('wdata')
             ->where('id = :wref', [':wref' => $wref])
-            ->get();
+            ->first();
 
         return $result['fieldtype'];
     }
@@ -597,12 +597,7 @@ class Database
 
     public function getVillageState($wref)
     {
-        $result = $this->conn
-            ->select('oasistype, occupied')
-            ->from('wdata')
-            ->where('id = :wref', [':wref' => $wref])
-            ->get();
-
+        $result = $this->conn->select('oasistype, occupied')->from('wdata')->where('id = :wref', [':wref' => $wref])->first();
         return $result['occupied'] != 0 || $result['oasistype'] != 0;
     }
 
@@ -613,7 +608,7 @@ class Database
             ->from('vdata')
             ->where('owner = :uid', [':uid' => $uid])
             ->orderByDesc('pop, desc')
-            ->get();
+            ->first();
 
         return $result;
     }
@@ -723,12 +718,12 @@ class Database
             ->get();
     }
 
-    public function getOasisInfo($wid)
+    public function getOasisInfo($worlid)
     {
         return $this->conn
             ->select('conquered, loyalty')
             ->from('odata')
-            ->where('wref = :wid', [':wid' => $wid])
+            ->where('wref = :wid', [':wid' => $worlid])
             ->get();
     }
 
@@ -1922,13 +1917,13 @@ class Database
             ->fetchAll([':uid' => $uid]);
     }
 
-    function createTradeRoute($uid, $wid, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
+    function createTradeRoute($uid, $worlid, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
     {
         $this->conn->update("users", ['gold' => 'gold - 2'], 'id = :uid', [':uid' => $uid]);
         return $this->conn
             ->insert("route", [
                 'uid' => $uid,
-                'wid' => $wid,
+                'wid' => $worlid,
                 'from' => $from,
                 'r1' => $r1,
                 'r2' => $r2,
@@ -1996,12 +1991,12 @@ class Database
             ->fetchAll([':aid' => $aid]);
     }
 
-    function addBuilding($wid, $field, $type, $loop, $time, $master, $level)
+    function addBuilding($worlid, $field, $type, $loop, $time, $master, $level)
     {
-        $this->conn->update("fdata", ["f" . $field . "t" => $type], 'vref = :wid', [':wid' => $wid]);
+        $this->conn->update("fdata", ["f" . $field . "t" => $type], 'vref = :wid', [':wid' => $worlid]);
         return $this->conn
             ->insert("bdata", [
-                'wid' => $wid,
+                'wid' => $worlid,
                 'field' => $field,
                 'type' => $type,
                 'loopcon' => $loop,
@@ -2078,22 +2073,22 @@ class Database
         $this->conn->delete("bdata", ["id" => $d]);
     }
 
-    function addDemolition($wid, $field)
+    function addDemolition($worlid, $field)
     {
         global $building, $village;
 
-        $this->conn->delete("bdata", ["field" => $field, "wid" => $wid]);
+        $this->conn->delete("bdata", ["field" => $field, "wid" => $worlid]);
 
         $uprequire = $building->resourceRequired($field, $village->resarray['f' . $field . 't']);
         $timestamp = time() + floor($uprequire['time'] / 2);
 
-        $this->conn->insert("demolition", ["vref" => $wid, "field" => $field, "level" => ($this->getFieldLevel($wid, $field) - 1), "timetofinish" => $timestamp]);
+        $this->conn->insert("demolition", ["vref" => $worlid, "field" => $field, "level" => ($this->getFieldLevel($worlid, $field) - 1), "timetofinish" => $timestamp]);
     }
 
-    function getDemolition($wid = 0)
+    function getDemolition($worlid = 0)
     {
-        if ($wid) {
-            $condition = ["vref" => $wid];
+        if ($worlid) {
+            $condition = ["vref" => $worlid];
         } else {
             $condition = ["timetofinish[<=]" => time()];
         }
@@ -2103,36 +2098,36 @@ class Database
         return ($result) ? $result->fetchAll() : NULL;
     }
 
-    function finishDemolition($wid)
+    function finishDemolition($worlid)
     {
-        $this->conn->update("demolition", ["timetofinish" => time()], ["vref" => $wid]);
+        $this->conn->update("demolition", ["timetofinish" => time()], ["vref" => $worlid]);
     }
 
-    function delDemolition($wid)
+    function delDemolition($worlid)
     {
-        $this->conn->delete("demolition", ["vref" => $wid]);
+        $this->conn->delete("demolition", ["vref" => $worlid]);
     }
 
-    function getJobs($wid)
+    function getJobs($worlid)
     {
-        $result = $this->conn->select("bdata", "*", ["wid" => $wid], ["ORDER" => ["master", "timestamp" => "ASC"]]);
+        $result = $this->conn->select("bdata", "*", ["wid" => $worlid], ["ORDER" => ["master", "timestamp" => "ASC"]]);
 
         return ($result) ? $result->fetchAll() : NULL;
     }
 
-    function FinishWoodcutter($wid)
+    function FinishWoodcutter($worlid)
     {
         $time = time() - 1;
-        $woodcutterResult = $this->conn->select("bdata", "*", ["wid" => $wid, "type" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+        $woodcutterResult = $this->conn->select("bdata", "*", ["wid" => $worlid, "type" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
         if ($woodcutterResult) {
             $woodcutterId = $woodcutterResult['id'];
             $this->conn->update("bdata", ["timestamp" => $time], ["id" => $woodcutterId]);
 
-            $tribe = $this->getUserField($this->getVillageField($wid, "owner"), "tribe", 0);
+            $tribe = $this->getUserField($this->getVillageField($worlid, "owner"), "tribe", 0);
             if ($tribe == 1) {
-                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1, "field[<=]" => 18], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $worlid, "loopcon" => 1, "field[<=]" => 18], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
             } else {
-                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $worlid, "loopcon" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
             }
             if ($loopconQuery) {
                 $wc_time = $woodcutterResult['timestamp'];
@@ -2141,19 +2136,19 @@ class Database
         }
     }
 
-    function FinishRallyPoint($wid)
+    function FinishRallyPoint($worlid)
     {
         $time = time() - 1;
-        $rallyPointResult = $this->conn->select("bdata", "*", ["wid" => $wid, "type" => 16], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+        $rallyPointResult = $this->conn->select("bdata", "*", ["wid" => $worlid, "type" => 16], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
         if ($rallyPointResult) {
             $rallyPointId = $rallyPointResult['id'];
             $this->conn->update("bdata", ["timestamp" => $time], ["id" => $rallyPointId]);
 
-            $tribe = $this->getUserField($this->getVillageField($wid, "owner"), "tribe", 0);
+            $tribe = $this->getUserField($this->getVillageField($worlid, "owner"), "tribe", 0);
             if ($tribe == 1) {
-                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1, "field[>=]" => 19], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $worlid, "loopcon" => 1, "field[>=]" => 19], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
             } else {
-                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $wid, "loopcon" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
+                $loopconQuery = $this->conn->select("bdata", "*", ["wid" => $worlid, "loopcon" => 1], ["ORDER" => ["master", "timestamp" => "ASC"], "LIMIT" => 1])->fetch();
             }
             if ($loopconQuery) {
                 $rally_time = $rallyPointResult['timestamp'];
@@ -2162,34 +2157,34 @@ class Database
         }
     }
 
-    function getMasterJobs($wid)
+    function getMasterJobs($worlid)
     {
-        return $this->conn->select("bdata", "*", ["wid" => $wid, "master" => 1], ["ORDER" => ["master", "timestamp" => "ASC"]])->fetchAll();
+        return $this->conn->select("bdata", "*", ["wid" => $worlid, "master" => 1], ["ORDER" => ["master", "timestamp" => "ASC"]])->fetchAll();
     }
 
-    function getMasterJobsByField($wid, $field)
+    function getMasterJobsByField($worlid, $field)
     {
-        return $this->conn->select("bdata", "*", ["wid" => $wid, "field" => $field, "master" => 1], ["ORDER" => ["master", "timestamp" => "ASC"]])->fetchAll();
+        return $this->conn->select("bdata", "*", ["wid" => $worlid, "field" => $field, "master" => 1], ["ORDER" => ["master", "timestamp" => "ASC"]])->fetchAll();
     }
 
-    function getBuildingByField($wid, $field)
+    function getBuildingByField($worlid, $field)
     {
-        return $this->conn->select("bdata", "*", ["wid" => $wid, "field" => $field, "master" => 0])->fetchAll();
+        return $this->conn->select("bdata", "*", ["wid" => $worlid, "field" => $field, "master" => 0])->fetchAll();
     }
 
-    function getBuildingByType($wid, $type)
+    function getBuildingByType($worlid, $type)
     {
-        return $this->conn->select("bdata", "*", ["wid" => $wid, "type" => $type, "master" => 0])->fetchAll();
+        return $this->conn->select("bdata", "*", ["wid" => $worlid, "type" => $type, "master" => 0])->fetchAll();
     }
 
-    function getDorf1Building($wid)
+    function getDorf1Building($worlid)
     {
-        return $this->conn->select("bdata", "*", ["wid" => $wid, "field[<]" => 19, "master" => 0])->fetchAll();
+        return $this->conn->select("bdata", "*", ["wid" => $worlid, "field[<]" => 19, "master" => 0])->fetchAll();
     }
 
-    function getDorf2Building($wid)
+    function getDorf2Building($worlid)
     {
-        return $this->conn->select("bdata", "*", ["wid" => $wid, "field[>]" => 18, "master" => 0])->fetchAll();
+        return $this->conn->select("bdata", "*", ["wid" => $worlid, "field[>]" => 18, "master" => 0])->fetchAll();
     }
 
     function updateBuildingWithMaster($id, $time, $loop)
@@ -2680,24 +2675,23 @@ class Database
         return $query->fetchAll();
     }
 
-    function addUnits($vid)
+    public function addUnits($vid)
     {
         return $this->conn->insert('units', ['vref' => $vid]);
     }
 
-    function getUnit($vid)
+    public function getUnit($vid)
     {
-        $query = $this->conn
+        $result = $this->conn
             ->select()
             ->from('units')
             ->where('vref', '=', $vid)
-            ->execute();
+            ->get();
 
-        $result = $query->fetch();
         return $result ? $result : NULL;
     }
 
-    function getHUnit($vid)
+    public function getHUnit($vid)
     {
         $query = $this->conn
             ->select('hero')
@@ -2779,25 +2773,23 @@ class Database
         return $query->rowCount();
     }
 
-    function addTech($vid)
+    public function addTech($vid)
     {
         return $this->conn->insert('tdata', ['vref' => $vid]);
     }
 
-    function addABTech($vid)
+    public function addABTech($vid)
     {
         return $this->conn->insert('abdata', ['vref' => $vid]);
     }
 
     function getABTech($vid)
     {
-        $query = $this->conn
+        return $this->conn
             ->select()
             ->from('abdata')
             ->where('vref', '=', $vid)
-            ->execute();
-
-        return $query->fetchAssoc();
+            ->get();
     }
 
     function addResearch($vid, $tech, $time)
@@ -3457,7 +3449,7 @@ class Database
         $result2 = $this->conn->query($selectQuery);
 
         while ($row = $result2->fetch_assoc()) {
-            $wid = $row['id'];
+            $worlid = $row['id'];
             switch ($row['oasistype']) {
                 case 1:
                     $tt =  "1000,1000,1000,1000,1000,1000";
@@ -3496,7 +3488,7 @@ class Database
                     $tt =  "1000,1000,1000,2000,2000,2000";
                     break;
             }
-            $basearray = $this->getOMInfo($wid);
+            $basearray = $this->getOMInfo($worlid);
             $insertQuery = $this->conn->insert("odata")
                 ->set(array(
                     'id' => $basearray['id'],
@@ -4443,11 +4435,11 @@ class Database
         return $crop;
     }
 
-    function getFieldDistance($wid)
+    function getFieldDistance($worlid)
     {
-        $q = "SELECT * FROM " . "vdata where owner > 4 and wref != $wid";
+        $q = "SELECT * FROM " . "vdata where owner > 4 and wref != $worlid";
         $array = $this->query_return($q);
-        $coor = $this->getCoor($wid);
+        $coor = $this->getCoor($worlid);
         $x1 = intval($coor['x']);
         $y1 = intval($coor['y']);
         $prevdist = 0;
@@ -4536,24 +4528,24 @@ class Database
         }
     }
 
-    function addPrisoners($wid, $from, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11)
+    function addPrisoners($worlid, $from, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11)
     {
-        $q = "INSERT INTO " . "prisoners values (0,$wid,$from,$t1,$t2,$t3,$t4,$t5,$t6,$t7,$t8,$t9,$t10,$t11)";
+        $q = "INSERT INTO " . "prisoners values (0,$worlid,$from,$t1,$t2,$t3,$t4,$t5,$t6,$t7,$t8,$t9,$t10,$t11)";
     }
 
-    function updatePrisoners($wid, $from, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11)
+    function updatePrisoners($worlid, $from, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11)
     {
-        $q = "UPDATE " . "prisoners set t1 = t1 + $t1, t2 = t2 + $t2, t3 = t3 + $t3, t4 = t4 + $t4, t5 = t5 + $t5, t6 = t6 + $t6, t7 = t7 + $t7, t8 = t8 + $t8, t9 = t9 + $t9, t10 = t10 + $t10, t11 = t11 + $t11 where wid = $wid and from = $from";
+        $q = "UPDATE " . "prisoners set t1 = t1 + $t1, t2 = t2 + $t2, t3 = t3 + $t3, t4 = t4 + $t4, t5 = t5 + $t5, t6 = t6 + $t6, t7 = t7 + $t7, t8 = t8 + $t8, t9 = t9 + $t9, t10 = t10 + $t10, t11 = t11 + $t11 where wid = $worlid and from = $from";
     }
 
-    function getPrisoners($wid)
+    function getPrisoners($worlid)
     {
-        $q = "SELECT * FROM " . "prisoners where wref = $wid";
+        $q = "SELECT * FROM " . "prisoners where wref = $worlid";
     }
 
-    function getPrisoners2($wid, $from)
+    function getPrisoners2($worlid, $from)
     {
-        $q = "SELECT * FROM " . "prisoners where wref = $wid and from = $from";
+        $q = "SELECT * FROM " . "prisoners where wref = $worlid and from = $from";
     }
 
     function getPrisonersByID($id)
