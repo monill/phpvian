@@ -18,7 +18,7 @@ class Validate
     {
         if (is_array($data)) {
             return empty($data);
-        } elseif ($data === "") {
+        } elseif ($data === '') {
             return true;
         } else {
             return false;
@@ -38,7 +38,7 @@ class Validate
      */
     public function userExist($username)
     {
-        return $this->exist("users", "username", $username);
+        return $this->exist('users', 'username', $username);
     }
 
     /**
@@ -46,7 +46,7 @@ class Validate
      */
     public function emailExist($email)
     {
-        return $this->exist("users", "email", $email);
+        return $this->exist('users', 'email', $email);
     }
 
     /**
