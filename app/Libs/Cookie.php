@@ -18,8 +18,6 @@ class Cookie
     {
         $result = setcookie($name, $value, time() + $expiry, "/");
         if (!$result) {
-            // Error handling - failed to set cookie
-            // You can log or throw an exception here depending on your use case
             return false;
         }
         return true;
@@ -27,7 +25,6 @@ class Cookie
 
     public static function destroy($name)
     {
-        // Set the cookie with a past expiration time to delete it
         return self::set($name, "", time() - 1);
     }
 }
