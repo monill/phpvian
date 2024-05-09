@@ -61,7 +61,6 @@ class InstallController
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Check if all fields have been sent
             if (isset($_POST['db_host'], $_POST['db_name'], $_POST['db_user'], $_POST['db_pass'])) {
-                // Construa o conteúdo do arquivo
                 $content = "<?php\n\nreturn [\n";
                 $content .= "\t'DB_TYPE' => 'mysql',\n";
                 $content .= "\t'DB_HOST' => '{$_POST['db_host']}',\n";
@@ -238,39 +237,36 @@ class InstallController
     {
         $password = input('mhpwd');
 
-        if (!$password) {
-            return;
+        if (!empty($password)) {
+            $password = md5_gen();
         }
 
         $this->insertUsers($password);
 
-        $worldid2 = $this->db->getWref(0, 0);
-        $this->setupVillages($worldid2, 2, 'WW Village', 0);
         $worldid4 = $this->db->getWref(1, 0);
         $this->setupVillages($worldid4, 4, 'Multihunter', 1);
+        $worldid2 = $this->db->getWref(0, 0);
+        $this->setupVillages($worldid2, 2, '1', 0);
 
-        $this->updateUnits($worldid2);
+        $speed = setting('speed');
+        $speed = $speed > 5 ? 5 : $speed;
+
+        $this->updateUnits($worldid2, $speed);
 
         for ($i = 1; $i <= 13; $i++) {
-            $natars_max = setting('natars_max');
-
+            $nareadis = setting('natars_max');
             do {
-                $x = rand(3, intval(floor($natars_max)));
-                $y = rand(3, intval(floor($natars_max)));
-                if (rand(1, 10) > 5) {
-                    $x = $x * -1;
-                }
-                if (rand(1, 10) > 5) {
-                    $y = $y * -1;
-                }
-                $distance = sqrt(($x * $x) + ($y * $y));
-                $villageId = $this->db->getWref($x, $y);
-                $status = $this->db->getVillageState($villageId);
-            } while (($distance > $natars_max) || $status != 0);
+                $x = rand(3, intval(floor($nareadis)));
+                if (rand(1, 10) > 5) $x = $x * -1;
+                $y = rand(3, intval(floor($nareadis)));
+                if (rand(1, 10) > 5) $y = $y * -1;
+                $dis = sqrt(($x * $x) + ($y * $y));
+                $villageid = $this->db->getWref($x, $y);
+                $status = $this->db->getVillageState($villageid);
+            } while (($dis > $nareadis) || $status != 0);
 
-            if ($status == false) {
-                $this->updateNatars($worldid2);
-            }
+            $this->setupVillages($villageid, 2, 'Natars', 1);
+            $this->updateNatars($villageid, $speed);
         }
 
         redirect('/installer/oasis');
@@ -279,10 +275,10 @@ class InstallController
     protected function insertUsers($password)
     {
         $users = [
-            ['username' => 'Support', 'password' => md5($password), 'email' => 'support@phpvian.com', 'tribe' => 1, 'access' => 8, 'timestamp' => time(), 'desc1' => '[#support]', 'desc2' => '[#support]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
+            ['username' => 'Support', 'password' => md5($password), 'email' => 'support@phpvian.com', 'tribe' => 1, 'access' => 8, 'timestamp' => time(), 'desc1' => '[#support]', 'desc2' => '[#support]', 'protect' => 0, 'quest' => 25],
             ['username' => 'Natars', 'password' => md5($password), 'email' => 'natars@phpvian.com', 'tribe' => 5, 'access' => 8, 'timestamp' => time(), 'desc1' => '[#natars]', 'desc2' => '[#natars]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
-            ['username' => 'Nature', 'password' => md5($password), 'email' => 'nature@phpvian.com', 'tribe' => 4, 'access' => 2, 'timestamp' => time(), 'desc1' => '[#nature]', 'desc2' => '[#nature]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
-            ['username' => 'Multihunter', 'password' => md5($password), 'email' => 'multihunter@phpvian.com', 'tribe' => 4, 'access' => 9, 'timestamp' => time(), 'desc1' => '[#multihunter]', 'desc2' => '[#multihunter]', 'protect' => 0, 'quest' => 25, 'fquest' => 35],
+            ['username' => 'Nature', 'password' => md5($password), 'email' => 'nature@phpvian.com', 'tribe' => 4, 'access' => 2, 'timestamp' => time(), 'desc1' => '[#nature]', 'desc2' => '[#nature]', 'protect' => 0, 'quest' => 25],
+            ['username' => 'Multihunter', 'password' => md5($password), 'email' => 'multihunter@phpvian.com', 'tribe' => 0, 'access' => 9, 'timestamp' => time(), 'desc1' => '[#multihunter]', 'desc2' => '[#multihunter]', 'protect' => 0, 'quest' => 25],
         ];
 
         foreach ($users as $user) {
@@ -303,30 +299,45 @@ class InstallController
         }
     }
 
-    protected function updateUnits($worldid2)
+    protected function updateUnits($worldid, $speed)
     {
-        $speed = setting('speed');
         $data = [
-            'u41' => 274700 * $speed,
-            'u42' => 995231 * $speed,
-            'u43' => 10000,
-            'u44' => 3048 * $speed,
-            'u45' => 964401 * $speed,
-            'u46' => 617602 * $speed,
-            'u47' => 6034 * $speed,
-            'u48' => 3040 * $speed,
+            'u41' => (94700 * $speed),
+            'u42' => (295231 * $speed),
+            'u43' => (180747 * $speed),
+            'u44' => (1048 * $speed),
+            'u45' => (364401 * $speed),
+            'u46' => (217602 * $speed),
+            'u47' => (2034 * $speed),
+            'u48' => (1040 * $speed),
             'u49' => 1,
             'u50' => 9
         ];
-        $this->conn->from('units')->input($data)->where('vref = :wid', [':wid' => $worldid2])->update();
+        $this->conn->upgrade('vdata', ['pop' => 781], "wref = {$worldid}");
+        $this->conn->upgrade('units', $data, "vref = {$worldid}");
     }
 
-    protected function updateNatars($worldid)
+    protected function updateNatars($worldid, $speed)
     {
-        $speed = setting('speed');
-        $this->conn->from('vdata')->input(['pop' => 238, 'natar' => 1])->where('wref = :wid', [':wid' => $worldid])->update();
-        $this->conn->from('units')->input(['u41' => random_int(3000, 6000) * $speed, 'u42' => random_int(4500, 6000) * $speed, 'u43' => 10000, 'u44' => random_int(635, 1575) * $speed, 'u45' => random_int(3600, 5700) * $speed,'u46' => random_int(4500, 6000) * $speed, 'u47' => random_int(1500, 2700) * $speed, 'u48' => random_int(300, 900) * $speed, 'u49' => 0, 'u50' => 9])->where('vref = :wid', [':wid' => $worldid])->update();
-        $this->conn->from('fdata')->input(['f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40, 'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16])->where(':vref = :wid', ['wid' => $worldid])->update();
+        $units = [
+            'u41' => (random_int(1000, 2000) * $speed),
+            'u42' => (random_int(1500, 2000) * $speed),
+            'u43' => (random_int(2300, 2800) * $speed),
+            'u44' => (random_int(235, 575) * $speed),
+            'u45' => (random_int(1200, 1900) * $speed),
+            'u46' => (random_int(1500, 2000) * $speed),
+            'u47' => (random_int(500, 900) * $speed),
+            'u48' => (random_int(100, 300) * $speed),
+            'u49' => (random_int(1, 5) * $speed),
+            'u50' => (random_int(1, 5) * $speed)
+        ];
+        $fdata = [
+            'f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40,
+            'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16
+        ];
+        $this->conn->upgrade('vdata', ['pop' => 238, 'natar' => 1, 'name' => 'WW Village', 'capital' => 0], "wref = {$worldid}");
+        $this->conn->upgrade('units', $units, "vref = {$worldid}");
+        $this->conn->upgrade('fdata', $fdata, "vref = {$worldid}");
     }
 
     public function oasis()
