@@ -2,9 +2,11 @@
 
 namespace PHPvian\Libs;
 
+use Exception;
+
 class Route
 {
-    protected $routes = [];
+    protected array $routes = [];
 
     public function get($route, $controller, $action)
     {
@@ -27,7 +29,7 @@ class Route
         $method = $_SERVER['REQUEST_METHOD'];
 
         if (!isset($this->routes[$method])) {
-            throw new \Exception("Unsupported HTTP method: $method");
+            throw new Exception("Unsupported HTTP method: $method");
         }
 
         foreach ($this->routes[$method] as $route => $handler) {
@@ -36,13 +38,13 @@ class Route
                 $action = $handler['action'];
 
                 if (!class_exists($controller)) {
-                    throw new \Exception("Controller class not found: $controller");
+                    throw new Exception("Controller class not found: $controller");
                 }
 
                 $controllerInstance = new $controller();
 
                 if (!method_exists($controllerInstance, $action)) {
-                    throw new \Exception("Action method not found: $action");
+                    throw new Exception("Action method not found: $action");
                 }
 
                 $controllerInstance->$action();
@@ -50,12 +52,12 @@ class Route
             }
         }
 
-        throw new \Exception("No route found for URI: $uri");
+        throw new Exception("No route found for URI: $uri");
     }
 
     private function routeMatches($route, $uri)
     {
-        $regex = str_replace('/', '\/', $route);
+        $regex = str_replace('/', '\/', $route) . '\/?';
         $regex = preg_replace('/\{(\w+)\}/', '(?<$1>\w+)', $regex);
         $regex = "/^$regex$/";
 
