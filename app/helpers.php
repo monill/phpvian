@@ -310,3 +310,14 @@ if (!function_exists('connection_file')) {
         return file_exists(dirname(__DIR__) . '/config/database.php') ? true : false;
     }
 }
+
+if (!function_exists('generate_login_string')) {
+    /**
+     * Generate a string that will be used as a fingerprint.
+     * This is actually a string created from the user's browser name and the user's IP
+     * Address, so if someone steals users session, he will not be able to access.
+     */
+    function generate_login_string() {
+        return hash("sha512", get_ip() . browser());
+    }
+}
