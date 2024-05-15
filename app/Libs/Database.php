@@ -714,7 +714,7 @@ class Database
         return $this->conn
             ->select()
             ->from('odata')
-            ->where('conqured = :vid', [':vid' => $vid])
+            ->where('`conqured` = :vid', [':vid' => $vid])
             ->get();
     }
 
@@ -723,7 +723,7 @@ class Database
         return $this->conn
             ->select('conquered, loyalty')
             ->from('odata')
-            ->where('wref = :wid', [':wid' => $worlid])
+            ->where('`wref` = :wid', [':wid' => $worlid])
             ->get();
     }
 
