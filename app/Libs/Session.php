@@ -2,6 +2,10 @@
 
 namespace PHPvian\Libs;
 
+use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
+
 class Session
 {
     private $secure;
@@ -68,7 +72,7 @@ class Session
 
             // Regenerates session ID to prevent session fixation attacks
             session_regenerate_id(true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Handles any errors during session initialization
             error_log('Error when starting the session: ' . $e->getMessage());
             exit('An internal error has occurred. Please try again later.');
@@ -100,13 +104,13 @@ class Session
     {
         // Checks if the session is active
         if (!session_id()) {
-            throw new \RuntimeException('The session is not started.');
+            throw new RuntimeException('The session is not started.');
         }
         // Try to set the value in the session
         $_SESSION[$key] = $value;
         // Checks if the value was set successfully
         if (!isset($_SESSION[$key]) || $_SESSION[$key] !== $value) {
-            throw new \RuntimeException('Failed to set value in session.');
+            throw new RuntimeException('Failed to set value in session.');
         }
         // Returns the defined value
         return $value;
@@ -123,7 +127,7 @@ class Session
     {
         // Checks if the key is a valid string
         if (!is_string($key)) {
-            throw new \InvalidArgumentException('The session key must be a valid string.');
+            throw new InvalidArgumentException('The session key must be a valid string.');
         }
         // Returns the value associated with the key in the session, or the default value if the key does not exist
         return isset($_SESSION[$key]) ? $_SESSION[$key] : $default;
