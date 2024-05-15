@@ -27,9 +27,9 @@ class Connection extends PDO
             try {
                 parent::__construct($dsn, $config['DB_USER'], $config['DB_PASS']);
                 $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $this->exec("SET CHARACTER SET utf8");
+                $this->exec('SET CHARACTER SET utf8');
             } catch (PDOException $exc) {
-                exit("Connection error: " . $exc->getMessage());
+                exit('Connection error: ' . $exc->getMessage());
             }
         }
     }
@@ -41,7 +41,7 @@ class Connection extends PDO
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException | RuntimeException $exc) {
-            throw new RuntimeException("Query execution error: " . $exc->getMessage());
+            throw new RuntimeException('Query execution error: ' . $exc->getMessage());
         }
     }
 
@@ -49,7 +49,7 @@ class Connection extends PDO
     {
         foreach ($data as $key => $value) {
             if (!is_numeric($value) && !is_string($value) && !is_bool($value) && !is_null($value)) {
-                throw new InvalidArgumentException("Invalid data type for column $key.");
+                throw new InvalidArgumentException('Invalid data type for column: ' . $key);
             }
         }
     }
@@ -176,7 +176,7 @@ class Connection extends PDO
             $stmt->execute($this->params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Get error: " . $e->getMessage());
+            throw new RuntimeException('Get error: ' . $e->getMessage());
         }
     }
 
@@ -194,7 +194,7 @@ class Connection extends PDO
             }
             return $stmt->execute();
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Insert error: " . $e->getMessage());
+            throw new RuntimeException('Insert error: ' . $e->getMessage());
         }
     }
 
@@ -241,7 +241,7 @@ class Connection extends PDO
         try {
             return $this->executeQuery($sql, $this->params);
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Update error: " . $e->getMessage());
+            throw new RuntimeException('Update error: ' . $e->getMessage());
         }
     }
 
@@ -266,7 +266,7 @@ class Connection extends PDO
             }
             return $stmt->execute();
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Upgrade error: " . $e->getMessage());
+            throw new RuntimeException('Upgrade error: ' . $e->getMessage());
         }
     }
 
@@ -276,7 +276,7 @@ class Connection extends PDO
             $sql = "DELETE FROM $table WHERE $where";
             return $this->executeQuery($sql, $bind);
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Delete error: " . $e->getMessage());
+            throw new RuntimeException('Delete error: ' . $e->getMessage());
         }
     }
 
@@ -290,7 +290,7 @@ class Connection extends PDO
         try {
             return $this->executeQuery($sql, $params)->fetch(PDO::FETCH_ASSOC)['total'];
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Count error: " . $e->getMessage());
+            throw new RuntimeException('Count error: ' . $e->getMessage());
         }
     }
 
@@ -305,7 +305,7 @@ class Connection extends PDO
             $result = $this->executeQuery($sql, $params)->fetchAll(PDO::FETCH_ASSOC);
             return count($result) === 1 ? $result[0] : $result;
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Join error: " . $e->getMessage());
+            throw new RuntimeException('Join error: ' . $e->getMessage());
         }
     }
 
@@ -333,7 +333,7 @@ class Connection extends PDO
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return $result['total'] > 0;
         } catch (PDOException $e) {
-            throw new RuntimeException("Error checking existence: " . $e->getMessage());
+            throw new RuntimeException('Error checking existence: ' . $e->getMessage());
         }
     }
 
@@ -353,7 +353,7 @@ class Connection extends PDO
 
             return $stmt->execute();
         } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException("Replace error: " . $e->getMessage());
+            throw new RuntimeException('Replace error: ' . $e->getMessage());
         }
     }
 
@@ -361,9 +361,9 @@ class Connection extends PDO
     {
         try {
             $this->query('SELECT 1');
-            return "Connection successful!";
+            return 'Connection successful!';
         } catch (PDOException | RuntimeException $exc) {
-            exit("Error testing connection: " . $exc->getMessage());
+            throw new RuntimeException('Error testing connection: ' . $exc->getMessage());
         }
     }
 
@@ -378,7 +378,7 @@ class Connection extends PDO
         try {
             return $this->query('KILL CONNECTION_ID()');
         } catch (PDOException | RuntimeException $exc) {
-            throw new RuntimeException("Error closing connection: " . $exc->getMessage());
+            throw new RuntimeException('Error closing connection: ' . $exc->getMessage());
         }
     }
 
