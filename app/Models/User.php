@@ -8,32 +8,21 @@ class User
 {
 	protected $table = 'users';
 	
-    private $db, $password, $id;
-    public $username, $email, $status, $banned = null;
+    private $conn, $password, $id;
+    public $username, $email, $status, $banned;
 
     public function __construct()
     {
-        $this->db = new Connection();
+        $this->conn = new Connection();
     }
 
     public function findByEmail($email)
     {
-        // 'id, email, username, password, access',
-
-
-
-//        $this->id = $sql->id;
-//        $this->username = $sql->username;
-//        $this->email = $sql->email;
-//        $this->password = $sql->password;
-//        $this->status = $sql->access == 1 ? true : false;
-//        $this->banned = $sql->access == 1 ? true : false;
-//        return $this;
     }
 
     public function existsByEmail($email)
     {
-        if ($this->db->exists('users', 'email', $email)) {
+        if ($this->conn->exists('users', 'email', $email)) {
             return true;
         }
         return false;
