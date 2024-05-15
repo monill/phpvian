@@ -1,5 +1,7 @@
 <?php
 
+use PHPvian\Libs\Session;
+
 header("Content-Type: text/html; charset=UTF-8");
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
@@ -10,6 +12,8 @@ ob_start();
 if (file_exists(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'vendor/autoload.php')) {
     require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'vendor/autoload.php';
 }
+
+Session::startSession();
 
 require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app/routes.php';
 
