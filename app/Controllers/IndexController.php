@@ -4,11 +4,11 @@ namespace PHPvian\Controllers;
 
 use PHPvian\Libs\Session;
 
-class IndexController
+class IndexController extends Controller
 {
     public function __construct()
     {
-        Session::startSession();
+        parent::__construct();
     }
 
     public function index()
