@@ -29,7 +29,9 @@ $route->get('/installer/oasis', InstallController::class, 'oasis');
 $route->post('/installer/oasis', InstallController::class, 'setOasis');
 $route->get('/installer/complete', InstallController::class, 'complete');
 //End installer
-
+//Activate
+$route->get('/activate', \PHPvian\Controllers\ActivateController::class, 'index');
+//Server error
 $route->get('/404', ErrorsController::class, 'deny');
 $route->get('/500', ErrorsController::class, 'server');
 //Auth
@@ -40,6 +42,7 @@ $route->post('/signup', SignupController::class, 'signup');
 $route->get('/logout', LogoutController::class, 'logout');
 //End Auth
 $route->get('/village', \PHPvian\Controllers\VillageController::class, 'index');
+$route->get('/resources', \PHPvian\Controllers\ResourcesController::class, 'index');
 
 
 
