@@ -2,17 +2,18 @@
 
 namespace PHPvian\Controllers;
 
+use PHPvian\Libs\Connection;
 use PHPvian\Libs\Session;
 
 class Controller
 {
     protected $loginFingerPrint;
+    protected $conn;
 
     public function __construct()
     {
         $this->loginFingerPrint = config('login', 'login_fingerprint');
-        Session::startSession();
-        $this->checkLoggedIn();
+        $this->conn = new Connection();
     }
 
     protected function checkLoggedIn()
@@ -31,21 +32,11 @@ class Controller
         // If the user is logged in and fingerprint login is enabled,
         // checks if the stored fingerprint matches the currently generated one
         if ($loggedIn && $this->loginFingerPrint) {
-            $currentLoginString = $this->generateLoginString();
             $storedLoginString = Session::get("loginFingerPrint");
-            return ($storedLoginString !== null && $storedLoginString === $currentLoginString);
+            return ($storedLoginString !== null && $storedLoginString === generate_login_string());
         }
 
         return $loggedIn;
     }
 
-    /**
-     * Generate a string that will be used as a fingerprint.
-     * This is actually a string created from the user's browser name and the user's IP
-     * Address, so if someone steals users session, he will not be able to access.
-     */
-    protected function generateLoginString()
-    {
-        return hash("sha512", get_ip() . browser());
-    }
 }
