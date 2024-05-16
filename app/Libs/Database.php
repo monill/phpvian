@@ -118,11 +118,11 @@ class Database
     public function updateUserField($ref, $field, $value, $mode)
     {
         if ($mode == 0) {
-            $this->conn->from('users')->set($field, $value)->where('username = :ref', [':ref' => $ref])->update();
+            $this->conn->upgrade('users', [$field => $value], 'username = '.$ref);
         } elseif ($mode == 1) {
-            $this->conn->from('users')->set($field, $value)->where('id = :ref', [':ref' => $ref])->update();
+            $this->conn->upgrade('users', [$field => $value],'id = '.$ref);
         } elseif ($mode == 2) {
-            $this->conn->from('users')->set($field, "$field + :value")->where('id = :ref', [':ref' => $ref, ':value' => $value])->update();
+            $this->conn->upgrade('users', [$field => "$field + :value"], 'id = :ref', [':value' => $value, ':ref' => $ref]);
         }
     }
 
@@ -294,26 +294,22 @@ class Database
         return $dbarray['timestamp'];
     }
 
-    public function modifyGold($userid, $amount, $mode)
+    public function modifyGold($userID, $amount, $mode)
     {
-        $goldlog = $this->conn->count('gold_fin_log');
-        $referer = $_SERVER['HTTP_REFERER'] ?? '';
-
         if (!$mode) {
             // Decrement gold
-            $this->conn->from('users')->set('gold', "gold - $amount")->where('id = :userid', [':userid' => $userid])->update();
+            $this->conn->from('users')->set('gold', "gold - $amount")->where('id = :userid', [':userid' => $userID])->update();
             // Increment usedgold
-            $this->conn->from('users')->set('usedgold', "usedgold + $amount")->where('id = :userid', [':userid' => $userid])->update();
+            $this->conn->from('users')->set('usedgold', "usedgold + $amount")->where('id = :userid', [':userid' => $userID])->update();
         } else {
             // Increment gold
-            $this->conn->from('users')->set('gold', "gold + $amount")->where('id = :userid', [':userid' => $userid])->update();
+            $this->conn->from('users')->set('gold', "gold + $amount")->where('id = :userid', [':userid' => $userID])->update();
             // Increment Addgold
-            $this->conn->from('users')->set('Addgold', "Addgold + $amount")->where('id = :userid', [':userid' => $userid])->update();
+            $this->conn->from('users')->set('Addgold', "Addgold + $amount")->where('id = :userid', [':userid' => $userID])->update();
         }
         $this->conn->insert('gold_fin_log', [
-            'id' => $goldlog + 1,
-            'userid' => $userid,
-            'details' => "$amount GOLD ADDED FROM $referer"
+            'wid' => $userID,
+            'log' => "$amount GOLD ADDED FROM " . $_SERVER['HTTP_REFERER'] ?? ''
         ]);
     }
 
@@ -595,55 +591,51 @@ class Database
         $world_max = setting('world_max');
         $nareadis = setting('natars_max') + 2;
 
-        // (-/-) SW
-        if ($sector == 1) {
-            $x_a = ($world_max - ($world_max * 2));
-            $x_b = 0;
-            $y_a = ($world_max - ($world_max * 2));
-            $y_b = 0;
-            $order = "ORDER BY y DESC, x DESC";
-            $mmm = rand(-1, -20);
-            $x_y = "AND x < -4 AND y < $mmm";
-        }
-        // (+/-) SE
-        elseif ($sector == 2) {
-            $x_a = ($world_max - ($world_max * 2));
-            $x_b = 0;
-            $y_a = 0;
-            $y_b = $world_max;
-            $order = "ORDER BY y ASC, x DESC";
-            $mmm = rand(1, 20);
-            $x_y = "AND x < -4 AND y > $mmm";
-        }
-        // (+/+) NE
-        elseif ($sector == 3) {
-            $x_a = 0;
-            $x_b = $world_max;
-            $y_a = 0;
-            $y_b = $world_max;
-            $order = "ORDER BY y, x ASC";
-            $mmm = rand(1, 20);
-            $x_y = "AND x > 4 AND y > $mmm";
-        }
-        // (-/+) NW
-        elseif ($sector == 4) {
-            $x_a = 0;
-            $x_b = $world_max;
-            $y_a = ($world_max - ($world_max * 2));
-            $y_b = 0;
-            $order = "ORDER BY y DESC, x ASC";
-            $mmm = rand(-1, -20);
-            $x_y = "AND x > 4 AND y < $mmm";
+        switch ($sector) {
+            case 1: // (-/-) SW
+                $x_a = ($world_max - ($world_max * 2));
+                $x_b = 0;
+                $y_a = ($world_max - ($world_max * 2));
+                $y_b = 0;
+                $order = "ORDER BY y DESC,x DESC";
+                $mmm = rand(-1, -20);
+                $x_y = "AND x < -4 AND y < $mmm";
+                break;
+            case 2: // (+/-) SE
+                $x_a = ($world_max - ($world_max * 2));
+                $x_b = 0;
+                $y_a = 0;
+                $y_b = $world_max;
+                $order = "ORDER BY y ASC,x DESC";
+                $mmm = rand(1, 20);
+                $x_y = "AND x < -4 AND y > $mmm";
+                break;
+            case 3: // (+/+) NE
+                $x_a = 0;
+                $x_b = $world_max;
+                $y_a = 0;
+                $y_b = $world_max;
+                $order = "ORDER BY y,x ASC";
+                $mmm = rand(1, 20);
+                $x_y = "AND x > 4 AND y > $mmm";
+                break;
+            case 4: // (-/+) NW
+                $x_a = 0;
+                $x_b = $world_max;
+                $y_a = ($world_max - ($world_max * 2));
+                $y_b = 0;
+                $order = "ORDER BY y DESC, x ASC";
+                $mmm = rand(-1, -20);
+                $x_y = "AND x > 4 AND y < $mmm";
+                break;
         }
 
-        $result = $this->conn
-            ->select('id')
-            ->from('wdata')
-            ->where("fieldtype = 3 AND occupied = 0 $x_y AND (x BETWEEN $x_a AND $x_b) AND (y BETWEEN $y_a AND $y_b) AND (SQRT(POW(x,2)+POW(y,2)) > {$nareadis})")
-            ->order($order)
-            ->first();
+        $q = "SELECT id FROM wdata WHERE fieldtype = 3 AND occupied = 0 $x_y AND (x BETWEEN $x_a AND $x_b) AND (y BETWEEN $y_a AND $y_b) AND (SQRT(POW(x, 2) + POW(y, 2)) > $nareadis) $order LIMIT 20";
+        $stmt = $this->conn->prepare($q);
+        $stmt->execute();
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        return $result['id'];
+        return $result['id'] ?? null;
     }
 
     public function setFieldTaken($id)
@@ -683,10 +675,14 @@ class Database
         $results = $this->conn
             ->select('wref')
             ->from('vdata')
-            ->where('owner = :uid', [':uid' => $userID])
+            ->where('owner = :owner', [':owner' => $userID])
             ->get();
 
-        return array_column($results, 'wref');
+        $newarray = [];
+        for ($i = 0; $i < count($results); $i++) {
+            array_push($newarray, $results[$i]['wref']);
+        }
+        return $newarray;
     }
 
     public function addResourceFields($vid, $type)
@@ -2431,7 +2427,7 @@ class Database
         return $result ?? null;
     }
 
-    public function modifyHero($uid, $id, $column, $value, $mode = 0)
+    public function modifyHero($userID, $id, $column, $value, $mode = 0)
     {
         $cmd = '';
         $cmd .= match ($mode) {
@@ -2448,9 +2444,9 @@ class Database
 
         $params = [':value' => $value];
         $where = 'TRUE';
-        if ($uid) {
+        if ($userID) {
             $where .= ' AND uid = :uid';
-            $params[':uid'] = $uid;
+            $params[':uid'] = $userID;
         }
         if ($id) {
             $where .= ' AND heroid = :id';
@@ -3207,7 +3203,6 @@ class Database
             }
         }
         // trapped settlers/chiefs calculation required
-
         $settlerslots = $maxslots * 3 - $settlers - $chiefs * 3;
         $chiefslots = $maxslots - $chiefs - floor(($settlers + 2) / 3);
 
@@ -3278,7 +3273,6 @@ class Database
         $currentArte = $this->getArtefactDetails($id);
 
         // set new active artes for new owner
-
         #---------first inactive large and uinque artes if this currentArte is large/unique
         if ($currentArte['size'] == 2 || $currentArte['size'] == 3) {
             $ulArts = $this->query_return('SELECT * FROM artefacts WHERE `owner`=' . $newowner . ' AND `status`=1 AND `size`<>1');
@@ -3341,9 +3335,9 @@ class Database
         return mysql_fetch_array($result);
     }
 
-    public function getHeroFace($uid)
+    public function getHeroFace($userID)
     {
-        $q = "SELECT * FROM heroface WHERE uid = " . $uid;
+        $q = "SELECT * FROM heroface WHERE uid = " . $userID;
         $result = mysql_query($q, $this->connection);
         return mysql_fetch_array($result);
     }
@@ -3365,10 +3359,10 @@ class Database
         return $this->conn->insert('heroface', $data);
     }
 
-    public function modifyHeroFace($uid, $column, $value)
+    public function modifyHeroFace($userID, $column, $value)
     {
-        $hash = md5("$uid" . time());
-        $q = "UPDATE heroface SET `$column`='$value',`hash`='$hash' WHERE `uid` = '$uid'";
+        $hash = md5("$userID" . time());
+        $q = "UPDATE heroface SET `$column`='$value',`hash`='$hash' WHERE `uid` = '$userID'";
         return mysql_query($q, $this->connection);
     }
 
@@ -3857,12 +3851,11 @@ class Database
 
     public function getVFH($userID)
     {
-        $result = $this->conn->select('wref')
+        return $this->conn
+            ->select('wref')
             ->from('vdata')
-            ->where('owner = :uid AND capital = 1', [':uid' => $userID])
-            ->first();
-
-        return $result['wref'];
+            ->where("`owner` = {$userID} AND capital = 1")
+            ->first()['wref'];
     }
 
     public function getNotice2($id, $field)
@@ -3873,15 +3866,12 @@ class Database
         return $dbarray[$field];
     }
 
-    public function addAdventure($wref, $uid, $time = 0, $dif = 0)
+    public function addAdventure($wref, $userID)
     {
-        if ($time == 0) {
-            $time = time();
-        }
-
-        $result = $this->conn->select('id')->from('wdata')->orderByDesc('id')->limit(1)->get();
-        $lastw = $result['id'];
-
+        $time = time() + (3600 * 120);
+        $ddd = rand(0, 3);
+        $dif = $ddd == 1 ? 1 : 0;
+        $lastw = 641601;
         if (($wref - 10000) <= 10) {
             $w1 = rand(10, ($wref + 10000));
         } elseif (($wref + 10000) >= $lastw) {
@@ -3889,10 +3879,9 @@ class Database
         } else {
             $w1 = rand(($wref - 10000), ($wref + 10000));
         }
-
         $data = [
             'wref' => $w1,
-            'uid' => $uid,
+            'uid' => $userID,
             'dif' => $dif,
             'time' => $time,
             'end' => 0
@@ -4560,7 +4549,7 @@ class Database
 
     public function settribe($tribe, $userID)
     {
-        return $this->conn->from('users')->set('tribe', $tribe)->where('id = :id', [':id' => $userID])->update();
+        return $this->conn->upgrade('users', ['tribe' => $tribe], 'id = '.$userID);
     }
 
     public function checkreg($userID)
@@ -4646,19 +4635,15 @@ class Database
         return $t;
     }
 
-    public function modifyHero2($column, $value, $uid, $mode)
+    public function modifyHero2($column, $value, $userID, $mode)
     {
-        switch ($mode) {
-            case 1:
-                $q = "UPDATE hero SET $column = $column + $value WHERE uid = $uid";
-                break;
-            case 2:
-                $q = "UPDATE hero SET $column = $column - $value WHERE uid = $uid";
-                break;
-            default:
-                $q = "UPDATE hero SET $column = $value WHERE uid = $uid";
+        if ($mode == 0) {
+            $this->conn->upgrade('hero', [$column => $value], "uid = {$userID}");
+        } elseif ($mode == 1) {
+            $this->conn->upgrade('hero', [$column => "$column + :value"], 'uid = :ref', [':value' => $value, ':ref' => $userID]);
+        } elseif ($mode == 2) {
+            $this->conn->upgrade('hero', [$column => "$column - :value"], 'uid = :ref', [':value' => $value, ':ref' => $userID]);
         }
-        return mysql_query($q, $this->connection);
     }
 
     public function createTradeRoute($uid, $wid, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
