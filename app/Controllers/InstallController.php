@@ -8,12 +8,12 @@ use PHPvian\Libs\Database;
 
 class InstallController
 {
-    private $conn, $db, $databaseFile, $htaccessFile;
+    private $conn, $database, $databaseFile, $htaccessFile;
 
     public function __construct()
     {
         $this->conn = new Connection();
-        $this->db = new Database();
+        $this->database = new Database();
         $this->databaseFile = dirname(__DIR__) . '/../storage/database.sql';
         $this->htaccessFile = dirname(__DIR__) . '/../public/.htaccess';
     }
@@ -243,9 +243,9 @@ class InstallController
 
         $this->insertUsers($password);
 
-        $worldid4 = $this->db->getWref(1, 0);
+        $worldid4 = $this->database->getWref(1, 0);
         $this->setupVillages($worldid4, 4, 'Multihunter', 1);
-        $worldid2 = $this->db->getWref(0, 0);
+        $worldid2 = $this->database->getWref(0, 0);
         $this->setupVillages($worldid2, 2, '1', 0);
 
         $speed = setting('speed');
@@ -261,8 +261,8 @@ class InstallController
                 $y = rand(3, intval(floor($nareadis)));
                 if (rand(1, 10) > 5) $y = $y * -1;
                 $dis = sqrt(($x * $x) + ($y * $y));
-                $villageid = $this->db->getWref($x, $y);
-                $status = $this->db->getVillageState($villageid);
+                $villageid = $this->database->getWref($x, $y);
+                $status = $this->database->getVillageState($villageid);
             } while (($dis > $nareadis) || $status != 0);
 
             $this->setupVillages($villageid, 2, 'Natars', 1);
@@ -288,14 +288,14 @@ class InstallController
 
     protected function setupVillages($worldid, $userid, $username, $capital)
     {
-        $status = $this->db->getVillageState($worldid);
+        $status = $this->database->getVillageState($worldid);
         if ($status == false) {
-            $this->db->setFieldTaken($worldid);
-            $this->db->addVillage($worldid, $userid, $username, $capital);
-            $this->db->addResourceFields($worldid, $this->db->getVillageType($worldid));
-            $this->db->addUnits($worldid);
-            $this->db->addTech($worldid);
-            $this->db->addABTech($worldid);
+            $this->database->setFieldTaken($worldid);
+            $this->database->addVillage($worldid, $userid, $username, $capital);
+            $this->database->addResourceFields($worldid, $this->database->getVillageType($worldid));
+            $this->database->addUnits($worldid);
+            $this->database->addTech($worldid);
+            $this->database->addABTech($worldid);
         }
     }
 
@@ -362,7 +362,7 @@ class InstallController
 
         foreach ($worlds as $world) {
             $time = time();
-            $base = $this->db->getOMInfo($world['id']);
+            $base = $this->database->getOMInfo($world['id']);
             $data = [
                 "wref" => $base['id'],
                 "type" => $base['oasistype'],
@@ -388,7 +388,7 @@ class InstallController
     {
         $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
         foreach ($worlds as $world) {
-            $this->db->addUnits($world['id']);
+            $this->database->addUnits($world['id']);
         }
     }
 
@@ -397,7 +397,7 @@ class InstallController
         $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
 
         foreach ($worlds as $world) {
-            $base = $this->db->getMInfo($world['id']);
+            $base = $this->database->getMInfo($world['id']);
             $oasisValues = $this->generateOasisValues($base['oasistype']);
             $this->conn->from('units')->values($oasisValues)->where('`vref` = :vref', [':vref' => $world['id']])->update();
         }
