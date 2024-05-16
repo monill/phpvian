@@ -17,7 +17,7 @@
 -- Dumping structure for table phpvian.a2b
 CREATE TABLE IF NOT EXISTS `a2b` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
-  `ckey` char(12) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `ckey` char(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `time_check` int unsigned NOT NULL DEFAULT '0',
   `to_vid` int unsigned NOT NULL,
   `u1` int unsigned NOT NULL,
@@ -70,16 +70,16 @@ CREATE TABLE IF NOT EXISTS `abdata` (
 -- Dumping structure for table phpvian.activate
 CREATE TABLE IF NOT EXISTS `activate` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `username` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `password` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `email` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `username` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `tribe` tinyint unsigned NOT NULL,
   `access` tinyint unsigned NOT NULL DEFAULT '1',
-  `act` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `act` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `timestamp` int unsigned NOT NULL DEFAULT '0',
-  `location` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `act2` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `ancestor` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `location` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `act2` char(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ancestor` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `activate` (
 
 -- Dumping structure for table phpvian.active
 CREATE TABLE IF NOT EXISTS `active` (
-  `username` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `username` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `timestamp` int unsigned NOT NULL,
   PRIMARY KEY (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -113,14 +113,14 @@ CREATE TABLE IF NOT EXISTS `adventure` (
 -- Dumping structure for table phpvian.alidata
 CREATE TABLE IF NOT EXISTS `alidata` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
-  `name` char(25) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `tag` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `name` char(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tag` char(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `leader` smallint unsigned NOT NULL,
   `coor` int unsigned NOT NULL,
   `advisor` int unsigned NOT NULL,
   `recruiter` int unsigned NOT NULL,
-  `notice` char(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `desc` char(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `notice` char(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `desc` char(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `max` tinyint unsigned NOT NULL,
   `ap` bigint unsigned NOT NULL DEFAULT '0',
   `dp` bigint unsigned NOT NULL DEFAULT '0',
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS `ali_invite` (
 CREATE TABLE IF NOT EXISTS `ali_log` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `aid` smallint NOT NULL,
-  `comment` char(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `comment` char(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `date` int unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS `ali_permission` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
   `alliance` smallint unsigned NOT NULL,
-  `rank` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `rank` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `opt1` int unsigned NOT NULL DEFAULT '0',
   `opt2` int unsigned NOT NULL DEFAULT '0',
   `opt3` int unsigned NOT NULL DEFAULT '0',
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS `allimedal` (
   `plaats` smallint NOT NULL,
   `week` smallint NOT NULL,
   `points` bigint NOT NULL,
-  `img` char(6) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `img` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -206,12 +206,12 @@ CREATE TABLE IF NOT EXISTS `artefacts` (
   `conquered` int unsigned NOT NULL,
   `lastupdate` int unsigned NOT NULL,
   `status` tinyint unsigned NOT NULL,
-  `name` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `desc` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `name` char(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `desc` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `effecttype` int NOT NULL,
   `effect` double NOT NULL,
   `aoe` int NOT NULL,
-  `img` char(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `img` char(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -327,10 +327,10 @@ CREATE TABLE IF NOT EXISTS `cchat` (
 CREATE TABLE IF NOT EXISTS `chat` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `id_user` int NOT NULL,
-  `name` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `alli` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `date` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `msg` char(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `name` char(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `alli` char(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `date` char(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `msg` char(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -338,7 +338,7 @@ CREATE TABLE IF NOT EXISTS `chat` (
 
 -- Dumping structure for table phpvian.config
 CREATE TABLE IF NOT EXISTS `config` (
-    `server_name` VARCHAR(60) NOT NULL COLLATE 'utf8mb3_general_ci',
+    `server_name` VARCHAR(60) NOT NULL COLLATE 'utf8mb4_unicode_ci',
     `speed` DOUBLE NOT NULL,
     `roundlenght` DOUBLE NOT NULL,
     `increase` DOUBLE NOT NULL,
@@ -376,9 +376,9 @@ CREATE TABLE IF NOT EXISTS `config` (
     `newsbox1` INT(10) NOT NULL,
     `newsbox2` INT(10) NOT NULL,
     `newsbox3` INT(10) NOT NULL,
-    `domain_url` VARCHAR(60) NOT NULL COLLATE 'utf8mb3_general_ci',
-    `homepage_url` VARCHAR(60) NOT NULL COLLATE 'utf8mb3_general_ci',
-    `server_url` VARCHAR(60) NOT NULL COLLATE 'utf8mb3_general_ci',
+    `domain_url` VARCHAR(60) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+    `homepage_url` VARCHAR(60) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+    `server_url` VARCHAR(60) NOT NULL COLLATE 'utf8mb4_unicode_ci',
     `natars_max` DOUBLE NOT NULL,
     `medalinterval` INT(10) NOT NULL,
     `lastgavemedal` INT(10) NOT NULL,
@@ -434,7 +434,7 @@ CREATE TABLE IF NOT EXISTS `diplomacy` (
 CREATE TABLE IF NOT EXISTS `emailinvite` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `uid` smallint unsigned NOT NULL,
-  `invemail` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `invemail` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `time` int unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -509,7 +509,7 @@ CREATE TABLE IF NOT EXISTS `farmlist` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `wref` smallint unsigned NOT NULL,
   `owner` smallint unsigned NOT NULL,
-  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `name` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -600,7 +600,7 @@ CREATE TABLE IF NOT EXISTS `fdata` (
   `f40t` tinyint unsigned NOT NULL DEFAULT '0',
   `f99` tinyint unsigned NOT NULL DEFAULT '0',
   `f99t` tinyint unsigned NOT NULL DEFAULT '0',
-  `wwname` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '',
+  `wwname` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`vref`),
   KEY `vref` (`vref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -612,8 +612,8 @@ CREATE TABLE IF NOT EXISTS `forum_cat` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `owner` smallint NOT NULL,
   `alliance` smallint NOT NULL,
-  `forum_name` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `forum_des` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `forum_name` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `forum_des` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `forum_area` tinyint NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -624,7 +624,7 @@ CREATE TABLE IF NOT EXISTS `forum_cat` (
 CREATE TABLE IF NOT EXISTS `forum_edit` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `alliance` smallint NOT NULL,
-  `result` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `result` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -651,8 +651,8 @@ CREATE TABLE IF NOT EXISTS `forum_poll` (
 -- Dumping structure for table phpvian.forum_post
 CREATE TABLE IF NOT EXISTS `forum_post` (
   `id` smallint NOT NULL AUTO_INCREMENT,
-  `post` longtext CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `topic` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `post` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `topic` char(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner` smallint NOT NULL,
   `date` int NOT NULL,
   `alliance0` int unsigned NOT NULL,
@@ -667,16 +667,16 @@ CREATE TABLE IF NOT EXISTS `forum_post` (
 -- Dumping structure for table phpvian.forum_topic
 CREATE TABLE IF NOT EXISTS `forum_topic` (
   `id` smallint NOT NULL AUTO_INCREMENT,
-  `title` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `post` longtext CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `title` char(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `post` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `date` int NOT NULL,
   `post_date` int NOT NULL,
   `cat` smallint NOT NULL,
   `owner` smallint NOT NULL,
   `alliance` smallint NOT NULL,
-  `ends` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `close` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `stick` char(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `ends` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `close` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `stick` char(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -687,9 +687,9 @@ CREATE TABLE IF NOT EXISTS `fpost_rules` (
   `id` int NOT NULL,
   `forum_id` int NOT NULL,
   `players_id` int NOT NULL,
-  `players_name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
+  `players_name` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `ally_id` int NOT NULL,
-  `ally_tag` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL
+  `ally_tag` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table phpvian.fpost_rules: ~0 rows (approximately)
@@ -698,7 +698,7 @@ CREATE TABLE IF NOT EXISTS `fpost_rules` (
 CREATE TABLE IF NOT EXISTS `gold_fin_log` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `wid` smallint unsigned NOT NULL,
-  `log` char(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `log` char(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -706,58 +706,58 @@ CREATE TABLE IF NOT EXISTS `gold_fin_log` (
 
 -- Dumping structure for table phpvian.hero
 CREATE TABLE IF NOT EXISTS `hero` (
-  `heroid` smallint unsigned NOT NULL AUTO_INCREMENT,
-  `uid` smallint unsigned NOT NULL,
-  `wref` smallint unsigned NOT NULL,
-  `level` tinyint unsigned NOT NULL,
-  `adv` smallint unsigned NOT NULL,
-  `sucsadv` smallint unsigned NOT NULL,
-  `speed` tinyint unsigned NOT NULL,
-  `itemspeed` tinyint unsigned NOT NULL,
-  `points` smallint unsigned NOT NULL,
-  `experience` int NOT NULL,
-  `dead` tinyint NOT NULL,
-  `health` double(10,7) unsigned NOT NULL DEFAULT '100.0000000',
-  `power` tinyint unsigned NOT NULL,
-  `fsperpoint` tinyint unsigned NOT NULL,
-  `itemfs` smallint unsigned NOT NULL,
-  `offBonus` tinyint unsigned NOT NULL,
-  `defBonus` tinyint unsigned NOT NULL,
-  `product` tinyint unsigned NOT NULL,
-  `r0` tinyint unsigned NOT NULL,
-  `r1` tinyint unsigned NOT NULL,
-  `r2` tinyint unsigned NOT NULL,
-  `r3` tinyint unsigned NOT NULL,
-  `r4` tinyint unsigned NOT NULL,
-  `rc` tinyint unsigned NOT NULL,
-  `autoregen` tinyint NOT NULL,
-  `itemautoregen` tinyint NOT NULL,
-  `extraexpgain` tinyint NOT NULL,
-  `itemextraexpgain` tinyint NOT NULL,
-  `cpproduction` tinyint NOT NULL,
-  `itemcpproduction` tinyint NOT NULL,
-  `infantrytrain` tinyint NOT NULL,
-  `iteminfantrytrain` tinyint NOT NULL,
-  `cavalrytrain` tinyint NOT NULL,
-  `itemcavalrytrain` tinyint NOT NULL,
-  `rob` tinyint NOT NULL,
-  `itemrob` tinyint NOT NULL,
-  `extraresist` tinyint NOT NULL,
-  `itemextraresist` tinyint NOT NULL,
-  `vsnatars` tinyint NOT NULL,
-  `itemvsnatars` tinyint NOT NULL,
-  `accountmspeed` tinyint NOT NULL,
-  `itemaccountmspeed` tinyint NOT NULL,
-  `allymspeed` tinyint NOT NULL,
-  `itemallymspeed` tinyint NOT NULL,
-  `longwaymspeed` tinyint NOT NULL,
-  `itemlongwaymspeed` tinyint NOT NULL,
-  `returnmspeed` tinyint NOT NULL,
-  `itemreturnmspeed` tinyint NOT NULL,
-  `lastupdate` int unsigned NOT NULL,
-  `lastadv` int unsigned NOT NULL DEFAULT '0',
-  `hash` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `hide` tinyint unsigned NOT NULL DEFAULT '1',
+  `heroid` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`uid` SMALLINT(5) UNSIGNED NOT NULL,
+	`wref` SMALLINT(5) UNSIGNED NOT NULL,
+	`level` TINYINT(3) UNSIGNED NOT NULL,
+	`adv` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`sucsadv` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`speed` TINYINT(3) UNSIGNED NOT NULL,
+	`itemspeed` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`points` SMALLINT(5) UNSIGNED NOT NULL,
+	`experience` INT(10) NOT NULL,
+	`dead` TINYINT(3) NOT NULL,
+	`health` DOUBLE(10,7) UNSIGNED NOT NULL DEFAULT '100.0000000',
+	`power` TINYINT(3) UNSIGNED NOT NULL,
+	`fsperpoint` TINYINT(3) UNSIGNED NOT NULL,
+	`itemfs` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`offBonus` TINYINT(3) UNSIGNED NOT NULL,
+	`defBonus` TINYINT(3) UNSIGNED NOT NULL,
+	`product` TINYINT(3) UNSIGNED NOT NULL,
+	`r0` TINYINT(3) UNSIGNED NOT NULL,
+	`r1` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`r2` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`r3` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`r4` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`rc` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`autoregen` TINYINT(3) NOT NULL,
+	`itemautoregen` TINYINT(3) NULL DEFAULT NULL,
+	`extraexpgain` TINYINT(3) NOT NULL,
+	`itemextraexpgain` TINYINT(3) NULL DEFAULT NULL,
+	`cpproduction` TINYINT(3) NOT NULL,
+	`itemcpproduction` TINYINT(3) NULL DEFAULT NULL,
+	`infantrytrain` TINYINT(3) NULL DEFAULT NULL,
+	`iteminfantrytrain` TINYINT(3) NULL DEFAULT NULL,
+	`cavalrytrain` TINYINT(3) NULL DEFAULT NULL,
+	`itemcavalrytrain` TINYINT(3) NULL DEFAULT NULL,
+	`rob` TINYINT(3) NOT NULL,
+	`itemrob` TINYINT(3) NULL DEFAULT NULL,
+	`extraresist` TINYINT(3) NOT NULL,
+	`itemextraresist` TINYINT(3) NULL DEFAULT NULL,
+	`vsnatars` TINYINT(3) NOT NULL,
+	`itemvsnatars` TINYINT(3) NULL DEFAULT NULL,
+	`accountmspeed` TINYINT(3) NOT NULL,
+	`itemaccountmspeed` TINYINT(3) NULL DEFAULT NULL,
+	`allymspeed` TINYINT(3) NOT NULL,
+	`itemallymspeed` TINYINT(3) NULL DEFAULT NULL,
+	`longwaymspeed` TINYINT(3) NOT NULL,
+	`itemlongwaymspeed` TINYINT(3) NULL DEFAULT NULL,
+	`returnmspeed` TINYINT(3) NOT NULL,
+	`itemreturnmspeed` TINYINT(3) NULL DEFAULT NULL,
+	`lastupdate` INT(10) UNSIGNED NOT NULL,
+	`lastadv` INT(10) UNSIGNED NOT NULL DEFAULT '0',
+	`hash` CHAR(45) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`hide` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1',
   PRIMARY KEY (`heroid`),
   KEY `uid` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -766,27 +766,27 @@ CREATE TABLE IF NOT EXISTS `hero` (
 
 -- Dumping structure for table phpvian.heroface
 CREATE TABLE IF NOT EXISTS `heroface` (
-  `uid` smallint unsigned NOT NULL,
-  `gender` tinyint NOT NULL,
-  `beard` tinyint NOT NULL,
-  `ear` tinyint NOT NULL,
-  `eye` tinyint NOT NULL,
-  `eyebrow` tinyint NOT NULL,
-  `face` tinyint NOT NULL,
-  `hair` tinyint NOT NULL,
-  `mouth` tinyint NOT NULL,
-  `nose` tinyint NOT NULL,
-  `color` tinyint NOT NULL,
-  `foot` tinyint unsigned NOT NULL,
-  `helmet` smallint unsigned NOT NULL,
-  `body` smallint unsigned NOT NULL,
-  `shoes` smallint unsigned NOT NULL,
-  `horse` smallint unsigned NOT NULL,
-  `leftHand` smallint NOT NULL,
-  `rightHand` smallint NOT NULL,
-  `bag` smallint NOT NULL,
-  `num` smallint NOT NULL,
-  `hash` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `uid` SMALLINT(5) UNSIGNED NOT NULL,
+	`gender` TINYINT(3) NULL DEFAULT NULL,
+	`beard` TINYINT(3) NOT NULL,
+	`ear` TINYINT(3) NOT NULL,
+	`eye` TINYINT(3) NOT NULL,
+	`eyebrow` TINYINT(3) NOT NULL,
+	`face` TINYINT(3) NOT NULL,
+	`hair` TINYINT(3) NOT NULL,
+	`mouth` TINYINT(3) NOT NULL,
+	`nose` TINYINT(3) NOT NULL,
+	`color` TINYINT(3) NOT NULL,
+	`foot` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`helmet` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`body` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`shoes` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`horse` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`leftHand` SMALLINT(5) NULL DEFAULT NULL,
+	`rightHand` SMALLINT(5) NULL DEFAULT NULL,
+	`bag` SMALLINT(5) NULL DEFAULT NULL,
+	`num` SMALLINT(5) NULL DEFAULT NULL,
+	`hash` CHAR(45) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -817,8 +817,8 @@ CREATE TABLE IF NOT EXISTS `heroitems` (
 CREATE TABLE IF NOT EXISTS `links` (
   `id` mediumint unsigned NOT NULL AUTO_INCREMENT,
   `userid` smallint unsigned NOT NULL,
-  `name` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `url` char(150) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `name` char(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url` char(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `pos` smallint unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -832,10 +832,10 @@ CREATE TABLE IF NOT EXISTS `map_marks` (
   `x` smallint NOT NULL,
   `y` smallint NOT NULL,
   `index` tinyint NOT NULL,
-  `text` char(30) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
+  `text` char(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `kid` int NOT NULL,
   `plus` int NOT NULL,
-  `type` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
+  `type` char(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `dataId` smallint NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
@@ -866,18 +866,18 @@ CREATE TABLE IF NOT EXISTS `mdata` (
   `id` smallint unsigned NOT NULL AUTO_INCREMENT,
   `target` smallint unsigned NOT NULL,
   `owner` smallint unsigned NOT NULL,
-  `topic` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
-  `message` varchar(1000) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
+  `topic` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message` LONGTEXT NOT NULL COLLATE 'utf8mb4_unicode_ci',
   `viewed` tinyint unsigned NOT NULL,
   `archived` tinyint unsigned NOT NULL,
   `send` tinyint unsigned NOT NULL,
   `time` int unsigned NOT NULL DEFAULT '0',
-  `deltarget` tinyint unsigned NOT NULL,
-  `delowner` tinyint unsigned NOT NULL,
-  `alliance` smallint unsigned NOT NULL,
-  `player` smallint unsigned NOT NULL,
-  `coor` smallint unsigned NOT NULL,
-  `report` smallint unsigned NOT NULL,
+  `deltarget` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`delowner` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`alliance` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`player` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`coor` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`report` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `time` (`time`),
   KEY `target` (`target`),
@@ -895,7 +895,7 @@ CREATE TABLE IF NOT EXISTS `medal` (
   `plaats` tinyint unsigned NOT NULL,
   `week` tinyint unsigned NOT NULL,
   `points` bigint NOT NULL,
-  `img` char(8) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `img` char(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -908,7 +908,7 @@ CREATE TABLE IF NOT EXISTS `movement` (
   `from` smallint unsigned NOT NULL DEFAULT '0',
   `to` smallint unsigned NOT NULL DEFAULT '0',
   `ref` mediumint unsigned NOT NULL DEFAULT '0',
-  `data` varchar(400) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `data` varchar(400) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `starttime` int unsigned NOT NULL DEFAULT '0',
   `endtime` int unsigned NOT NULL DEFAULT '0',
   `proc` tinyint unsigned NOT NULL DEFAULT '0',
@@ -926,10 +926,10 @@ CREATE TABLE IF NOT EXISTS `movement` (
 CREATE TABLE IF NOT EXISTS `msg_reports` (
   `id` tinyint unsigned NOT NULL AUTO_INCREMENT,
   `msg_id` smallint unsigned NOT NULL,
-  `reported_by` char(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
+  `reported_by` char(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `viewed` tinyint NOT NULL DEFAULT '0',
   `delet` tinyint NOT NULL DEFAULT '0',
-  `reason` char(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_persian_ci NOT NULL,
+  `reason` char(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `time` int NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -957,9 +957,9 @@ CREATE TABLE IF NOT EXISTS `ndata` (
   `uid` smallint unsigned NOT NULL,
   `toWref` smallint unsigned NOT NULL,
   `ally` smallint unsigned NOT NULL,
-  `topic` varchar(600) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `topic` varchar(600) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `ntype` tinyint unsigned NOT NULL,
-  `data` varchar(600) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `data` varchar(600) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `time` int unsigned NOT NULL,
   `viewed` tinyint unsigned NOT NULL,
   `archive` tinyint unsigned NOT NULL,
@@ -973,9 +973,9 @@ CREATE TABLE IF NOT EXISTS `ndata` (
 -- Dumping structure for table phpvian.newproc
 CREATE TABLE IF NOT EXISTS `newproc` (
   `uid` smallint unsigned NOT NULL AUTO_INCREMENT,
-  `npw` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `nemail` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `act` char(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `npw` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nemail` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `act` char(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `time` int unsigned NOT NULL,
   `proc` tinyint unsigned NOT NULL,
   PRIMARY KEY (`uid`)
@@ -991,19 +991,19 @@ CREATE TABLE IF NOT EXISTS `odata` (
   `wood` float(12,2) NOT NULL,
   `iron` float(12,2) NOT NULL,
   `clay` float(12,2) NOT NULL,
-  `woodp` float(12,2) NOT NULL,
-  `ironp` float(12,2) NOT NULL,
-  `clayp` float(12,2) NOT NULL,
+  `woodp` float(12,2) NULL DEFAULT NULL,
+  `ironp` float(12,2) NULL DEFAULT NULL,
+  `clayp` float(12,2) NULL DEFAULT NULL,
   `maxstore` mediumint unsigned NOT NULL,
   `crop` float(12,2) NOT NULL,
-  `cropp` float(12,2) NOT NULL,
+  `cropp` float(12,2) NULL DEFAULT NULL,
   `maxcrop` mediumint unsigned NOT NULL,
   `lasttrain` int unsigned NOT NULL,
   `lastfarmed` int unsigned NOT NULL,
   `lastupdated` int unsigned NOT NULL,
   `loyalty` tinyint NOT NULL DEFAULT '100',
   `owner` smallint unsigned NOT NULL DEFAULT '2',
-  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'Unoccupied Oasis',
+  `name` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Unoccupied Oasis',
   PRIMARY KEY (`wref`),
   KEY `conqured` (`conqured`),
   KEY `loyalty` (`loyalty`),
@@ -1014,7 +1014,7 @@ CREATE TABLE IF NOT EXISTS `odata` (
 
 -- Dumping structure for table phpvian.online
 CREATE TABLE IF NOT EXISTS `online` (
-  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `name` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `time` int NOT NULL,
   `sitter` int unsigned NOT NULL,
   UNIQUE KEY `name` (`name`)
@@ -1029,7 +1029,7 @@ CREATE TABLE IF NOT EXISTS `raidlist` (
   `towref` smallint unsigned NOT NULL,
   `x` smallint NOT NULL,
   `y` smallint NOT NULL,
-  `distance` char(5) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0',
+  `distance` char(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0',
   `t1` int unsigned NOT NULL,
   `t2` int unsigned NOT NULL,
   `t3` int unsigned NOT NULL,
@@ -1050,7 +1050,7 @@ CREATE TABLE IF NOT EXISTS `raidlist` (
 CREATE TABLE IF NOT EXISTS `refrence` (
   `id` smallint NOT NULL AUTO_INCREMENT,
   `player_id` smallint NOT NULL,
-  `player_name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `player_name` char(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -1060,7 +1060,7 @@ CREATE TABLE IF NOT EXISTS `refrence` (
 CREATE TABLE IF NOT EXISTS `research` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `vref` int unsigned NOT NULL,
-  `tech` char(3) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `tech` char(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `timestamp` int unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `vref` (`vref`)
@@ -1195,7 +1195,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `gold` int NOT NULL,
   `time` int NOT NULL,
   `status` int NOT NULL DEFAULT '0',
-  `orderid` char(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `orderid` char(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -1418,37 +1418,37 @@ CREATE TABLE IF NOT EXISTS `users_setting` (
 
 -- Dumping structure for table phpvian.vdata
 CREATE TABLE IF NOT EXISTS `vdata` (
-  `wref` int unsigned NOT NULL,
-  `owner` int unsigned NOT NULL,
-  `name` char(45) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `capital` tinyint unsigned NOT NULL,
-  `pop` smallint unsigned NOT NULL,
-  `cp` smallint unsigned NOT NULL,
-  `evasion` tinyint NOT NULL,
-  `celebration` int NOT NULL DEFAULT '0',
-  `type` int NOT NULL DEFAULT '0',
-  `wood` float(12,2) NOT NULL,
-  `clay` float(12,2) NOT NULL,
-  `iron` float(12,2) NOT NULL,
-  `woodp` float(12,2) NOT NULL,
-  `clayp` float(12,2) NOT NULL,
-  `ironp` float(12,2) NOT NULL,
-  `maxstore` int unsigned NOT NULL,
-  `extra_maxstore` int unsigned NOT NULL,
-  `crop` float(12,2) NOT NULL,
-  `cropp` float(12,2) NOT NULL,
-  `maxcrop` int unsigned NOT NULL,
-  `extra_maxcrop` int unsigned NOT NULL,
-  `upkeep` float unsigned NOT NULL,
-  `lastupdate` int unsigned NOT NULL,
-  `loyalty` tinyint NOT NULL DEFAULT '100',
-  `exp1` smallint NOT NULL,
-  `exp2` smallint NOT NULL,
-  `exp3` smallint NOT NULL,
-  `created` int NOT NULL,
-  `natar` tinyint unsigned NOT NULL,
-  `starv` int unsigned NOT NULL,
-  `expandedfrom` smallint unsigned NOT NULL,
+	`wref` INT(10) UNSIGNED NOT NULL,
+	`owner` INT(10) UNSIGNED NOT NULL,
+	`name` CHAR(45) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`capital` TINYINT(3) UNSIGNED NOT NULL,
+	`pop` SMALLINT(5) UNSIGNED NOT NULL,
+	`cp` SMALLINT(5) UNSIGNED NOT NULL,
+	`evasion` TINYINT(3) NULL DEFAULT NULL,
+	`celebration` INT(10) NOT NULL DEFAULT '0',
+	`type` INT(10) NOT NULL DEFAULT '0',
+	`wood` FLOAT(12,2) NOT NULL,
+	`clay` FLOAT(12,2) NOT NULL,
+	`iron` FLOAT(12,2) NOT NULL,
+	`woodp` FLOAT(12,2) NULL DEFAULT NULL,
+	`clayp` FLOAT(12,2) NULL DEFAULT NULL,
+	`ironp` FLOAT(12,2) NULL DEFAULT NULL,
+	`maxstore` INT(10) UNSIGNED NOT NULL,
+	`extra_maxstore` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`crop` FLOAT(12,2) NOT NULL,
+	`cropp` FLOAT(12,2) NULL DEFAULT NULL,
+	`maxcrop` INT(10) UNSIGNED NOT NULL,
+	`extra_maxcrop` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`upkeep` FLOAT UNSIGNED NULL DEFAULT NULL,
+	`lastupdate` INT(10) UNSIGNED NOT NULL,
+	`loyalty` TINYINT(3) NOT NULL DEFAULT '100',
+	`exp1` SMALLINT(5) NULL DEFAULT NULL,
+	`exp2` SMALLINT(5) NULL DEFAULT NULL,
+	`exp3` SMALLINT(5) NULL DEFAULT NULL,
+	`created` INT(10) NOT NULL,
+	`natar` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`starv` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`expandedfrom` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
   PRIMARY KEY (`wref`),
   KEY `pop` (`pop`),
   KEY `capital` (`capital`),
@@ -1469,7 +1469,7 @@ CREATE TABLE IF NOT EXISTS `wdata` (
   `x` smallint NOT NULL,
   `y` smallint NOT NULL,
   `occupied` tinyint NOT NULL,
-  `image` char(12) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `image` char(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   KEY `x` (`x`),
   KEY `y` (`y`)
