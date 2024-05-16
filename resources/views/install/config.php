@@ -84,7 +84,8 @@
                                             <div class="information-form-group col-sm-6">
                                                 <label for="wmax">World Size:</label>
                                                 <select class="form-control" name="world_max" id="wmax">
-                                                    <option value="50" selected="selected">50x50</option>
+                                                    <option value="25" selected="selected">25x25</option>
+                                                    <option value="50">50x50</option>
                                                     <option value="100">100x100</option>
                                                     <option value="250">250x250</option>
                                                     <option value="350">350x350</option>
