@@ -71,7 +71,7 @@ class Auth
 
         $sessid = $this->conn->select('sessid')->from('users')->where('username = :username', [':username' => $_SESSION['username']])->first();
         if (strlen($sessid) > 134) {
-            $this->database->updateUserField($_SESSION['username'], 'sessid', '', 0);
+            $this->database->updateUserField($_SESSION['username'], 'sessid', 'NULL', 0);
         }
         $sessid = $sessid ? $sessid . '+' . $_SESSION['sessid'] : $_SESSION['sessid'];
         $this->database->updateUserField($_SESSION['username'], 'sessid', $sessid, 0);
