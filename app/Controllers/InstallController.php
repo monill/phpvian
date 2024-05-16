@@ -5,7 +5,6 @@ namespace PHPvian\Controllers;
 use Exception;
 use PHPvian\Libs\Connection;
 use PHPvian\Libs\Database;
-use PHPvian\Libs\Session;
 
 class InstallController
 {
@@ -17,7 +16,6 @@ class InstallController
         $this->db = new Database();
         $this->databaseFile = dirname(__DIR__) . '/../storage/database.sql';
         $this->htaccessFile = dirname(__DIR__) . '/../public/.htaccess';
-        Session::startSession();
     }
 
     public function index()
@@ -99,7 +97,7 @@ class InstallController
             $sql = file_get_contents($this->databaseFile);
             $this->conn->exec($sql);
         } catch (Exception $e) {
-            echo "Error importing SQL file: " . $e->getMessage();
+            echo 'Error importing SQL file: ' . $e->getMessage();
         }
         redirect('/installer/config');
     }
@@ -372,12 +370,8 @@ class InstallController
                 'wood' => 750 * $speed / 10,
                 'iron' => 750 * $speed / 10,
                 'clay' => 750 * $speed / 10,
-                'woodp' => 0,
-                'ironp' => 0,
-                'clayp' => 0,
                 'maxstore' => 800 * $speed / 10,
                 'crop' => 750 * $speed / 10,
-                'cropp' => 0,
                 'maxcrop' => 800 * $speed / 10,
                 'lasttrain' => $time,
                 'lastfarmed' => $time,
@@ -403,10 +397,9 @@ class InstallController
         $worlds = $this->conn->select('id')->from('wdata')->where('oasistype != 0')->get();
 
         foreach ($worlds as $world) {
-            $worldid = $world['id'];
-            $base = $this->db->getMInfo($worldid);
+            $base = $this->db->getMInfo($world['id']);
             $oasisValues = $this->generateOasisValues($base['oasistype']);
-            $this->conn->from('units')->input($oasisValues)->where('`vref` = :vref', [':vref' => $worldid])->update();
+            $this->conn->from('units')->values($oasisValues)->where('`vref` = :vref', [':vref' => $world['id']])->update();
         }
     }
 
