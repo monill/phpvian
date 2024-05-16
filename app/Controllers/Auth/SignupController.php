@@ -47,11 +47,9 @@ class SignupController
             $this->conn->insert('users', [
                 'username' => $username,
                 'password' => md5($password),
-                'access' => 0,
                 'email' => $email,
-                'tribe' => 0,
                 'timestamp' => time(),
-                'act' => $act->generateRandStr(10),
+                'activate' => $act->generateRandStr(10),
                 'protect' => (time() + time()),
                 'clp' => random_int(8900, 9000),
                 'cp' => 1,
