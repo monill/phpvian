@@ -102,7 +102,6 @@ class Database
 
     public function checkExist_activate($ref, $mode)
     {
-
         if (!$mode) {
             $q = "SELECT username FROM activate where username = '$ref' LIMIT 1";
         } else {
@@ -119,11 +118,11 @@ class Database
     public function updateUserField($ref, $field, $value, $mode)
     {
         if ($mode == 0) {
-            $this->conn->from('users')->set($field, $value)->where('`username` = :ref', [':ref' => $ref])->update();
+            $this->conn->from('users')->set($field, $value)->where('username = :ref', [':ref' => $ref])->update();
         } elseif ($mode == 1) {
             $this->conn->from('users')->set($field, $value)->where('id = :ref', [':ref' => $ref])->update();
         } elseif ($mode == 2) {
-            $this->conn->from('users')->set($field, "$field + :value")->where('`id` = :ref', [':ref' => $ref, ':value' => $value])->update();
+            $this->conn->from('users')->set($field, "$field + :value")->where('id = :ref', [':ref' => $ref, ':value' => $value])->update();
         }
     }
 
@@ -175,7 +174,6 @@ class Database
 
     public function getUsersetting($uid)
     {
-        global $session;
         $q = "SELECT `id` FROM users_setting WHERE id = $uid LIMIT 1";
         $result = mysql_query($q, $this->connection);
         $dbarray = mysql_fetch_assoc($result);
@@ -582,7 +580,6 @@ class Database
 
     public function UpdateOnline($mode, $name = "", $sit = 0)
     {
-        global $session;
         if ($mode == "login") {
             $q = "INSERT IGNORE INTO online (name, time, sitter) VALUES ('$name', " . time() . ", " . $sit . ")";
             return mysql_query($q, $this->connection);
@@ -973,7 +970,6 @@ class Database
 
     public function check_forumRules($id)
     {
-        global $session;
         $q = "SELECT * FROM fpost_rules WHERE forum_id = $id";
         $z = mysql_query($q, $this->connection);
         $row = mysql_fetch_assoc($z);
@@ -1716,7 +1712,6 @@ class Database
 
     public function getMessage($id, $mode)
     {
-        global $session;
         switch ($mode) {
             case 1:
                 $q = "SELECT `id`,`target`,`owner`,`topic`,`message`,`viewed`,`archived`,`send`,`time`,`deltarget`,`delowner`,`alliance`,`player`,`coor`,`report` FROM mdata WHERE target = $id and send = 0 and archived = 0 ORDER BY time DESC";
