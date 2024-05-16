@@ -43,10 +43,10 @@ class ActivateController extends Controller
             $reg2 = $this->database->checkname($userID);
             $name = $reg2['username'];
             Cookie::set('COOKUSR', $name, 7200);
-//            $this->database->addHeroFace($userID);
-//            $this->database->addHero($userID);
-//            $this->database->updateUserField($userID, 'act', 'NULL', 1);
-//            $this->database->settribe($tribe, $userID);
+            $this->database->addHero($userID);
+            $this->database->addHeroFace($userID);
+            $this->database->updateUserField($userID, 'activate', 'NULL', 1);
+            $this->database->settribe($tribe, $userID);
 
             $this->generateBase($sector, $userID, $name);
 
@@ -61,7 +61,7 @@ class ActivateController extends Controller
             $this->conn->insert('users_setting', ['id' => $userID]);
             $this->conn->from('users')->set('plus', time() + 21600)->where('id = :userID', [':userID' => $userID])->update();
 
-//            (new Auth())->login($name);
+            (new Auth())->login($name);
         }
     }
 
