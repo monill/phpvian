@@ -204,7 +204,7 @@ class Connection extends PDO
         return $this;
     }
 
-    public function input(array $data)
+    public function values(array $data)
     {
         foreach ($data as $column => $value) {
             $this->setValues[$column] = $value;
@@ -268,6 +268,18 @@ class Connection extends PDO
         } catch (PDOException | RuntimeException $e) {
             throw new RuntimeException('Upgrade error: ' . $e->getMessage());
         }
+    }
+
+    public function replaceInto($table, $data) {
+        $fields = implode(', ', array_keys($data));
+        $placeholders = ':' . implode(', :', array_keys($data));
+        $sql = "REPLACE INTO {$table} ({$fields}) VALUES ({$placeholders})";
+
+        $stmt = $this->prepare($sql);
+        foreach ($data as $key => $value) {
+            $stmt->bindValue(":$key", $value);
+        }
+        return $stmt->execute();
     }
 
     public function delete($table, $where, $bind = [])
