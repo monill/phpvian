@@ -1398,19 +1398,19 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Dumping structure for table phpvian.users_setting
 CREATE TABLE IF NOT EXISTS `users_setting` (
   `id` smallint NOT NULL,
-  `sitter1_set_1` tinyint NOT NULL,
-  `sitter1_set_2` tinyint NOT NULL,
-  `sitter1_set_3` tinyint NOT NULL,
-  `sitter1_set_4` tinyint NOT NULL,
-  `sitter1_set_5` tinyint NOT NULL,
-  `sitter1_set_6` tinyint NOT NULL,
-  `sitter2_set_1` tinyint NOT NULL,
-  `sitter2_set_2` tinyint NOT NULL,
-  `sitter2_set_3` tinyint NOT NULL,
-  `sitter2_set_4` tinyint NOT NULL,
-  `sitter2_set_5` tinyint NOT NULL,
-  `sitter2_set_6` tinyint NOT NULL,
-  `nopicn` tinyint NOT NULL DEFAULT '0',
+  `sitter1_set_1` TINYINT(3) NULL DEFAULT NULL,
+	`sitter1_set_2` TINYINT(3) NULL DEFAULT NULL,
+	`sitter1_set_3` TINYINT(3) NULL DEFAULT NULL,
+	`sitter1_set_4` TINYINT(3) NULL DEFAULT NULL,
+	`sitter1_set_5` TINYINT(3) NULL DEFAULT NULL,
+	`sitter1_set_6` TINYINT(3) NULL DEFAULT NULL,
+	`sitter2_set_1` TINYINT(3) NULL DEFAULT NULL,
+	`sitter2_set_2` TINYINT(3) NULL DEFAULT NULL,
+	`sitter2_set_3` TINYINT(3) NULL DEFAULT NULL,
+	`sitter2_set_4` TINYINT(3) NULL DEFAULT NULL,
+	`sitter2_set_5` TINYINT(3) NULL DEFAULT NULL,
+	`sitter2_set_6` TINYINT(3) NULL DEFAULT NULL,
+	`nopicn` TINYINT(3) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=COMPRESSED;
 
