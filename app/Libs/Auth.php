@@ -45,7 +45,7 @@ class Auth
     {
         $this->logged_in = true;
 
-        $_SESSION['sessid'] = md5($_SERVER['HTTP_ACCEPT_CHARSET'] . $_SERVER['HTTP_ACCEPT_ENCODING'] . $_SERVER['HTTP_ACCEPT_LANGUAGE'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
+        $_SESSION['sessid'] = md5($_SERVER['HTTP_ACCEPT_LANGUAGE'] . $_SERVER['REMOTE_ADDR']);
         $_SESSION['username'] = $username;
         $_SESSION['checker'] = $this->generator->generateRandStr(3);
         $_SESSION['mchecker'] = $this->generator->generateRandStr(5);
@@ -54,12 +54,12 @@ class Auth
 
         if (!isset($_SESSION['wid'])) {
             $userId = $this->database->getUserField($_SESSION['username'], 'id', 1);
-            $data = $this->conn->select()->from('vdata')->where('owner = :owner', [':owner' => $userId])->first();
+            $data = $this->conn->select('wref')->from('vdata')->where('owner = :owner', [':owner' => $userId])->first();
             $_SESSION['wid'] = $data['wref'];
         } else {
             if ($_SESSION['wid'] == '') {
                 $userId = $this->database->getUserField($_SESSION['username'], 'id', 1);
-                $data = $this->conn->select('*')->from('vdata')->where('owner = :owner', [':owner' => $userId])->first();
+                $data = $this->conn->select('wref')->from('vdata')->where('owner = :owner', [':owner' => $userId])->first();
                 $_SESSION['wid'] = $data['wref'];
             }
         }
@@ -106,6 +106,7 @@ class Auth
         $this->silver = $user['silver'];
         $this->cp = $user['cp'];
         $this->oldrank = $user['oldrank'];
+        $this->evasion = $user['evasion'];
         $_SESSION['ok'] = $user['ok'];
         $time = $this->time;
         if ($user['b1'] > $this->time) {
