@@ -40,18 +40,18 @@ class ActivateController extends Controller
         $reg2 = $this->database->checkreg($userID);
 
         if ($reg2['reg2'] == 1) {
-            $reg2 = $this->database->checkname($userID);
-            $name = $reg2['username'];
+            $this->database->settribe($tribe, $userID);
+            $reg = $this->database->checkname($userID);
+            $name = $reg['username'];
             Cookie::set('COOKUSR', $name, 7200);
             $this->database->addHero($userID);
             $this->database->addHeroFace($userID);
             $this->database->updateUserField($userID, 'activate', 'NULL', 1);
-            $this->database->settribe($tribe, $userID);
 
             $this->generateBase($sector, $userID, $name);
 
             $this->database->modifyUnit($this->database->getVFH($userID), 'hero', 1, 1);
-            $this->database->modifyHero($userID, 0, 'wref', $this->database->getVFH($userID));
+            $this->database->modifyHero2('wref', $this->database->getVFH($userID), $userID, 0);
             for ($s = 1; $s <= 3; $s++) {
                 $this->database->addAdventure($this->database->getVFH($userID), $userID);
             }
