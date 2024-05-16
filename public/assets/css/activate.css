@@ -1,0 +1,234 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial Black', sans-serif;
+}
+
+.background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/assets/images/village.jpg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    opacity: 0.5;
+    z-index: -1;
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+}
+
+.title {
+    text-align: center;
+    color: #be0c0c;
+    margin-top: 50px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #000;
+    font-size: 16px;
+}
+
+.tribe-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 50px;
+}
+
+.character {
+    width: 430px;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 4px solid #fff;
+    border-radius: 10px;
+    margin: 20px;
+    transition: transform 0.3s ease;
+}
+
+.character img {
+    height: 310px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+}
+
+.character-title {
+    color: rgb(218, 165, 32);
+}
+
+.character:hover {
+    transform: scale(1.1);
+}
+
+.description {
+    background-color: rgba(255, 255, 255, 0.185);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.properties {
+    color: rgb(11, 59, 163);
+}
+
+ul {
+    list-style-type: none;
+    text-align: left;
+}
+
+li::marker {
+    content: "⮞" ' ';
+    color: rgb(218, 165, 32);
+}
+
+.character-selected {
+    border: 4px solid #d4b60a;
+    transform: scale(1.1);
+}
+
+/* section 2 starts here */
+.location-section {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tribe-section {
+    display: block;
+}
+
+.map-container {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-left: 350px;
+}
+
+.map {
+    width: 794px;
+    height: 596px;
+    background: url('/assets/images/map.jpg') no-repeat center center/cover;
+    position: relative;
+    border: 4px solid #ffffff;
+    margin-right: 20px;
+}
+
+.sector-select {
+    width: 67%;
+    padding: 7px;
+    font-size: 16px;
+    margin-top: -6px;
+    margin-right: 0px;
+    margin-left: 10px;
+}
+
+.start {
+    background: url('/assets/images/bubbleSector.png') no-repeat;
+    float: right;
+    height: 25px;
+    padding: 26px 20px 25px 30px;
+    width: 271px;
+    margin-top: 155px;
+}
+
+.buttons {
+    margin-left: -280px;
+    margin-top: 303px;
+}
+
+.cancelb, .submitb {
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    margin-right: 16px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.cancelb {
+    background-color: #db1f11;
+}
+
+.submitb {
+    background-color: #008000;
+}
+
+.cancelb:hover, .submitb:hover {
+    opacity: 0.8;
+}
+
+.map::before, .map::after {
+    content: '';
+    position: absolute;
+    background-color: #ffffff;
+}
+
+.map::before {
+    width: 100%;
+    height: 1px;
+    top: 50%;
+    left: 0;
+}
+
+.map::after {
+    width: 1px;
+    height: 100%;
+    top: 0;
+    left: 50%;
+}
+
+.sector {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    background-color: rgba(128, 128, 128, 0.5);
+    transition: background-color 0.3s;
+}
+
+#nw {
+    top: 0;
+    left: 0;
+}
+
+#ne {
+    top: 0;
+    right: 0;
+}
+
+#sw {
+    bottom: 0;
+    left: 0;
+}
+
+#se {
+    bottom: 0;
+    right: 0;
+}
+
+.sector:hover {
+    background-color: rgba(144, 238, 144, 0.5);
+}
+
+.selected {
+    background-color: rgba(255, 255, 0, 0.5);
+}
+
+.select-container {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .map {
+        width: 90%;
+    }
+}
