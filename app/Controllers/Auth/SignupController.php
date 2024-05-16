@@ -47,7 +47,7 @@ class SignupController
             $this->conn->insert('users', [
                 'username' => $username,
                 'password' => md5($password),
-                'access' => 2,
+                'access' => 0,
                 'email' => $email,
                 'tribe' => 0,
                 'timestamp' => time(),
