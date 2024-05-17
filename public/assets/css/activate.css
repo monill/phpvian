@@ -10,7 +10,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('/assets/images/village.jpg');
+    background-image: url('/assets/images/activate/village.jpg');
     background-repeat: no-repeat;
     background-size: cover;
     opacity: 0.5;
@@ -113,7 +113,7 @@ li::marker {
 .map {
     width: 794px;
     height: 596px;
-    background: url('/assets/images/map.jpg') no-repeat center center/cover;
+    background: url('/assets/images/activate/map.jpg') no-repeat center center/cover;
     position: relative;
     border: 4px solid #ffffff;
     margin-right: 20px;
@@ -129,7 +129,7 @@ li::marker {
 }
 
 .start {
-    background: url('/assets/images/bubbleSector.png') no-repeat;
+    background: url('/assets/images/activate/bubbleSector.png') no-repeat;
     float: right;
     height: 25px;
     padding: 26px 20px 25px 30px;
