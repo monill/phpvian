@@ -24,7 +24,7 @@
                 <div class="column">
                     <div class="character" id="teutons" data-tribe="teutons">
                         <h2 class="character-title">Teutons</h2>
-                        <img src="/assets/images/teutons.png" alt="teutons">
+                        <img src="/assets/images/activate/teutons.png" alt="teutons">
                         <div class="description">
                             <p class="properties">Properties:</p>
                             <ul>
@@ -40,7 +40,7 @@
                 <div class="column">
                     <div class="character" id="gauls" data-tribe="gauls">
                         <h2 class="character-title">Gauls</h2>
-                        <img src="/assets/images/gauls.png" alt="gauls">
+                        <img src="/assets/images/activate/gauls.png" alt="gauls">
                         <div class="description">
                             <p class="properties">Properties:</p>
                             <ul>
@@ -56,7 +56,7 @@
                 <div class="column">
                     <div class="character" id="romans" data-tribe="romans">
                         <h2 class="character-title">Romans</h2>
-                        <img src="/assets/images/romans.png" alt="romans">
+                        <img src="/assets/images/activate/romans.png" alt="romans">
                         <div class="description">
                             <p class="properties">Properties:</p>
                             <ul>
