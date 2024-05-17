@@ -69,12 +69,16 @@ class Auth
         $this->logging->addLoginLog($this->uid);
         $this->database->addActiveUser($_SESSION['username'], $this->time);
 
-        $sessid = $this->conn->select('sessid')->from('users')->where('username = :username', [':username' => $_SESSION['username']])->first();
-        if (strlen($sessid) > 134) {
+        $result = $this->conn->select('sessid')->from('users')->where('username = :username', [':username' => $_SESSION['username']])->first();
+        if (strlen($result['sessid'] ?? '') > 134) {
             $this->database->updateUserField($_SESSION['username'], 'sessid', 'NULL', 0);
         }
-        $sessid = $sessid ? $sessid . '+' . $_SESSION['sessid'] : $_SESSION['sessid'];
-        $this->database->updateUserField($_SESSION['username'], 'sessid', $sessid, 0);
+        if ($result['sessid'] != '') {
+            $sessid = $result['sessid'] . '+' . $_SESSION['sessid'];
+        } else {
+            $sessid = $_SESSION['sessid'];
+        }
+        $this->database->updateUserField($_SESSION['uid'], 'sessid', $sessid, 1);
 
         $ua = $_SERVER['HTTP_USER_AGENT'];
         $ip = $_SERVER['REMOTE_ADDR'];
@@ -106,9 +110,8 @@ class Auth
         $this->silver = $user['silver'];
         $this->cp = $user['cp'];
         $this->oldrank = $user['oldrank'];
-        $this->evasion = $user['evasion'];
         $_SESSION['ok'] = $user['ok'];
-        $time = $this->time;
+        $this->time = time();
         if ($user['b1'] > $this->time) {
             $this->bonus1 = 1;
         }
@@ -125,17 +128,14 @@ class Auth
         $herodetail = $this->database->getHero($this->uid);
         $aday = min(86400 / setting('speed'), 100);
         $tenday = min(86400 / setting('speed'), 600);
-        $endat = time() + 900;
-        if ($herodetail['lastadv'] <= ($time - $aday)) {
-            if ($herodetail['lastadv'] <= $time - $tenday) {
-                $herodetail['lastadv'] = $time - $tenday + $aday;
+        if ($herodetail['lastadv'] <= ($this->time - $aday)) {
+            if ($herodetail['lastadv'] <= $this->time - $tenday) {
+                $herodetail['lastadv'] = $this->time - $tenday + $aday;
             }
-            $dif = rand(0, 2);
-            $this->database->addAdventure($this->database->getVFH($herodetail['uid']), $herodetail['uid'], $endat, $dif);
-            $this->database->addAdventure($this->database->getVFH($herodetail['uid']), $herodetail['uid'], $endat + rand(10, 20), $dif);
+            $this->database->addAdventure($this->database->getVFH($herodetail['uid']), $herodetail['uid']);
             $herodetail['lastadv'] += $aday;
         }
-        $this->database->modifyHero(0, $herodetail['heroid'], 'lastadv', $time);
+        $this->database->modifyHero2('lastadv', $herodetail['heroid'], 0, 0);
     }
 
 
