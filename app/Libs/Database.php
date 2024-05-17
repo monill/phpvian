@@ -118,9 +118,9 @@ class Database
     public function updateUserField($ref, $field, $value, $mode)
     {
         if ($mode == 0) {
-            $this->conn->upgrade('users', [$field => $value], 'username = '.$ref);
+            $this->conn->from('users')->set($field, $value)->where("username = {$ref}")->update();
         } elseif ($mode == 1) {
-            $this->conn->upgrade('users', [$field => $value],'id = '.$ref);
+            $this->conn->upgrade('users', [$field => $value],"id = {$ref}");
         } elseif ($mode == 2) {
             $this->conn->upgrade('users', [$field => "$field + :value"], 'id = :ref', [':value' => $value, ':ref' => $ref]);
         }
@@ -416,7 +416,7 @@ class Database
         $result = $this->conn->select('sitter')
             ->from('online')
             ->where('name = :username', [':username' => $username])
-            ->get();
+            ->first();
 
         return $result ? $result['sitter'] : null;
     }
@@ -555,10 +555,10 @@ class Database
 
     public function getUser($ref, $mode = 0)
     {
-        if (!$mode) {
-            $result = $this->conn->select()->from('users')->where('username = :ref', [':ref' => $ref])->get();
-        } else {
-            $result = $this->conn->select()->from('users')->where('id = :ref', [':ref' => $ref])->get();
+        if ($mode == 0) {
+            $result = $this->conn->select()->from('users')->where('username = :ref', [':ref' => $ref])->first();
+        } elseif ($mode == 1) {
+            $result = $this->conn->select()->from('users')->where('id = :ref', [':ref' => $ref])->first();
         }
 
         if (!empty($result) && count($result) > 0) {
@@ -2407,10 +2407,9 @@ class Database
         }
     }
 
-    public function getHero($uid = 0, $id = 0, $dead = 2)
+    public function getHero($uid = false, $id = false, $dead = 2)
     {
         $query = $this->conn->select()->from('hero');
-
         if ($uid) {
             $query->where('uid = :uid', [':uid' => $uid]);
         }
@@ -2420,11 +2419,8 @@ class Database
         if ($dead != 2) {
             $query->andWhere('dead = :dead', [':dead' => $dead]);
         }
-
         $query->limit(1);
-
-        $result = $query->get();
-        return $result ?? null;
+        return $query->first();
     }
 
     public function modifyHero($userID, $id, $column, $value, $mode = 0)
