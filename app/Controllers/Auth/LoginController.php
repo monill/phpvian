@@ -3,7 +3,7 @@
 namespace PHPvian\Controllers\Auth;
 
 use PHPvian\Controllers\Controller;
-use PHPvian\Libs\Connection;
+use PHPvian\Libs\Auth;
 use PHPvian\Libs\Cookie;
 use PHPvian\Libs\Session;
 use PHPvian\Libs\Validate;
@@ -53,7 +53,7 @@ class LoginController extends Controller
             if ($user['reg2'] == 1) {
                 redirect('/activate');
             } else {
-                redirect('/village');
+                (new Auth())->login($user['username']);
             }
 
         } else {
