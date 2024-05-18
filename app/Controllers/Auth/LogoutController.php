@@ -2,13 +2,23 @@
 
 namespace PHPvian\Controllers\Auth;
 
+use PHPvian\Libs\Auth;
+use PHPvian\Libs\Database;
 use PHPvian\Libs\Session;
 
 class LogoutController
 {
+    private $database;
+
+    public function __construct()
+    {
+        $this->database = new Database();
+    }
+
     public function logout()
     {
-        Session::destroySession();
-        redirect('/login');
+        $this->database->activeModify(addslashes(Session::get('username')), 1);
+        $this->database->updateOnline('logout', Session::get('username'), 0);
+        (new Auth())->logout();
     }
 }
