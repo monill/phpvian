@@ -76,7 +76,7 @@ class Connection extends PDO
     public function andWhere($condition, $params = [])
     {
         if (!empty($this->where)) {
-            $this->where .= " AND $condition";
+            $this->where .= " AND {$condition}";
         } else {
             $this->where = $condition;
         }
@@ -86,33 +86,33 @@ class Connection extends PDO
 
     public function order($column)
     {
-        $this->orderBy = " $column";
+        $this->orderBy = " {$column}";
         return $this;
     }
 
     public function orderBy($column, $order)
     {
-        $this->orderBy = " ORDER BY $column $order";
+        $this->orderBy = " ORDER BY {$column} {$order}";
         return $this;
     }
 
     public function orderByAsc($column)
     {
-        $this->orderBy = " ORDER BY $column ASC";
+        $this->orderBy = " ORDER BY {$column} ASC";
         return $this;
     }
 
     public function orderByDesc($column)
     {
-        $this->orderBy = " ORDER BY $column DESC";
+        $this->orderBy = " ORDER BY {$column} DESC";
         return $this;
     }
 
     public function limit($limit, $offset = 0)
     {
-        $this->limit = " LIMIT $limit";
+        $this->limit = " LIMIT {$limit}";
         if ($offset > 0) {
-            $this->limit .= " OFFSET $offset";
+            $this->limit .= " OFFSET {$offset}";
         }
         return $this;
     }
@@ -143,7 +143,7 @@ class Connection extends PDO
 
     public function between($column, $start, $end)
     {
-        $this->where("$column BETWEEN :start AND :end");
+        $this->where("{$column} BETWEEN :start AND :end");
         $this->params[':start'] = $start;
         $this->params[':end'] = $end;
         return $this;
@@ -188,7 +188,7 @@ class Connection extends PDO
         $values = ':' . implode(', :', array_keys($data));
 
         try {
-            $stmt = $this->prepare("INSERT INTO $table ($columns) VALUES ($values)");
+            $stmt = $this->prepare("INSERT INTO {$table} ({$columns}) VALUES ({$values})");
             foreach ($data as $key => $value) {
                 $stmt->bindValue(":$key", $value);
             }
@@ -198,9 +198,32 @@ class Connection extends PDO
         }
     }
 
-    public function set($column, $value)
+    public function insertIgnore($table, $data)
     {
-        $this->setValues[$column] = $value;
+        $this->validateData($data);
+
+        $columns = implode(', ', array_keys($data));
+        $values = ':' . implode(', :', array_keys($data));
+
+        try {
+            $stmt = $this->prepare("INSERT IGNORE INTO {$table} ({$columns}) VALUES ({$values})");
+            foreach ($data as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            return $stmt->execute();
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException('Insert Ignore error: ' . $e->getMessage());
+        }
+    }
+
+    public function set($column, $value, $isExpression = false)
+    {
+        if ($isExpression) {
+            $this->setValues[$column] = $value;
+        } else {
+            $this->setValues[$column] = ":$column";
+            $this->params[":$column"] = $value;
+        }
         return $this;
     }
 
@@ -228,14 +251,18 @@ class Connection extends PDO
     {
         $setFields = '';
         foreach ($this->setValues as $column => $value) {
-            $setFields .= "`$column` = $value, ";
+            if (str_starts_with($value, ':')) {
+                $setFields .= "`$column` = $value, ";
+            } else {
+                $setFields .= "`$column` = $value, ";
+            }
         }
         $setFields = rtrim($setFields, ', ');
 
-        $sql = "UPDATE `$this->table` SET $setFields";
+        $sql = "UPDATE `{$this->table}` SET {$setFields}";
 
         if (!empty($this->where)) {
-            $sql .= " WHERE $this->where";
+            $sql .= " WHERE {$this->where}";
         }
 
         try {
@@ -255,7 +282,7 @@ class Connection extends PDO
         }
         $fields = rtrim($fields, ', ');
 
-        $sql = "UPDATE $table SET $fields WHERE $where";
+        $sql = "UPDATE {$table} SET {$fields} WHERE {$where}";
 
         $mergedParams = array_merge($data, $params);
 
@@ -270,22 +297,28 @@ class Connection extends PDO
         }
     }
 
-    public function replaceInto($table, $data) {
-        $fields = implode(', ', array_keys($data));
-        $placeholders = ':' . implode(', :', array_keys($data));
-        $sql = "REPLACE INTO {$table} ({$fields}) VALUES ({$placeholders})";
+    public function replace($table, $data)
+    {
+        $this->validateData($data);
 
-        $stmt = $this->prepare($sql);
-        foreach ($data as $key => $value) {
-            $stmt->bindValue(":$key", $value);
+        $columns = implode(', ', array_keys($data));
+        $values = ':' . implode(', :', array_keys($data));
+
+        try {
+            $stmt = $this->prepare("REPLACE INTO {$table} ({$columns}) VALUES ({$values})");
+            foreach ($data as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            return $stmt->execute();
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException('Replace error: ' . $e->getMessage());
         }
-        return $stmt->execute();
     }
 
     public function delete($table, $where, $bind = [])
     {
         try {
-            $sql = "DELETE FROM $table WHERE $where";
+            $sql = "DELETE FROM {$table} WHERE {$where}";
             return $this->executeQuery($sql, $bind);
         } catch (PDOException | RuntimeException $e) {
             throw new RuntimeException('Delete error: ' . $e->getMessage());
@@ -294,7 +327,7 @@ class Connection extends PDO
 
     public function count($table, $params = [])
     {
-        $sql = "SELECT COUNT(*) as total FROM $table";
+        $sql = "SELECT COUNT(*) as total FROM {$table}";
         if (!empty($this->where)) {
             $sql .= " WHERE {$this->where}";
         }
@@ -308,9 +341,9 @@ class Connection extends PDO
 
     public function join($type, $table1, $table2, $onCondition, $columns = '*', $where = '', $params = [])
     {
-        $sql = "SELECT $columns FROM $table1 $type $table2 ON $onCondition";
+        $sql = "SELECT {$columns} FROM {$table1} {$type} {$table2} ON {$onCondition}";
         if (!empty($where)) {
-            $sql .= " WHERE $where";
+            $sql .= " WHERE {$where}";
         }
 
         try {
@@ -339,33 +372,13 @@ class Connection extends PDO
     public function exists($table, $column, $value)
     {
         try {
-            $stmt = $this->prepare("SELECT COUNT(*) as total FROM $table WHERE $column = :value");
+            $stmt = $this->prepare("SELECT COUNT(*) as total FROM {$table} WHERE {$column} = :value");
             $stmt->bindParam(':value', $value);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return $result['total'] > 0;
         } catch (PDOException $e) {
             throw new RuntimeException('Error checking existence: ' . $e->getMessage());
-        }
-    }
-
-    public function replace($table, $data = [])
-    {
-        $this->validateData($data);
-
-        $columns = implode(', ', array_keys($data));
-        $values = ':' . implode(', :', array_keys($data));
-
-        try {
-            $stmt = $this->prepare("REPLACE INTO $table ($columns) VALUES ($values)");
-
-            foreach ($data as $key => $value) {
-                $stmt->bindValue(":$key", $value);
-            }
-
-            return $stmt->execute();
-        } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException('Replace error: ' . $e->getMessage());
         }
     }
 
@@ -381,7 +394,7 @@ class Connection extends PDO
 
     public function getLastInsertId()
     {
-        $stmt = $this->query("SELECT LAST_INSERT_ID()");
+        $stmt = $this->query('SELECT LAST_INSERT_ID()');
         return $stmt->fetchColumn();
     }
 
