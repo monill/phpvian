@@ -11,6 +11,8 @@ class ResourcesController extends Controller
 
     public function index()
     {
-        echo "Resources Controller";
+
+
+        return view('resources/index');
     }
 }
