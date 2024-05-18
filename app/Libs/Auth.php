@@ -138,5 +138,47 @@ class Auth
         $this->database->modifyHero2('lastadv', $herodetail['heroid'], 0, 0);
     }
 
+    public function logout()
+    {
+        $this->logged_in = false;
+
+        $user = $this->conn->select('sessid')
+            ->from('users')
+            ->where('username = :uname', [':uname' => Session::get('username')])
+            ->limit(1)
+            ->first();
+
+        $sessidarray = explode('+', $user['sessid']);
+        $last = count($sessidarray);
+        for ($i = 0; $i <= $last; $i++) {
+            if ($sessidarray[$i] == $_SESSION['sessid']) {
+                $sessidarray[$i] = null;
+            }
+        }
+
+        $this->database->updateUserField($_SESSION['username'], 'sessid', 'NULL', 0);
+        for ($i = 0; $i <= $last; $i++) {
+            if ($sessidarray[$i] != 0) {
+                if ($sessidarray[$i - 1] == 0) {
+                    $xx = $sessidarray[$i];
+                } else {
+                    $xx = $sessidarray[$i - 1] . '+' . $sessidarray[$i];
+                }
+            }
+        }
+
+        $this->database->updateUserField($_SESSION['username'], 'sessid', $xx, 0);
+        $this->database->UpdateOnline('logout', $_SESSION['username'], 0);
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            session_set_cookie_params('3600'); // 1 hour
+            setcookie(session_name(), '', $_SERVER['REQUEST_TIME'] - 42000, $params['path'], $params['domain'], TRUE, TRUE);
+            setcookie('lang', $_SESSION['lang'], $_SERVER['REQUEST_TIME'] + 86400, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+        }
+
+        Session::destroySession();
+
+        redirect('/login');
+    }
 
 }
