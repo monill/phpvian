@@ -313,12 +313,18 @@ class InstallController
             'u49' => 1,
             'u50' => 9
         ];
-        $this->conn->upgrade('vdata', ['pop' => 781], "wref = {$worldid}");
-        $this->conn->upgrade('units', $data, "vref = {$worldid}");
+        $this->conn->upgrade('vdata', ['pop' => 781], 'wref = :wref', [':wref' => $worldid]);
+        $this->conn->upgrade('units', $data, 'vref = :vref', [':vref' => $worldid]);
     }
 
     protected function updateNatars($worldid, $speed)
     {
+        $vdata = [
+            'pop' => 238,
+            'natar' => 1,
+            'name' => 'WW Village',
+            'capital' => 0
+        ];
         $units = [
             'u41' => (random_int(1000, 2000) * $speed),
             'u42' => (random_int(1500, 2000) * $speed),
@@ -335,9 +341,9 @@ class InstallController
             'f22t' => 27, 'f22' => 10, 'f28t' => 25, 'f28' => 10, 'f19t' => 23, 'f19' => 10, 'f99t' => 40,
             'f26' => 0, 'f26t' => 0, 'f21' => 1, 'f21t' => 15, 'f39' => 1, 'f39t' => 16
         ];
-        $this->conn->upgrade('vdata', ['pop' => 238, 'natar' => 1, 'name' => 'WW Village', 'capital' => 0], "wref = {$worldid}");
-        $this->conn->upgrade('units', $units, "vref = {$worldid}");
-        $this->conn->upgrade('fdata', $fdata, "vref = {$worldid}");
+        $this->conn->upgrade('vdata', $vdata, 'wref = :wref', [':wref' => $worldid]);
+        $this->conn->upgrade('units', $units, 'vref = :vref', [':vref' => $worldid]);
+        $this->conn->upgrade('fdata', $fdata, 'vref = :vref', [':vref' => $worldid]);
     }
 
     public function oasis()
@@ -399,7 +405,7 @@ class InstallController
         foreach ($worlds as $world) {
             $base = $this->database->getMInfo($world['id']);
             $oasisValues = $this->generateOasisValues($base['oasistype']);
-            $this->conn->from('units')->values($oasisValues)->where('`vref` = :vref', [':vref' => $world['id']])->update();
+            $this->conn->upgrade('units', $oasisValues, 'vref = :vref', [':vref' => $world['id']]);
         }
     }
 
