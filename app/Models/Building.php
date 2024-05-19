@@ -735,7 +735,7 @@ class Building
                 }
                 break;
             case 36:
-                if ($this->getTypeLevel(16) >= 1 && $session->tribe == 3) {
+                if ($this->getTypeLevel(16) >= 1 && Session::get('tribe') == 3) {
                     return TRUE;
                 } else {
                     return FALSE;
@@ -789,7 +789,7 @@ class Building
 
     public function hasPalaceAnywhere()
     {
-        $userVillages = $this->database->getArrayMemberVillage($session->uid);
+        $userVillages = $this->database->getArrayMemberVillage(Session::get('uid'));
 
         foreach ($userVillages as $v) {
             $lvl = $this->getTypeLevel(26, $v['wref']);
@@ -817,7 +817,7 @@ class Building
                     $this->database->modifyPop($jobs['wid'], $resource['pop'], 0);
                     $this->database->addCP($jobs['wid'], $resource['cp']);
                     $this->database->finishDemolition($this->village->wid);
-                    $this->database->addCLP($session->uid, 7);
+                    $this->database->addCLP(Session::get('uid'), 7);
 
                     $q = "DELETE FROM bdata WHERE id = " . $jobs['id'];
                     $this->database->query($q);
