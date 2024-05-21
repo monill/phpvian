@@ -321,3 +321,16 @@ if (!function_exists('generate_login_string')) {
         return hash("sha512", get_ip() . browser());
     }
 }
+
+if (!function_exists('render')) {
+    function render($filename) {
+        $viewFile = dirname(__DIR__) . "resources/views/{$filename}.php";
+        if (file_exists($viewFile)) {
+            ob_start();
+            include $viewFile;
+            return ob_get_clean();
+        } else {
+            throw new Exception("View file not found: $filename");
+        }
+    }
+}
