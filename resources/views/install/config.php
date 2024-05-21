@@ -375,10 +375,6 @@
                                                     <option value="2">Fast</option>
                                                 </select>
                                             </div>
-                                            <div class="information-form-group col-sm-6">
-                                                <label for="commence">Start Date: [<?= date('Y-m-d H:i:s'); ?>]</label>
-                                                <input type="text" name="commence" id="commence" value="0" required> seconds.
-                                            </div>
                                         </div>
                                     </div>
                                     <div class="info-item">
