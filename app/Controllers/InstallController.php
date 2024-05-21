@@ -167,7 +167,7 @@ class InstallController
             'autodeltime' => input('autodeltime'),
             'demolish_lvl' => input('demolish'),
             'village_expand' => input('village_expand'),
-            'commence' => input('commence') + time()
+            'commence' => time()
         ];
         $this->conn->insert('config', $data);
         redirect('/installer/world');
