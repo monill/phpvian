@@ -38,7 +38,7 @@ class Admin
             'seggold' => $req['seggold'],
             'usedgold' => $req['usedgold']
         ];
-        $this->conn->update('users', $data, 'id = :uid', [':uid' => $req['uid']]);
+        $this->conn->upgrade('users', $data, 'id = :uid', [':uid' => $req['uid']]);
     }
 
     public function saveSilver($req)
@@ -50,7 +50,7 @@ class Admin
             'sisilver' => $req['sisilver'],
             'bisilver' => $req['bisilver']
         ];
-        $this->conn->update('users', $data, 'id = :uid', [':uid' => $req['uid']]);
+        $this->conn->upgrade('users', $data, 'id = :uid', [':uid' => $req['uid']]);
     }
 
     public function reviveHeroNow($uid)
@@ -60,14 +60,14 @@ class Admin
             $data = ['hero' => 0];
             $where = '`vref` = :wref';
             $bind = [':wref' => $vil['wref']];
-            $this->conn->update('units', $data, $where, $bind);
-            $this->conn->update('enforcement', $data, $where, $bind);
-            $this->conn->update('trapped', $data, $where, $bind);
-            $this->conn->update('attacks', ['t11' => 0], '`from` = :wref', $bind);
+            $this->conn->upgrade('units', $data, $where, $bind);
+            $this->conn->upgrade('enforcement', $data, $where, $bind);
+            $this->conn->upgrade('trapped', $data, $where, $bind);
+            $this->conn->upgrade('attacks', ['t11' => 0], '`from` = :wref', $bind);
         }
 
         $heroData = $this->db->getHero($uid);
-        $this->conn->update('units', ['hero' => 1], '`vref` = :wref', [':wref' => $heroData['wref']]);
+        $this->conn->upgrade('units', ['hero' => 1], '`vref` = :wref', [':wref' => $heroData['wref']]);
         $this->db->modifyHero($uid, 0, 'health', 100, 0);
     }
 
@@ -84,14 +84,14 @@ class Admin
             for ($i = $start; $i <= $start + 9; $i++) {
                 $data["u$i"] = $req["u$i"];
             }
-            $this->conn->update('units', $data, 'vref = :vref', [':vref' => $id]);
+            $this->conn->upgrade('units', $data, 'vref = :vref', [':vref' => $id]);
             $this->insertAdminLog("Changed troop amount in village <a href='index.php?p=village&did=$id'>" . $village['name'] . "</a>");
         }
     }
 
     public function editGoldClub($uid, $v)
     {
-        $this->conn->update('users', ['goldclub' => $v], '`id` = :uid', [':uid' => $uid]);
+        $this->conn->upgrade('users', ['goldclub' => $v], '`id` = :uid', [':uid' => $uid]);
     }
 
     public function recountPopUser($uid)
@@ -119,7 +119,7 @@ class Admin
         if ($building) {
             $popTot += $this->buildingPOP($building, $lvl);
         }
-        $this->conn->update('vdata', ['pop' => $popTot], 'wref = :vid', [':vid' => $vid]);
+        $this->conn->upgrade('vdata', ['pop' => $popTot], 'wref = :vid', [':vid' => $vid]);
     }
 
     public function buildingPOP($f, $lvl)
@@ -194,14 +194,14 @@ class Admin
 
     public function punishBuilding($vid, $proc, $pop)
     {
-        $this->conn->update('vdata', ['pop' => $pop], 'wref = ?', [$vid]);
+        $this->conn->upgrade('vdata', ['pop' => $pop], 'wref = ?', [$vid]);
         $fdata = $this->db->getResourceLevel($vid);
         foreach ($fdata as $key => $level) {
             if (str_starts_with($key, 'f') && $level > 1) {
                 $zm = max(($level / 100) * $proc, 1);
                 $zm = floor($zm);
                 $fieldNumber = substr($key, 1);
-                $this->conn->update('fdata', ["f$fieldNumber" => $zm], 'vref = ?', [$vid]);
+                $this->conn->upgrade('fdata', ["f$fieldNumber" => $zm], 'vref = ?', [$vid]);
             }
         }
     }
@@ -215,7 +215,7 @@ class Admin
 
     public function delUnits2($vid, $unit)
     {
-        $this->conn->update('units', ["u$unit" => 0], 'vref = ?', [$vid]);
+        $this->conn->upgrade('units', ["u$unit" => 0], 'vref = ?', [$vid]);
     }
 
     public function delPlayer($uid, $pass)
@@ -254,7 +254,7 @@ class Admin
             $this->conn->delete('fdata', 'vref = ?', [$wref]);
             $this->conn->delete('training', 'vref = ?', [$wref]);
             $this->conn->delete('movement', '`from` = ?', [$wref]);
-            $this->conn->update('wdata', ['occupied' => 0], 'id = ?', [$wref]);
+            $this->conn->upgrade('wdata', ['occupied' => 0], 'id = ?', [$wref]);
         }
     }
 
@@ -273,15 +273,15 @@ class Admin
     {
         $name = $this->db->getUserField($uid, "username", 0);
         $this->insertAdminLog("Unbanned user <a href='index.php?p=player&uid=$uid'>$name</a>");
-        $this->conn->update('users', ['access' => USER], 'id = ?', [$uid]);
-        $this->conn->update('banlist', ['active' => 0], 'uid = ?', [$uid]);
+        $this->conn->upgrade('users', ['access' => USER], 'id = ?', [$uid]);
+        $this->conn->upgrade('banlist', ['active' => 0], 'uid = ?', [$uid]);
     }
 
     public function addBan($uid, $end, $reason)
     {
         $name = $this->db->getUserField($uid, "username", 0);
         $this->insertAdminLog("Banned user <a href='index.php?p=player&uid=$uid'>$name</a>");
-        $this->conn->update('users', ['access' => 0], 'id = ?', [$uid]);
+        $this->conn->upgrade('users', ['access' => 0], 'id = ?', [$uid]);
         $admin = $_SESSION['id'] ?? 0;
         $this->conn->insert('banlist', ['uid' => $uid, 'name' => $name, 'reason' => $reason, 'time' => time(), 'end' => $end, 'admin' => $admin, 'active' => 1]);
     }
