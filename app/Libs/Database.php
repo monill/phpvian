@@ -392,6 +392,29 @@ class Database
         }
     }
 
+    public function countOasisTroops($vref){
+        //count oasis troops: $troops
+        $troops = 0;
+        $units = $this->conn->select('*')->from('units')->where('vref = :vref', [':vref' => $vref])->get();
+        if (!empty($units)) {
+            $unit = $units[0];
+            for ($i = 1; $i < 51; $i++) {
+                $troops += $unit[$i];
+            }
+            $troops += $unit['hero'];
+        }
+
+        $enforcements = $this->conn->select('*')->from('enforcement')->where('vref = :vref', [':vref' => $vref])->get();
+        foreach ($enforcements as $enforcement) {
+            for ($i = 1; $i < 51; $i++) {
+                $troops += $enforcement[$i];
+            }
+            $troops += $enforcement['hero'];
+        }
+
+        return $troops;
+    }
+
     public function getResourceLevel($vid)
     {
         return $this->conn
@@ -403,28 +426,17 @@ class Database
 
     public function VillageOasisCount($vref)
     {
-        $result = $this->conn->count('odata')->where('conqured = :conqured', [':conqured' => $vref]);
-        return $result[0];
+        return $this->conn->count('odata', ['conqured' => $vref]);
     }
 
     public function getOasisInfo($worlid)
     {
-        return $this->conn
-            ->select('`conqured`,`loyalty`')
-            ->from('odata')
-            ->where('`wref` = :wref', [':wref' => $worlid])
-            ->limit(1)
-            ->first();
+        return $this->conn->select('`conqured`,`loyalty`')->from('odata')->where('`wref` = :wref', [':wref' => $worlid])->limit(1)->first();
     }
 
     public function getCoor($wref)
     {
-        return $this->conn
-            ->select('x, y')
-            ->from('wdata')
-            ->where('id = :id', [':id' => $wref])
-            ->limit(1)
-            ->first();
+        return $this->conn->select('x, y')->from('wdata')->where('id = :id', [':id' => $wref])->limit(1)->first();
     }
 
     public function conquerOasis($vref, $wref)
@@ -985,14 +997,8 @@ class Database
 
     public function countTopic($id)
     {
-        $postsCount = $this->conn
-            ->count('forum_post')
-            ->where('owner = :owner', [':owner' => $id]);
-
-        $topicsCount = $this->conn
-            ->count('forum_topic')
-            ->where('owner = :owner', [':owner' => $id]);
-
+        $postsCount = $this->conn->count('forum_post', ['owner' => $id]);
+        $topicsCount = $this->conn->count('forum_topic', ['owner' => $id]);
         return $postsCount + $topicsCount;
     }
 
@@ -1914,7 +1920,7 @@ class Database
             if ($jobs[$jobDeleted]['field'] >= 19) {
                 $fieldlevel = $this->conn->select("f{$jobs[$jobDeleted]['field']}")->from('fdata')->where('vref = :vref', [':vref' => $jobs[$jobDeleted]['wid']])->first();
                 if ($fieldlevel[0] == 0) {
-                    $this->conn->upgrade('fdata', ["f${$jobs[$jobDeleted]['field']}t" => 0], 'vref = :vref', [':vref' => $jobs[$jobDeleted]['wid']]);
+                    $this->conn->upgrade('fdata', ["f{$jobs[$jobDeleted]['field']}t" => 0], 'vref = :vref', [':vref' => $jobs[$jobDeleted]['wid']]);
                 }
             }
             if (($jobLoopconID >= 0) && ($jobs[$jobDeleted]['loopcon'] != 1)) {
@@ -1926,7 +1932,7 @@ class Database
         }
         $this->conn->delete('bdata', 'id = :id', [':id' => $d]);
     }
-    
+
     public function addDemolition($worlID, $field)
     {
         $building = new Building();
@@ -2454,21 +2460,20 @@ class Database
 
     public function modifyHero($userID, $id, $column, $value, $mode = 0)
     {
-        $cmd = '';
-        $cmd .= match ($mode) {
-            0 => " $column = :value ",
-            1 => " $column = $column + :value ",
-            2 => " $column = $column - :value ",
-            3 => " $column = $column * :value ",
-            4 => " $column = $column / :value ",
+        $data = match ($mode) {
+            0 => [$column => ":value"],             // mode=0 set
+            1 => [$column => "$column + :value"],   // mode=1 add
+            2 => [$column => "$column - :value"],   // mode=2 sub
+            3 => [$column => "$column * :value"],   // mode=3 mul
+            4 => [$column => "$column / :value"],   // mode=4 div
         };
+        if (in_array($column, ['r0', 'r1', 'r2', 'r3', 'r4'])) {
+            $data['rc'] = 1;
+        }
 
-        $cmd .= match ($column) {
-            'r0', 'r1', 'r2', 'r3', 'r4' => ' ,rc = 1 ',
-        };
-
-        $params = [':value' => $value];
         $where = 'true';
+        $params = [':value' => $value];
+
         if ($userID) {
             $where .= ' AND uid = :uid';
             $params[':uid'] = $userID;
@@ -2478,7 +2483,7 @@ class Database
             $params[':id'] = $id;
         }
 
-        $this->conn->upgrade('hero', $cmd, $where, $params);
+        $this->conn->upgrade('hero', $data, $where, $params);
     }
 
     public function clearTech($vref)
@@ -2505,10 +2510,7 @@ class Database
 
     public function getABTech($vid)
     {
-        return $this->conn->select('*')
-            ->from('abdata')
-            ->where('vref = :vref', [':vref' => $vid])
-            ->first();
+        return $this->conn->select('*')->from('abdata')->where('vref = :vref', [':vref' => $vid])->first();
     }
 
     public function addResearch($vid, $tech, $time)
@@ -2523,10 +2525,7 @@ class Database
 
     public function getResearching($vid)
     {
-        return $this->$this->conn->select('*')
-            ->from('research')
-            ->where('vref = :vref', [':vref' => $vid])
-            ->get();
+        return $this->$this->conn->select('*')->from('research')->where('vref = :vref', [':vref' => $vid])->get();
     }
 
     public function checkIfResearched($vref, $unit)
@@ -2537,10 +2536,7 @@ class Database
 
     public function getTech($vid)
     {
-        return $this->conn->select('*')
-            ->from('tdata')
-            ->where('vref = :vid', [':vid' => $vid])
-            ->first();
+        return $this->conn->select('*')->from('tdata')->where('vref = :vid', [':vid' => $vid])->first();
     }
 
     public function getTraining($vid)
@@ -3420,14 +3416,15 @@ class Database
         return ($r1 && $r2);
     }
 
-    public function getArrayMemberVillage($userID)
+    public function getArrayMemberVillage($uid)
     {
-        $fields = ['v.wref', 'v.name', 'v.capital', 'w.x', 'w.y'];
-        $joinTables = ['vdata AS v', 'wdata AS w'];
-        $joinConditions = ['w.id' => 'v.wref'];
-        $condition = ['owner' => $userID];
-        $orderBy = 'ORDER BY capital, pop DESC';
-        return $this->conn->join($fields, $joinTables, $joinConditions, $condition, null, $orderBy);
+        $columns = 'a.wref, a.name, a.capital, b.x, b.y';
+        $onCondition = 'b.id = a.wref';
+        $where = 'a.owner = :uid';
+        $params = [':uid' => $uid];
+        $orderBy = 'a.capital DESC, a.pop DESC';
+
+        return $this->conn->leftJoin('vdata AS a', 'wdata AS b', $onCondition, $columns, $where, $params, $orderBy);
     }
 
     public function getNoticeData($nid)
@@ -3529,23 +3526,23 @@ class Database
         $where = ' true ';
         $params = [];
         if ($id) {
-            $where = ' AND id = :id';
+            $where .= ' AND id = :id';
             $params[':id'] = $id;
         }
         if ($userID) {
-            $where = ' AND uid = :uid';
+            $where .= ' AND uid = :uid';
             $params[':uid'] = $userID;
         }
         if ($btype) {
-            $where = ' AND btype = :btype';
+            $where .= ' AND btype = :btype';
             $params[':btype'] = $btype;
         }
         if ($type) {
-            $where = ' AND type = :type';
+            $where .= ' AND type = :type';
             $params[':type'] = $type;
         }
         if ($proc != 2) {
-            $where = ' AND proc = :proc';
+            $where .= ' AND proc = :proc';
             $params[':proc'] = $proc;
         }
 
@@ -3584,19 +3581,19 @@ class Database
         $params = [];
         $where = 'true ';
         if ($userID) {
-            $where = ' AND uid = :uid ';
+            $where .= ' AND uid = :uid ';
             $params[':uid'] = $userID;
         }
         if ($btype) {
-            $where = ' AND btype = :btype';
+            $where .= ' AND btype = :btype';
             $params[':btype'] = $btype;
         }
         if ($type) {
-            $where = ' AND type = :type';
+            $where .= ' AND type = :type';
             $params[':type'] = $type;
         }
         if ($proc != 2) {
-            $where = ' AND proc = :proc';
+            $where .= ' AND proc = :proc';
             $params[':proc'] = $proc;
         }
         $result = $this->conn->select('id, btype')->from('heroitems')->where($where, $params)->first();
@@ -3838,7 +3835,7 @@ class Database
     {
         $defenderFields = $this->getResourceLevel($vref);
         $attackerFields = $this->getResourceLevel($vref);
-        
+
         for ($i = 19; $i <= 38; $i++) {
             if ($defenderFields["f{$i}t"] == 27) {
                 $defcanclaim = false;
@@ -3846,7 +3843,7 @@ class Database
                 $defcanclaim = true;
             }
         }
-        
+
         for ($i = 19; $i <= 38; $i++) {
             if ($attackerFields["f{$i}t"] == 27) {
                 $attTresuaryLevel = $attackerFields["f{$i}"];
@@ -4110,7 +4107,7 @@ class Database
                     6 => $result['size'] == 1 ? rand(50, 100) / 100 : rand(25, 100) / 100,
                     7 => $result['size'] == 1 ? rand(100, 50000) / 100 : rand(100, 100000) / 100,
                     8 => $result['size'] == 1 ? rand(50, 100) / 100 : rand(25, 100) / 100,
-                    9 => $result['size'] == 1 ?? 1,
+                    9 => $result['size'] == 1 ? 1 : 1,
                 };
                 if ($result['size'] == 1 && rand(1, 100) <= 50) {
                     $effect = 1 / $effect;
