@@ -280,15 +280,15 @@ class Connection extends PDO
 
         $mergedParams = array_merge($params, $data);
 
-        // try {
-        $stmt = $this->prepare($sql);
-        foreach ($mergedParams as $key => $value) {
-            $stmt->bindValue(":$key", $value);
+        try {
+            $stmt = $this->prepare($sql);
+            foreach ($mergedParams as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            return $stmt->execute();
+        } catch (PDOException | RuntimeException $e) {
+            throw new RuntimeException('Upgrade error: ' . $e->getMessage());
         }
-        return $stmt->execute();
-        // } catch (PDOException | RuntimeException $e) {
-        // throw new RuntimeException('Upgrade error: ' . $e->getMessage());
-        // }
     }
 
     public function replace(string $table, array $data): bool
@@ -332,7 +332,7 @@ class Connection extends PDO
 
         try {
             $stmt = $this->executeQuery($sql, $params);
-            return (int) $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            return (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
         } catch (PDOException | RuntimeException $e) {
             throw new RuntimeException('Count error: ' . $e->getMessage());
         }
