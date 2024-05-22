@@ -6,7 +6,6 @@ use PHPvian\Models\Logging;
 
 class Auth
 {
-    private bool $logged_in = false;
     private $generator, $database, $conn, $logging;
     private $time;
     private $userarray;
@@ -43,7 +42,7 @@ class Auth
 
     public function login($username)
     {
-        $this->logged_in = true;
+        Session::set('logged_in', true);
 
         $_SESSION['sessid'] = md5($_SERVER['HTTP_ACCEPT_LANGUAGE'] . $_SERVER['REMOTE_ADDR']);
         $_SESSION['username'] = $username;
@@ -69,28 +68,25 @@ class Auth
         $this->logging->addLoginLog($this->uid);
         $this->database->addActiveUser($_SESSION['username'], $this->time);
 
-        $result = $this->conn->select('sessid')->from('users')->where('username = :username', [':username' => $_SESSION['username']])->first();
-        if (strlen($result['sessid'] ?? '') > 134) {
-            $this->database->updateUserField($_SESSION['username'], 'sessid', 'NULL', 0);
+        $user = $this->conn->select('sessid')->from('users')->where('username = :username', [':username' => $_SESSION['username']])->first();
+        if (strlen($user['sessid'] ?? '') > 134) {
+            $this->database->updateUserField($_SESSION['username'], 'sessid', '(NULL)', 0);
         }
-        if ($result['sessid'] != '') {
-            $sessid = $result['sessid'] . '+' . $_SESSION['sessid'];
-        } else {
-            $sessid = $_SESSION['sessid'];
-        }
-        $this->database->updateUserField($_SESSION['uid'], 'sessid', $sessid, 1);
+
+        $sessid = $user['sessid'] != '' ? $user['sessid'] . '+' . $_SESSION['sessid'] : $_SESSION['sessid'];
+        $this->database->updateUserField($_SESSION['userID'], 'sessid', $sessid, 0);
 
         $ua = $_SERVER['HTTP_USER_AGENT'];
         $ip = $_SERVER['REMOTE_ADDR'];
         $id = session_id();
         $_SESSION['hash'] = htmlspecialchars(sha1("$ua $ip $id"));
 
-        redirect('/village');
+        redirect('/resources');
     }
 
     private function populateVar()
     {
-        $user = $this->database->getUser($_SESSION['username']);
+        $user = $this->database->getUser($_SESSION['username'], 1);
         $this->userarray = $this->userinfo = $user;
         $this->username = $user['username'];
         $this->email = $user['email'];
@@ -140,41 +136,15 @@ class Auth
 
     public function logout()
     {
-        $this->logged_in = false;
-
-        $user = $this->conn->select('sessid')
+        Session::set('logged_in', false);
+        $user = $this->conn->select('id, username, sessid')
             ->from('users')
             ->where('username = :uname', [':uname' => Session::get('username')])
             ->limit(1)
             ->first();
 
-        $sessidarray = explode('+', $user['sessid']);
-        $last = count($sessidarray);
-        for ($i = 0; $i <= $last; $i++) {
-            if ($sessidarray[$i] == $_SESSION['sessid']) {
-                $sessidarray[$i] = null;
-            }
-        }
-
-        $this->database->updateUserField($_SESSION['username'], 'sessid', 'NULL', 0);
-        for ($i = 0; $i <= $last; $i++) {
-            if ($sessidarray[$i] != 0) {
-                if ($sessidarray[$i - 1] == 0) {
-                    $xx = $sessidarray[$i];
-                } else {
-                    $xx = $sessidarray[$i - 1] . '+' . $sessidarray[$i];
-                }
-            }
-        }
-
-        $this->database->updateUserField($_SESSION['username'], 'sessid', $xx, 0);
-        $this->database->UpdateOnline('logout', $_SESSION['username'], 0);
-        if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            session_set_cookie_params('3600'); // 1 hour
-            setcookie(session_name(), '', $_SERVER['REQUEST_TIME'] - 42000, $params['path'], $params['domain'], TRUE, TRUE);
-            setcookie('lang', $_SESSION['lang'], $_SERVER['REQUEST_TIME'] + 86400, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
-        }
+        $this->database->updateUserField($user['id'], 'sessid', '(NULL)', 0);
+        $this->database->UpdateOnline('logout', $user['username'], 0);
 
         Session::destroySession();
 
