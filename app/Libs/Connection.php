@@ -136,8 +136,8 @@ class Connection extends PDO
         $this->params[':end'] = $end;
         return $this;
     }
-	
-	public function set(string $column, $value, bool $isExpression = false): self
+
+    public function set(string $column, $value, bool $isExpression = false): self
     {
         if ($isExpression) {
             $this->setValues[$column] = $value;
@@ -245,27 +245,28 @@ class Connection extends PDO
         }
     }
 
-    public function update(): bool
+    public function update()
     {
-        $setFields = '';
+        $fields = '';
         foreach ($this->setValues as $column => $value) {
-            $setFields .= "`$column` = $value, ";
+            $fields .= "`$column` = $value, ";
         }
-        $setFields = rtrim($setFields, ', ');
+        $fields = rtrim($fields, ', ');
 
-        $sql = "UPDATE `{$this->table}` SET {$setFields}";
+        $sql = "UPDATE `{$this->table}` SET {$fields}";
         if ($this->where) {
             $sql .= " WHERE {$this->where}";
         }
 
+        print_r($sql);
         try {
-            return $this->executeQuery($sql, $this->params)->rowCount() > 0;
+            return $this->executeQuery($sql, $this->params);
         } catch (PDOException | RuntimeException $e) {
             throw new RuntimeException('Update error: ' . $e->getMessage());
         }
     }
 
-    public function upgrade(string $table, array $data, string $where, array $params = []): bool
+    public function upgrade(string $table, array $data, string $where, array $params = [])
     {
         $this->validateData($data);
 
@@ -277,17 +278,17 @@ class Connection extends PDO
 
         $sql = "UPDATE {$table} SET {$fields} WHERE {$where}";
 
-        $mergedParams = array_merge($data, $params);
+        $mergedParams = array_merge($params, $data);
 
-        try {
-            $stmt = $this->prepare($sql);
-            foreach ($mergedParams as $key => $value) {
-                $stmt->bindValue(":$key", $value);
-            }
-            return $stmt->execute();
-        } catch (PDOException | RuntimeException $e) {
-            throw new RuntimeException('Upgrade error: ' . $e->getMessage());
+        // try {
+        $stmt = $this->prepare($sql);
+        foreach ($mergedParams as $key => $value) {
+            $stmt->bindValue(":$key", $value);
         }
+        return $stmt->execute();
+        // } catch (PDOException | RuntimeException $e) {
+        // throw new RuntimeException('Upgrade error: ' . $e->getMessage());
+        // }
     }
 
     public function replace(string $table, array $data): bool
