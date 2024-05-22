@@ -17,8 +17,7 @@ class LogoutController
 
     public function logout()
     {
-        $this->database->activeModify(addslashes(Session::get('username')), 1);
-        $this->database->updateOnline('logout', Session::get('username'), 0);
+        $this->database->activeModify(Session::get('username'), 1);
         (new Auth())->logout();
     }
 }
