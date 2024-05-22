@@ -46,7 +46,7 @@ class ActivateController extends Controller
             Cookie::set('COOKUSR', $name, 7200);
             $this->database->addHero($userID);
             $this->database->addHeroFace($userID);
-            $this->database->updateUserField($userID, 'activate', 'NULL', 1);
+            $this->database->updateUserField($userID, 'activate', '(NULL)', 0);
 
             $this->generateBase($sector, $userID, $name);
 
@@ -57,9 +57,9 @@ class ActivateController extends Controller
             }
             $this->database->setreg2($userID);
             $this->database->modifyGold($userID, 40, 1);
-            $this->conn->from('users')->set('protect', time() + (setting('minprotecttime') * 2))->where('id = :userID', [':userID' => $userID])->update();
+            $this->conn->upgrade('users', ['protect' => time() + (setting('minprotecttime') * 2)], 'id = :uid', [':uid' => $userID]);
+            $this->conn->upgrade('users', ['plus' => time() + 21600], 'id = :uid', [':uid' => $userID]);
             $this->conn->insert('users_setting', ['id' => $userID]);
-            $this->conn->from('users')->set('plus', time() + 21600)->where('id = :userID', [':userID' => $userID])->update();
 
             (new Auth())->login($name);
         }
@@ -83,8 +83,8 @@ class ActivateController extends Controller
         $this->database->addUnits($wid);
         $this->database->addTech($wid);
         $this->database->addABTech($wid);
-        $this->database->updateUserField($userID, 'access', 2, 1);
-        $this->database->updateUserField($userID, 'location', 'NULL', 1);
+        $this->database->updateUserField($userID, 'access', 2, 0);
+        $this->database->updateUserField($userID, 'location', 'NULL', 0);
 
         $this->message->sendWelcome($userID, $username);
     }
