@@ -39,14 +39,14 @@ class Database
         return $this->conn->insert('users', $data) ? $this->conn->getLastInsertId() : false;
     }
 
-    public function modifyPoints($userID, $points, $amout)
+    public function modifyPoints($userID, $points, $amount)
     {
-        $this->conn->upgrade('users', [$points => [$points + $amout]], 'id = :aid', ['aid' => $userID]);
+        $this->conn->from('users')->increment($points, $amount)->where('id = :id', ['id' => $userID])->update();
     }
 
-    public function modifyPointsAlly($aid, $points, $amout)
+    public function modifyPointsAlly($aid, $points, $amount)
     {
-        $this->conn->upgrade('alidata', [$points => [$points + $amout]], 'id = :aid', ['aid' => $aid]);
+        $this->conn->from('alidata')->increment($points, $amount)->where('id = :id', ['id' => $aid])->update();
     }
 
     public function myactivate($username, $password, $email, $act, $act2)
@@ -2604,10 +2604,10 @@ class Database
         switch ($mode) {
             case 0:
                 $result = $this->conn->select($unit)->from('units')->where('vref = :vref', ['vref' => $vref])->first();
-                $this->conn->upgrade('units', [$unit => ($unit - min($result[$unit], $amount))], 'vref = :vref', ['vref' => $vref]);
+                $this->conn->from('units')->decrement($unit, ($unit - min($result[$unit], $amount)))->where('vref = :vref', ['vref' => $vref])->update();
                 break;
             case 1:
-                $this->conn->upgrade('units', [$unit => ($unit + $amount)], 'vref = :vref', ['vref' => $vref]);
+                $this->conn->from('units')->increment($unit, $amount)->where('vref = :vref', ['vref' => $vref])->update();
                 break;
             case 2:
                 $this->conn->upgrade('units', [$unit => $amount], 'vref = :vref', ['vref' => $vref]);
@@ -2738,7 +2738,7 @@ class Database
                 $this->conn->upgrade('enforcement', [$unit => ($unit - min($result[$unit], $amount))], 'id = :id', ['id' => $id]);
             }
         } else {
-            $this->conn->upgrade('enforcement', [$unit => "$unit + $amount"], 'id = :id', ['id' => $id]);
+            $this->conn->from('enforcement')->increment($unit, $amount)->where('id = :id', ['id' => $id])->update();
         }
     }
 
@@ -4199,7 +4199,7 @@ class Database
 
     public function modifyExtraVillage($worlID, $column, $value)
     {
-        $this->conn->upgrade('vdata', [$column => "$column + $value"], 'vref = :vref', ['vref' => $worlID]);
+        $this->conn->from('vdata')->increment($column, $value)->where('vref = :vref', ['vref' => $worlID])->update();
     }
 
     public function modifyFieldLevel($worlID, $field, $level, $mode)
@@ -4340,12 +4340,13 @@ class Database
 
     public function modifyHero2($column, $value, $userID, $mode)
     {
-        $data = match ($mode) {
-            1 => [$column => "$column + $value"],
-            2 => [$column => "$column - $value"],
-            default => [$column => $value],
-        };
-        $this->conn->upgrade('hero', $data, 'uid = :uid', ['uid' => $userID]);
+        if ($mode === 0) {
+            $this->conn->upgrade('hero', [$column => $value], 'uid = :uid', ['uid' => $userID]);
+        } elseif ($mode === 1) {
+            $this->conn->from('units')->increment($column, $value)->where('uid = :uid', ['uid' => $userID])->update();
+        } elseif ($mode == 2) {
+            $this->conn->from('hero')->decrement($column, $value)->where('uid = :uid', ['uid' => $userID])->update();
+        }
     }
 
     public function createTradeRoute($userID, $worlID, $from, $r1, $r2, $r3, $r4, $start, $deliveries, $merchant, $time)
