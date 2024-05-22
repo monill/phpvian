@@ -41,12 +41,12 @@ class Database
 
     public function modifyPoints($userID, $points, $amout)
     {
-        return $this->conn->from('users')->set($points, $points + $amout)->where('id = :aid', ['aid' => $userID])->update();
+        $this->conn->upgrade('users', [$points => [$points + $amout]], 'id = :aid', ['aid' => $userID]);
     }
 
     public function modifyPointsAlly($aid, $points, $amout)
     {
-        return $this->conn->from('alidata')->set($points, $points + $amout)->where('id = :aid', ['aid' => $aid])->update();
+        $this->conn->upgrade('alidata', [$points => [$points + $amout]], 'id = :aid', ['aid' => $aid]);
     }
 
     public function myactivate($username, $password, $email, $act, $act2)
@@ -129,8 +129,8 @@ class Database
 
     public function removeMeSit($userID, $userID2)
     {
-        $this->conn->set('sit1', 0)->from('users')->where('id = :uid AND sit1 = :uid2', ['uid' => $userID, 'uid2' => $userID2])->update();
-        $this->conn->set('sit2', 0)->from('users')->where('id = :uid AND sit2 = :uid2', ['uid' => $userID, 'uid2' => $userID2])->update();
+        $this->conn->upgrade('users', ['sit1' => 0], 'id = :uid AND sit1 = :uid2', ['uid' => $userID, 'uid2' => $userID2]);
+        $this->conn->upgrade('users', ['sit2' => 0], 'id = :uid AND sit1 = :uid2', ['uid' => $userID, 'uid2' => $userID2]);
     }
 
     public function getUsersetting($userID)
@@ -240,19 +240,16 @@ class Database
     {
         if (!$mode) {
             // Decrement gold
-            $this->conn->from('users')->set('gold', "gold - $amount")->where('id = :userid', ['userid' => $userID])->update();
+            $this->conn->upgrade('users', ['gold' => ["gold - $amount"]], 'id = :userid', ['userid' => $userID]);
             // Increment usedgold
-            $this->conn->from('users')->set('usedgold', "usedgold + $amount")->where('id = :userid', ['userid' => $userID])->update();
+            $this->conn->upgrade('users', ['usedgold' => ["usedgold + $amount"]], 'id = :userid', ['userid' => $userID]);
         } else {
             // Increment gold
-            $this->conn->from('users')->set('gold', "gold + $amount")->where('id = :userid', ['userid' => $userID])->update();
+            $this->conn->upgrade('users', ['gold' => ["gold + $amount"]], 'id = :userid', ['userid' => $userID]);
             // Increment Addgold
-            $this->conn->from('users')->set('Addgold', "Addgold + $amount")->where('id = :userid', ['userid' => $userID])->update();
+            $this->conn->upgrade('users', ['Addgold' => ["Addgold + $amount"]], 'id = :userid', ['userid' => $userID]);
         }
-        $this->conn->insert('gold_fin_log', [
-            'wid' => $userID,
-            'log' => "$amount GOLD ADDED FROM " . $_SERVER['HTTP_REFERER'] ?? ''
-        ]);
+        $this->conn->insert('gold_fin_log', ['wid' => $userID, 'log' => "$amount GOLD ADDED FROM " . $_SERVER['HTTP_REFERER'] ?? '']);
     }
 
     public function getGoldFinLog()
@@ -262,32 +259,15 @@ class Database
 
     public function instantCompleteBdataResearch($worlID, $username)
     {
-        $bdata = $this->conn->set('timestamp', 1)
-            ->where('wid = :wid AND type != 25 AND type != 26', ['wid' => $worlID])
-            ->from('bdata')
-            ->update();
-        $research = $this->conn->set('timestamp', 1)
-            ->from('research')
-            ->where('vref = :vref', ['vref' => $worlID])
-            ->update();
+        $bdata = $this->conn->upgrade('bdata', ['timestamp' => 1], 'wid = :wid AND type != 25 AND type != 26', ['wid' => $worlID]);
+        $research = $this->conn->upgrade('research', ['timestamp' => 1], 'vref = :vref', ['vref' => $worlID]);
 
         if ($bdata || $research) {
-            $this->conn->set('gold', 'gold - 2')
-                ->set('usedgold', 'usedgold + 2')
-                ->from('users')
-                ->where('username = :username', ['username' => $username])
-                ->update();
-
-            $this->conn->insert('gold_fin_log', [
-                'wid' => $worlID,
-                'log' => 'Finish construction and research with gold'
-            ]);
+            $this->conn->upgrade('users', ['gold' => ['gold - 2'], 'usedgold' => ['usedgold + 2']], 'username = :username', ['username' => $username]);
+            $this->conn->insert('gold_fin_log', ['wid' => $worlID, 'log' => 'Finish construction and research with gold']);
             return true;
         } else {
-            $this->conn->insert('gold_fin_log', [
-                'wid' => $worlID,
-                'log' => 'Failed construction and research with gold'
-            ]);
+            $this->conn->insert('gold_fin_log', ['wid' => $worlID, 'log' => 'Failed construction and research with gold']);
             return false;
         }
     }
@@ -345,7 +325,7 @@ class Database
     public function updateActiveUser($username, $time)
     {
         $this->conn->replace('active', ['username' => $username, 'timestamp' => $time]);
-        $this->conn->set('timestamp', $time)->from('users')->where('username = :username', ['username' => $username])->update();
+        $this->conn->upgrade('users', ['timestamp' => $time], 'username = :username', ['username' => $username]);
     }
 
     public function checkSitter($username)
@@ -445,8 +425,7 @@ class Database
             'owner' => $villageInfo['owner'],
             'name' => 'Occupied Oasis'
         ];
-
-        $this->conn->from('odata')->values($data)->where('wref = :wref', ['wref' => $wref])->update();
+        $this->conn->upgrade('odata', $data, 'wref = :wref', ['wref' => $wref]);
     }
 
     public function getVillage($vid)
@@ -467,11 +446,7 @@ class Database
             } else {
                 $loyaltyAmendment = 100;
             }
-
-            $this->conn->from('odata')
-                ->set('loyalty', 'GREATEST(loyalty-:loyaltyAmendment,0)', true)
-                ->where('wref = :wref', ['loyaltyAmendment' => $loyaltyAmendment, 'wref' => $wref])
-                ->update();
+            $this->conn->upgrade('odata', ['loyalty' => 'GREATEST(loyalty - :loyaltyAmendment, 0)'], 'wref = :wref', ['loyaltyAmendment' => $loyaltyAmendment, 'wref' => $wref]);
         }
         return false;
     }
@@ -587,7 +562,7 @@ class Database
 
     public function setFieldTaken($id)
     {
-        $this->conn->from('wdata')->set('occupied', 1)->where('id = :id', ['id' => $id])->update();
+        $this->conn->upgrade('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
     }
 
     public function addVillage($worlid, $userID, $username, $capital)
@@ -2576,7 +2551,7 @@ class Database
 
             if ($queued[count($queued) - 1]['unit'] == $unit) {
                 $endat = $each * $amount / 1000;
-                $this->conn->from('training')->set('amt', "amt + {$amount}")->set('timestamp', time())->set('endat', "endat + {$endat}")->where('id = :id', ['id' => $queued[count($queued) - 1]['id']])->update();
+                $this->conn->upgrade('training', ['amt' => "amt + {$amount}", 'timestamp' => time(), 'endat' => "endat + {$endat}"], 'id = :id', ['id' => $queued[count($queued) - 1]['id']]);
             } else {
                 $this->conn->insert('training', ['vref' => $vid, 'unit' => $unit, 'amt' => $amount, 'pop' => $pop, 'timestamp' => $timestamp, 'eachtime' => $each, 'commence' => $commence, 'endat' => time() + ($each * $amount / 1000)]);
             }
@@ -4306,7 +4281,7 @@ class Database
 
     public function setreg2($userID)
     {
-        $this->conn->from('users')->set('reg2', 0)->where('id = :id AND reg2 = 1', ['id' => $userID])->update();
+        $this->conn->upgrade('users', ['reg2' => 0], 'id = :id AND reg2 = 1', ['id' => $userID]);
     }
 
     public function getNotice5($userID)
