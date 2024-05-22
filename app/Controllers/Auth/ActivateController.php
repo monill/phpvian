@@ -1,7 +1,8 @@
 <?php
 
-namespace PHPvian\Controllers;
+namespace PHPvian\Controllers\Auth;
 
+use PHPvian\Controllers\Controller;
 use PHPvian\Libs\Auth;
 use PHPvian\Libs\Cookie;
 use PHPvian\Libs\Database;
