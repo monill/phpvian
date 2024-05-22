@@ -7,7 +7,6 @@ use PHPvian\Libs\Connection;
 use PHPvian\Libs\Cookie;
 use PHPvian\Libs\Generator;
 use PHPvian\Libs\Mail;
-use PHPvian\Libs\Session;
 use PHPvian\Libs\Validate;
 
 class SignupController
