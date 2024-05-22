@@ -276,13 +276,9 @@ class Connection extends PDO
         }
         $fields = rtrim($fields, ', ');
 
-        $sql = "UPDATE {$table} SET {$fields} WHERE {$where}";
-
-        $mergedParams = array_merge($params, $data);
-
         try {
-            $stmt = $this->prepare($sql);
-            foreach ($mergedParams as $key => $value) {
+            $stmt = $this->prepare("UPDATE $table SET $fields WHERE $where");
+            foreach ($data as $key => $value) {
                 $stmt->bindValue(":$key", $value);
             }
             return $stmt->execute();
