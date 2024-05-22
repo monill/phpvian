@@ -30,8 +30,8 @@ $route->post('/installer/oasis', InstallController::class, 'setOasis');
 $route->get('/installer/complete', InstallController::class, 'complete');
 //End installer
 //Activate
-$route->get('/activate', \PHPvian\Controllers\ActivateController::class, 'index');
-$route->post('/activate', \PHPvian\Controllers\ActivateController::class, 'postActivate');
+$route->get('/activate', \PHPvian\Controllers\Auth\ActivateController::class, 'index');
+$route->post('/activate', \PHPvian\Controllers\Auth\ActivateController::class, 'postActivate');
 //Server error
 $route->get('/404', ErrorsController::class, 'deny');
 $route->get('/500', ErrorsController::class, 'server');
