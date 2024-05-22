@@ -171,7 +171,7 @@ class Admin
         $uid = $post['uid'];
         $villages = $this->db->getProfileVillages($uid);
         $admid = $post['admid'];
-        $user = $this->db->getUser($uid, 1);
+        $user = $this->db->getUser($uid, 0);
 
         foreach ($villages as $village) {
             $vid = $village['wref'];
