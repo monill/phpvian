@@ -562,7 +562,7 @@ class Database
 
     public function setFieldTaken($id)
     {
-        $this->conn->upgrade('wdata', ['occupied' => 1], 'id = :id', ['id' => $id]);
+        $this->conn->upgrade('wdata', ['occupied' => 1], "`id` = {$id}"); //, [':id' => $id]
     }
 
     public function addVillage($worlid, $userID, $username, $capital)
@@ -3438,8 +3438,8 @@ class Database
     public function delAuction($id)
     {
         $aucData = $this->getAuctionData($id);
-        $usedtime = AUCTIONTIME - ($aucData['time'] - time());
-        if (($usedtime < (AUCTIONTIME / 10)) && !$aucData['bids']) {
+        $usedtime = setting('auctiontime') - ($aucData['time'] - time());
+        if (($usedtime < (setting('auctiontime') / 10)) && !$aucData['bids']) {
             $this->modifyHeroItem($aucData['itemid'], 'num', $aucData['num'], 1);
             $this->modifyHeroItem($aucData['itemid'], 'proc', 0, 0);
             $this->conn->delete('auction', 'id = :id AND finish = 0', ['id' => $id]);
@@ -3472,7 +3472,7 @@ class Database
 
     public function addAuction($owner, $itemid, $btype, $type, $amount)
     {
-        $time = time() + AUCTIONTIME;
+        $time = time() + setting('auctiontime');
         $itemData = $this->getHeroItem($itemid);
         if ($amount >= $itemData['num']) {
             $amount = $itemData['num'];
@@ -4231,10 +4231,10 @@ class Database
     public function register2($username, $password, $email, $act, $activateat)
     {
         $time = time();
-        if (strtotime(START_TIME) > time()) {
-            $time = strtotime(START_TIME);
+        if (strtotime(setting('start_time')) > time()) {
+            $time = strtotime(setting('start_time'));
         }
-        $timep = ($time + PROTECTION);
+        $timep = ($time + setting('protection'));
         $rand = rand(8900, 9000);
 
         $data = [
