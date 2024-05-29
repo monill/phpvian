@@ -237,7 +237,7 @@ class InstallController
     {
         $password = input('mhpwd');
 
-        if (!empty($password)) {
+        if (empty($password)) {
             $password = md5_gen();
         }
 
@@ -469,5 +469,4 @@ class InstallController
     {
         return view('install/complete');
     }
-
 }
