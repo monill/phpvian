@@ -10,8 +10,9 @@ use PHPvian\Libs\Route;
 
 $route = new Route();
 
+//Index
 $route->get('/', IndexController::class, 'index');
-//Installer
+//Install
 $route->get('/installer', InstallController::class, 'index');
 $route->get('/installer/requirements', InstallController::class, 'requirements');
 $route->get('/installer/files', InstallController::class, 'files');
@@ -28,10 +29,6 @@ $route->post('/installer/multihunter', InstallController::class, 'setMultihunter
 $route->get('/installer/oasis', InstallController::class, 'oasis');
 $route->post('/installer/oasis', InstallController::class, 'setOasis');
 $route->get('/installer/complete', InstallController::class, 'complete');
-//End installer
-//Activate
-$route->get('/activate', \PHPvian\Controllers\Auth\ActivateController::class, 'index');
-$route->post('/activate', \PHPvian\Controllers\Auth\ActivateController::class, 'postActivate');
 //Server error
 $route->get('/404', ErrorsController::class, 'deny');
 $route->get('/500', ErrorsController::class, 'server');
@@ -41,8 +38,12 @@ $route->post('/login', LoginController::class, 'login');
 $route->get('/signup', SignupController::class, 'index');
 $route->post('/signup', SignupController::class, 'signup');
 $route->get('/logout', LogoutController::class, 'logout');
-//End Auth
+//Activate
+$route->get('/activate', \PHPvian\Controllers\Auth\ActivateController::class, 'index');
+$route->post('/activate', \PHPvian\Controllers\Auth\ActivateController::class, 'postActivate');
+//Village
 $route->get('/village', \PHPvian\Controllers\VillageController::class, 'index');
+//Resources
 $route->get('/resources', \PHPvian\Controllers\ResourcesController::class, 'index');
 
 
