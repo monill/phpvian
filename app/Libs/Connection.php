@@ -266,7 +266,7 @@ class Connection extends PDO
         }
     }
 
-    public function upgrade(string $table, array $data, string $where, array $params = [])
+    public function upgrade(string $table, array $data, $where, array $params = [])
     {
         $this->validateData($data);
 
@@ -275,11 +275,13 @@ class Connection extends PDO
             $fields .= "`$key` = :$key, ";
         }
         $fields = rtrim($fields, ', ');
-
         try {
-            $stmt = $this->prepare("UPDATE $table SET $fields WHERE $where");
+            $stmt = $this->prepare("UPDATE {$table} SET {$fields} WHERE {$where}");
             foreach ($data as $key => $value) {
                 $stmt->bindValue(":$key", $value);
+            }
+            foreach ($params as $param_key => $param_value) {
+                $stmt->bindValue($param_key, $param_value);
             }
             return $stmt->execute();
         } catch (PDOException | RuntimeException $e) {
