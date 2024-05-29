@@ -9,8 +9,7 @@ if (!function_exists('md5_gen')) {
      * Generates random characters using MD5 values
      * 32 Characters
      */
-    function md5_gen()
-    {
+    function md5_gen() {
         return md5(uniqid() . time() . microtime());
     }
 }
@@ -19,22 +18,17 @@ if (!function_exists('sha1_gen')) {
     /**
      * Generates random characters using SHA1 values
      * 40 Characters
-     * @param null $data
      * @return string
      */
-    function sha1_gen($data = null)
-    {
-        return sha1(uniqid() . time() . microtime() . md5_gen() . $data);
+    function sha1_gen() {
+        return sha1(uniqid() . time() . microtime() . md5_gen());
     }
 }
 
 if (!function_exists('config')) {
-    /**
-     * Load config folder files
-     */
-    function config($file, $key = null)
-    {
-        $folder = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . $file . '.php';
+    // Load config folder files
+    function config($file, $key = null) {
+        $folder = dirname(__DIR__) . DIRECTORY_SEPARATOR.'config'.DIRECTORY_SEPARATOR."{$file}.php";
         if (file_exists($folder)) {
             $config = require $folder;
 
@@ -42,7 +36,7 @@ if (!function_exists('config')) {
                 if (array_key_exists($key, $config)) {
                     return $config[$key];
                 } else {
-                    throw new Exception("Key '$key' not found in configuration file '$file'.");
+                    throw new Exception("Key '$key' not found in configuration file '{$file}.php'.");
                 }
             } else {
                 return $config;
@@ -54,11 +48,8 @@ if (!function_exists('config')) {
 }
 
 if (!function_exists('base_url')) {
-    /**
-     * Function to access base url of project
-     */
-    function base_url($portOnly = false)
-    {
+    // Function to access base url of project
+    function base_url($portOnly = false) {
         if ($portOnly) {
             return $_SERVER['SERVER_PORT'];
         }
@@ -68,18 +59,14 @@ if (!function_exists('base_url')) {
 }
 
 if (!function_exists('view')) {
-    /**
-     * Function to include a view
-     */
-    function view($file, $data = [])
-    {
+    // Function to include a view
+    function view($file, $data = []) {
         return (new View())->load($file, $data);
     }
 }
 
 if (!function_exists('valid_ip')) {
-    function valid_ip($ip)
-    {
+    function valid_ip($ip) {
         if (strtolower($ip) === "unknown") {
             return false;
         }
@@ -114,8 +101,7 @@ if (!function_exists('valid_ip')) {
 }
 
 if (!function_exists('get_ip')) {
-    function get_ip()
-    {
+    function get_ip() {
         $headers_to_check = [
             'HTTP_CLIENT_IP',
             'HTTP_X_FORWARDED_FOR',
@@ -145,24 +131,21 @@ if (!function_exists('get_ip')) {
 }
 
 if (!function_exists('is_valid_int')) {
-    function is_valid_int($value)
-    {
+    function is_valid_int($value) {
         return is_numeric($value) && $value > 0 && $value == intval($value);
     }
 
 }
 
 if (!function_exists('md5_gen')) {
-    function md5_gen()
-    {
+    function md5_gen() {
         return md5(uniqid() . time() . microtime());
     }
 }
 
-// Function to check the existence of data in the request
 if (!function_exists('input_exists')) {
-    function input_exists($type = "POST")
-    {
+	// Function to check the existence of data in the request
+    function input_exists($type = "POST") {
         switch ($type) {
             case "POST":
                 return !empty($_POST);
@@ -174,10 +157,9 @@ if (!function_exists('input_exists')) {
     }
 }
 
-// Function to obtain a specific value from the request
 if (!function_exists('input')) {
-    function input($value)
-    {
+	// Function to obtain a specific value from the request
+    function input($value) {
         $inputValue = '';
 
         if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST[$value])) {
@@ -190,8 +172,7 @@ if (!function_exists('input')) {
 }
 
 if (!function_exists('redirect')) {
-    function redirect($url, $statusCode = 302)
-    {
+    function redirect($url, $statusCode = 302) {
         // Redirect using HTTP header if possible
         if (!headers_sent()) {
             header("Location: " . $url, true, $statusCode);
@@ -210,25 +191,20 @@ if (!function_exists('redirect')) {
 }
 
 if (!function_exists('browser')) {
-    function browser()
-    {
+    function browser() {
         return $_SERVER['HTTP_USER_AGENT'];
     }
 }
 
 if (!function_exists('activation_code')) {
-    function activation_code()
-    {
+    function activation_code() {
         return sha1(time() . microtime());
     }
 }
 
 if (!function_exists('asset')) {
-    /**
-     * Function to access public folder
-     */
-    function asset($asset = null)
-    {
+    // Function to access public folder
+    function asset($asset = null) {
         $assetPath = get_http_protocol() . '://' . base_url() . '/';
         if (is_null($asset)) {
             return $assetPath;
@@ -238,76 +214,70 @@ if (!function_exists('asset')) {
 }
 
 if (!function_exists('get_http_protocol')) {
-    /**
-     * Function to get if server is running on HTTPS or HTTP.
-     */
-    function get_http_protocol()
-    {
+    // Function to get if server is running on HTTPS or HTTP.
+    function get_http_protocol() {
         return !empty($_SERVER['HTTPS']) ? "https" : "http";
     }
 }
 
 if (!function_exists('translate')) {
-    function translate($file, $translate)
-    {
+    function translate($file, $translate) {
         $lang = new Lang();
         return $lang->get($file, $translate);
     }
 }
 
 if (!function_exists('error_response')) {
-    function error_response($errors, $status = "error")
-    {
+    function error_response($errors, $status = "error") {
         return json_encode(["status" => $status, "errors" => $errors]);
     }
 }
+
 if (!function_exists('tableRow')) {
-    function tableRow($name, $details, $status)
-    {
+    function tableRow($name, $details, $status) {
         // Set icon based on status
         $icon = ($status == '1') ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
         // Assemble the table row
         echo "<tr><td>$name</td><td>$details</td><td>$icon</td></tr>";
     }
 }
+
 if (!function_exists('isExtensionAvailable')) {
-    function isExtensionAvailable($name)
-    {
+    function isExtensionAvailable($name) {
         return extension_loaded($name);
     }
 }
+
 if (!function_exists('checkFolderPerm')) {
-    function checkFolderPerm($name)
-    {
-        // Verificar se a pasta existe
+    function checkFolderPerm($name) {
+        // Verify if the folder exists
         if (!is_dir(dirname(__DIR__) . DIRECTORY_SEPARATOR . $name)) {
             return false;
         }
 
-        // Verificar as permissões da pasta
+        // Check folder permissions
         $perm = substr(sprintf('%o', fileperms(dirname(__DIR__) . DIRECTORY_SEPARATOR . $name)), -4);
         return $perm >= '0775';
     }
 }
 
 if (!function_exists('setting')) {
-    function setting($value)
-    {
+    function setting($value) {
         $config = new Config();
         return $config->getSettingValue($value);
     }
 }
 
 if (!function_exists('http_host')) {
-    function http_host()
-    {
+    function http_host() {
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
         return $protocol . '://' . $_SERVER['HTTP_HOST'];
     }
 }
+
 if (!function_exists('connection_file')) {
     function connection_file() {
-        return file_exists(dirname(__DIR__) . '/config/database.php') ? true : false;
+        return file_exists(dirname(__DIR__) . DIRECTORY_SEPARATOR.'config'.DIRECTORY_SEPARATOR.'database.php') ? true : false;
     }
 }
 
@@ -324,11 +294,11 @@ if (!function_exists('generate_login_string')) {
 
 if (!function_exists('render')) {
     function render($filename) {
-        $viewFile = dirname(__DIR__) . "/resources/views/{$filename}.php";
+        $viewFile = dirname(__DIR__) . DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR."{$filename}.php";
         if (file_exists($viewFile)) {
             include $viewFile;
         } else {
-            throw new Exception("View file not found: $filename");
+            throw new Exception("View Template not found: {$filename}.php");
         }
     }
 }
