@@ -9,6 +9,7 @@ class Auth
     private $generator, $database, $conn, $logging;
     private $time;
     private $userarray;
+    private $userinfo;
     private $username;
     private $email;
     private $gpack;
