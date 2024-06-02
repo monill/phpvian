@@ -56,7 +56,7 @@ class SignupController
                 'activateat' => time()
             ]);
 
-            //$this->mailer->confirmEmail($email, $key);
+            $this->mailer->confirmEmail($email, $key);
 
             echo json_encode(["status" => "success", "msg" => "Account created successfully check your email to activate your account, Inbox or SPAM."]);
 
@@ -89,9 +89,9 @@ class SignupController
         if (strlen($password) < 6 || strlen($password2) > 12) {
             $errors[] = "Password must be between 6 and 12 characters long.";
         }
-//        if ($this->valid->validEmail($email)) {
-//            $errors[] = "Please enter a valid email address.";
-//        }
+        if ($this->valid->validEmail($email)) {
+            $errors[] = "Please enter a valid email address.";
+        }
         if ($this->valid->emailExist($email)) {
             $errors[] = "The email provided is already in use.";
         }
